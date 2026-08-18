@@ -2,9 +2,11 @@ import Link from "next/link";
 
 export function AuthPageShell({
   title,
+  subtitle,
   children,
 }: {
   title: string;
+  subtitle?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -16,9 +18,14 @@ export function AuthPageShell({
         >
           DeckPool
         </Link>
-        <h1 className="mb-6 font-display text-2xl font-bold text-[var(--ink-primary)]">
+        <h1 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
           {title}
         </h1>
+        {subtitle ? (
+          <p className="mt-2 mb-6 text-sm text-[var(--ink-muted)]">{subtitle}</p>
+        ) : (
+          <div className="mb-6" />
+        )}
         {children}
       </div>
     </div>

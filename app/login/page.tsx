@@ -1,18 +1,13 @@
-import Link from "next/link";
 import { AuthPageShell } from "@/components/auth/AuthPageShell";
+import { LoginForm } from "@/components/auth/LoginForm";
 
 export default function LoginPage() {
   return (
-    <AuthPageShell title="Log in">
-      <p className="mb-6 text-sm text-[var(--ink-muted)]">
-        Full login form ships in Phase 7. Auth wiring is ready.
-      </p>
-      <Link
-        href="/signup"
-        className="text-sm font-medium text-[var(--accent-ocean)] hover:underline"
-      >
-        Need an account? Sign up
-      </Link>
+    <AuthPageShell
+      title="Log in"
+      subtitle="Welcome back — pick up where you left off."
+    >
+      <LoginForm />
     </AuthPageShell>
   );
 }

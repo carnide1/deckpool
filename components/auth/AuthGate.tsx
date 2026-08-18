@@ -3,18 +3,9 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getOwnedCardCount } from "@/lib/users";
+import { getPostLoginPath } from "@/lib/auth-routing";
 
 const AUTH_ROUTES = new Set(["/", "/login", "/signup", "/forgot-password"]);
-
-async function postLoginPath(uid: string): Promise<string> {
-  try {
-    const owned = await getOwnedCardCount(uid);
-    return owned === 0 ? "/collection" : "/decks";
-  } catch {
-    return "/decks";
-  }
-}
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -32,9 +23,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
 
     if (user && isAuthRoute) {
-      void postLoginPath(user.uid).then((path) => router.replace(path));
+      void getPostLoginPath(user.uid).then((path) => router.replace(path));
     }
-  }, [user, loading, isAuthRoute, router]);
+  }, [user, loading, isAuthRoute, pathname, router]);
 
   if (loading) {
     return (

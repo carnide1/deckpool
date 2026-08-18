@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  /* Parchment & sky */
   --bg-page: #faf3e6;
   --bg-panel: #fffdf8;
   --bg-inset: #f0e4ce;
@@ -10,6 +11,27 @@
   --accent-ocean: #2e63a4;
   --accent-sky: #60bff5;
   --accent-gold: #ffce00;
+
+  /* OPTCG attribute colors */
+  --color-red: #e02020;
+  --color-green: #2ead4b;
+  --color-blue: #2563eb;
+  --color-purple: #7b3fae;
+  --color-black: #2d2d2d;
+  --color-yellow: #f5c400;
+
+  /* Status badges */
+  --badge-legal: #2ead4b;
+  --badge-illegal: #d7000f;
+  --badge-owned: #2e63a4;
+  --badge-unowned: #c4841d;
+
+  /* Shape */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --shadow-paper: 0 2px 8px rgb(26 18 8 / 8%);
+  --shadow-poster: 0 4px 16px rgb(26 18 8 / 12%);
 }
 
 @theme inline {
@@ -17,14 +39,61 @@
   --color-foreground: var(--ink-primary);
   --font-sans: var(--font-nunito);
   --font-display: var(--font-fredoka);
+
+  --color-op-red: var(--color-red);
+  --color-op-green: var(--color-green);
+  --color-op-blue: var(--color-blue);
+  --color-op-purple: var(--color-purple);
+  --color-op-black: var(--color-black);
+  --color-op-yellow: var(--color-yellow);
+
+  --color-pirate-red: var(--accent-pirate-red);
+  --color-ocean: var(--accent-ocean);
+  --color-sky: var(--accent-sky);
+  --color-gold: var(--accent-gold);
+  --color-parchment: var(--bg-page);
+  --color-panel: var(--bg-panel);
+  --color-inset: var(--bg-inset);
+  --color-ink: var(--ink-primary);
+  --color-ink-muted: var(--ink-muted);
 }
 
 body {
   background: var(--bg-page);
   color: var(--ink-primary);
   font-family: var(--font-nunito), system-ui, sans-serif;
+  /* Subtle parchment grain */
+  background-image: radial-gradient(
+    rgb(26 18 8 / 3%) 0.5px,
+    transparent 0.5px
+  );
+  background-size: 4px 4px;
 }
 
 .font-display {
   font-family: var(--font-fredoka), system-ui, sans-serif;
+}
+
+/* Wanted-poster panel — reuse on decks, profile, empty states */
+.poster-panel {
+  border: 1px solid var(--bg-inset);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-paper);
+}
+
+.poster-stamp {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent-pirate-red);
+  color: white;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
