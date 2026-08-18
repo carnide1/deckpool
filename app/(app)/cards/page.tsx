@@ -2,46 +2,84 @@
 
 import {
   Suspense,
-  useCallback,
   useDeferredValue,
   useEffect,
   useMemo,
   useState,
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { PackagePlus } from "lucide-react";
+import { AddStarterDeckModal } from "@/components/collection/AddStarterDeckModal";
 import { CardDetailModal } from "@/components/cards/CardDetailModal";
 import { CardGrid } from "@/components/cards/CardGrid";
-import { CardsSearchBar } from "@/components/cards/CardsSearchBar";
-import { FacetChips } from "@/components/cards/FacetChips";
+import { FilterPanel } from "@/components/search/FilterPanel";
+import { NameSearchBar } from "@/components/search/NameSearchBar";
+import { SortSelect } from "@/components/search/SortSelect";
+import { Button } from "@/components/ui/Button";
+import { useCardPrefs } from "@/contexts/CardPrefsContext";
 import { useCatalog } from "@/contexts/CatalogContext";
 import { useCollection } from "@/contexts/CollectionContext";
-import { filterCards } from "@/lib/search/filterCards";
-import { parseQuery } from "@/lib/search/parseQuery";
+import { useCollectionWrite } from "@/hooks/useCollectionWrite";
+import {
+  applySearchFilters,
+  cardsSearchString,
+  filtersEqual,
+  filtersFromSearchParams,
+  type SearchFilters,
+} from "@/lib/search/filters";
+import { sortCards, type SortKey } from "@/lib/search/sortCards";
 import type { DeckPoolCard } from "@/types/catalog";
 
-const MAX_RESULTS = 120;
-const URL_SYNC_DELAY_MS = 350;
+const CARDS_SORTS: SortKey[] = [
+  "newest",
+  "oldest",
+  "serial",
+  "name",
+  "category",
+  "cost",
+];
+const PAGE_SIZE = 120;
+
+function parseSort(raw: string | null): SortKey {
+  if (raw && CARDS_SORTS.includes(raw as SortKey)) return raw as SortKey;
+  return "newest";
+}
 
 function CardsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { cards, loading: catalogLoading, error: catalogError } = useCatalog();
   const { ownedMap, allLabels } = useCollection();
+  const { preferredByCardId } = useCardPrefs();
+  const { saving, adjustQuantity, setLabels } = useCollectionWrite(true);
 
-  const urlQ = searchParams.get("q") ?? "";
+  const urlKey = searchParams.toString();
+  const urlFilters = useMemo(
+    () => filtersFromSearchParams(searchParams),
+    [searchParams],
+  );
   const ownedOnly = searchParams.get("owned") === "1";
+  const urlSort = parseSort(searchParams.get("sort"));
 
-  const [query, setQuery] = useState(urlQ);
+  const [filters, setFilters] = useState<SearchFilters>(urlFilters);
+  const [sort, setSort] = useState<SortKey>(urlSort);
   const [selectedCard, setSelectedCard] = useState<DeckPoolCard | null>(null);
-  const [preferredImages, setPreferredImages] = useState<
-    Record<string, string>
-  >({});
+  const [starterOpen, setStarterOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   useEffect(() => {
-    setQuery(urlQ);
-  }, [urlQ]);
+    setFilters((prev) => (filtersEqual(prev, urlFilters) ? prev : urlFilters));
+  }, [urlFilters]);
 
-  const deferredQ = useDeferredValue(query);
+  useEffect(() => {
+    setSort(urlSort);
+  }, [urlSort]);
+
+  const deferredFilters = useDeferredValue(filters);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [deferredFilters, ownedOnly, sort]);
 
   const ownedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -49,6 +87,14 @@ function CardsPageContent() {
       if (item.quantity > 0) ids.add(cardId);
     }
     return ids;
+  }, [ownedMap]);
+
+  const quantityById = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const [cardId, item] of Object.entries(ownedMap)) {
+      map[cardId] = item.quantity;
+    }
+    return map;
   }, [ownedMap]);
 
   const labelsByCardId = useMemo(() => {
@@ -59,40 +105,27 @@ function CardsPageContent() {
     return map;
   }, [ownedMap]);
 
-  const results = useMemo(() => {
-    const expr = parseQuery(deferredQ);
-    const filtered = filterCards(cards, expr, {
+  const filtered = useMemo(() => {
+    const next = applySearchFilters(cards, deferredFilters, {
       ownedOnly,
       ownedIds,
       labelsByCardId,
     });
-    return filtered.slice(0, MAX_RESULTS);
-  }, [cards, deferredQ, ownedOnly, ownedIds, labelsByCardId]);
+    return sortCards(next, sort);
+  }, [cards, deferredFilters, ownedOnly, ownedIds, labelsByCardId, sort]);
 
-  const updateParams = useCallback(
-    (nextQ: string, nextOwnedOnly = ownedOnly) => {
-      const params = new URLSearchParams();
-      if (nextQ.trim()) params.set("q", nextQ);
-      if (nextOwnedOnly) params.set("owned", "1");
-      const search = params.toString();
-      router.replace(search ? `/cards?${search}` : "/cards", { scroll: false });
-    },
-    [ownedOnly, router],
-  );
+  const results = filtered.slice(0, visibleCount);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      if (query !== urlQ) {
-        updateParams(query, ownedOnly);
-      }
-    }, URL_SYNC_DELAY_MS);
+      const search = cardsSearchString(filters, ownedOnly, sort);
+      if (search === urlKey) return;
+      router.replace(search ? `/cards?${search}` : "/cards", { scroll: false });
+    }, 350);
     return () => window.clearTimeout(timer);
-  }, [query, urlQ, ownedOnly, updateParams]);
+  }, [filters, ownedOnly, sort, urlKey, router]);
 
-  const setQueryAndUrl = (nextQ: string) => {
-    setQuery(nextQ);
-    updateParams(nextQ, ownedOnly);
-  };
+  const selectedOwned = selectedCard ? ownedMap[selectedCard.id] : undefined;
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
@@ -102,55 +135,106 @@ function CardsPageContent() {
             Cards
           </h1>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            Browse the full catalog. Edit quantities on Collection, not here.
+            Search the full catalog and add copies to your binder.
           </p>
         </div>
-        <label className="inline-flex items-center gap-2 text-sm font-medium text-[var(--ink-primary)]">
-          <input
-            type="checkbox"
-            checked={ownedOnly}
-            onChange={(event) => updateParams(query, event.target.checked)}
-            className="rounded border-[var(--bg-inset)]"
-          />
-          Owned only
-        </label>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="inline-flex items-center gap-2 text-sm font-medium text-[var(--ink-primary)]">
+            <input
+              type="checkbox"
+              checked={ownedOnly}
+              onChange={(event) => {
+                const search = cardsSearchString(
+                  filters,
+                  event.target.checked,
+                  sort,
+                );
+                router.replace(search ? `/cards?${search}` : "/cards", {
+                  scroll: false,
+                });
+              }}
+              className="rounded border-[var(--bg-inset)]"
+            />
+            Owned only
+          </label>
+          <Button onClick={() => setStarterOpen(true)} className="shrink-0">
+            <PackagePlus className="h-4 w-4" />
+            Add starter deck
+          </Button>
+        </div>
       </div>
 
-      <CardsSearchBar
-        value={query}
-        onChange={setQuery}
-        onCommit={(next) => updateParams(next, ownedOnly)}
-        cards={cards}
-        userLabels={allLabels}
+      <NameSearchBar
+        value={filters.text}
+        onChange={(text) => setFilters((prev) => ({ ...prev, text }))}
       />
 
-      <FacetChips query={query} onChange={setQueryAndUrl} />
+      <FilterPanel
+        filters={filters}
+        onChange={setFilters}
+        cards={cards}
+        labelOptions={allLabels}
+      />
 
-      <p className="text-sm text-[var(--ink-muted)]">
-        {catalogLoading
-          ? "Loading catalog…"
-          : `${results.length.toLocaleString()} shown${results.length >= MAX_RESULTS ? "+" : ""}`}
-        {catalogError ? (
-          <span className="ml-2 text-[var(--accent-pirate-red)]">
-            {catalogError}
-          </span>
-        ) : null}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-[var(--ink-muted)]">
+          {catalogLoading
+            ? "Loading catalog…"
+            : `${results.length.toLocaleString()} of ${filtered.length.toLocaleString()}`}
+          {catalogError ? (
+            <span className="ml-2 text-[var(--accent-pirate-red)]">
+              {catalogError}
+            </span>
+          ) : null}
+        </p>
+        <SortSelect value={sort} onChange={setSort} options={CARDS_SORTS} />
+      </div>
 
       <CardGrid
         cards={results}
-        ownedIds={ownedIds}
-        preferredImages={preferredImages}
+        quantityById={quantityById}
+        preferredImages={preferredByCardId}
         onSelect={setSelectedCard}
+        onQuantityDelta={(card, delta) => void adjustQuantity(card.id, delta)}
+        showStepper
+        quantitySaving={saving}
       />
+
+      {visibleCount < filtered.length ? (
+        <div className="flex justify-center">
+          <Button
+            variant="secondary"
+            onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+          >
+            Show more
+          </Button>
+        </div>
+      ) : null}
 
       <CardDetailModal
         card={selectedCard}
         open={selectedCard !== null}
         onClose={() => setSelectedCard(null)}
-        onPreferredChange={(cardId, url) =>
-          setPreferredImages((prev) => ({ ...prev, [cardId]: url }))
+        ownedQty={selectedOwned?.quantity ?? 0}
+        labels={selectedOwned?.labels ?? []}
+        labelSuggestions={allLabels}
+        preferredImageUrl={
+          selectedCard
+            ? preferredByCardId[selectedCard.id] ?? selectedCard.images[0]
+            : null
         }
+        showCollectionEditor
+        onQuantityDelta={(delta) => {
+          if (selectedCard) void adjustQuantity(selectedCard.id, delta);
+        }}
+        onLabelsChange={(nextLabels) => {
+          if (selectedCard) void setLabels(selectedCard.id, nextLabels);
+        }}
+      />
+
+      <AddStarterDeckModal
+        open={starterOpen}
+        onClose={() => setStarterOpen(false)}
       />
     </div>
   );

@@ -5,6 +5,7 @@ import {
   useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { ArrowLeft, Pencil, RefreshCw } from "lucide-react";
@@ -21,7 +22,10 @@ import {
   RenameVariationModal,
 } from "@/components/builder/VariationModals";
 import { VariationTabs } from "@/components/builder/VariationTabs";
-import { CardsSearchBar } from "@/components/cards/CardsSearchBar";
+import { DeckModeToggle } from "@/components/builder/DeckModeToggle";
+import { FilterPanel } from "@/components/search/FilterPanel";
+import { NameSearchBar } from "@/components/search/NameSearchBar";
+import { SortSelect } from "@/components/search/SortSelect";
 import { ColorPills } from "@/components/decks/ColorPills";
 import { RenameDeckModal } from "@/components/decks/RenameDeckModal";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,17 +33,24 @@ import { useCatalog } from "@/contexts/CatalogContext";
 import { useCollection } from "@/contexts/CollectionContext";
 import { useDecks } from "@/contexts/DecksContext";
 import {
-  canIncrementCopy,
+  canAddToDeck,
   filterBuilderCatalog,
+  filterBuilderUniverse,
   mainDeckCount,
 } from "@/lib/builder";
 import { getConstructionRules } from "@/lib/construction";
 import { setVariationCards } from "@/lib/decks";
 import { validateVariation } from "@/lib/legality";
+import {
+  EMPTY_FILTERS,
+  type SearchFilters,
+} from "@/lib/search/filters";
+import { sortCards, type SortKey } from "@/lib/search/sortCards";
 import type { DeckPoolCard } from "@/types/catalog";
-import type { Deck, Variation } from "@/types/deck";
+import type { Deck } from "@/types/deck";
 
 const MAX_RESULTS = 80;
+const BUILDER_SORTS: SortKey[] = ["newest", "serial", "name", "cost", "category"];
 
 export function BuilderView({ deck }: { deck: Deck }) {
   const { user } = useAuth();
@@ -52,7 +63,8 @@ export function BuilderView({ deck }: { deck: Deck }) {
   const constructionRules = useMemo(() => getConstructionRules(), []);
 
   const [activeVariationId, setActiveVariationId] = useState("");
-  const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState<SearchFilters>(EMPTY_FILTERS);
+  const [sort, setSort] = useState<SortKey>("newest");
   const [ownedOnly, setOwnedOnly] = useState(true);
   const [renameDeckOpen, setRenameDeckOpen] = useState(false);
   const [changeLeaderOpen, setChangeLeaderOpen] = useState(false);
@@ -61,8 +73,14 @@ export function BuilderView({ deck }: { deck: Deck }) {
   const [renameVariationOpen, setRenameVariationOpen] = useState(false);
   const [deleteVariationOpen, setDeleteVariationOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [localCards, setLocalCards] = useState<Record<string, number> | null>(
+    null,
+  );
+  const cardsRef = useRef<Record<string, number>>({});
+  const writeChain = useRef(Promise.resolve());
+  const pendingWrites = useRef(0);
 
-  const deferredQuery = useDeferredValue(query);
+  const deferredFilters = useDeferredValue(filters);
 
   useEffect(() => {
     if (variations.length === 0) {
@@ -76,6 +94,15 @@ export function BuilderView({ deck }: { deck: Deck }) {
 
   const activeVariation =
     variations.find((row) => row.id === activeVariationId) ?? null;
+  const variationCards = localCards ?? activeVariation?.cards ?? {};
+
+  useEffect(() => {
+    const variation = variations.find((row) => row.id === activeVariationId);
+    if (variation) cardsRef.current = variation.cards;
+    setLocalCards(null);
+    // Reset the in-memory list only when switching tabs, not on snapshot echoes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeVariationId]);
 
   const ownedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -113,26 +140,32 @@ export function BuilderView({ deck }: { deck: Deck }) {
     [cards, ownedMap],
   );
 
+  const legalPool = useMemo(() => {
+    if (!leader) return [];
+    return filterBuilderUniverse(cards, leader, constructionRules);
+  }, [cards, leader, constructionRules]);
+
   const searchResults = useMemo(() => {
     if (!leader) return [];
-    const filtered = filterBuilderCatalog(cards, leader, deferredQuery, {
+    const filtered = filterBuilderCatalog(cards, leader, deferredFilters, {
       ownedOnly,
       ownedIds,
       labelsByCardId,
       rules: constructionRules,
     });
-    return filtered.slice(0, MAX_RESULTS);
+    return sortCards(filtered, sort).slice(0, MAX_RESULTS);
   }, [
     cards,
     leader,
-    deferredQuery,
+    deferredFilters,
     ownedOnly,
     ownedIds,
     labelsByCardId,
     constructionRules,
+    sort,
   ]);
 
-  const deckCount = activeVariation ? mainDeckCount(activeVariation.cards) : 0;
+  const deckCount = mainDeckCount(variationCards);
 
   const status = useMemo(() => {
     if (!activeVariation) {
@@ -140,13 +173,14 @@ export function BuilderView({ deck }: { deck: Deck }) {
     }
     return validateVariation(
       deck.leaderId,
-      activeVariation.cards,
+      variationCards,
       cardsById,
       ownedQtyById,
       constructionRules,
     );
   }, [
     activeVariation,
+    variationCards,
     deck.leaderId,
     cardsById,
     ownedQtyById,
@@ -155,7 +189,7 @@ export function BuilderView({ deck }: { deck: Deck }) {
 
   const manifestLines = useMemo(() => {
     if (!activeVariation) return [];
-    return Object.entries(activeVariation.cards)
+    return Object.entries(variationCards)
       .filter(([, qty]) => qty > 0)
       .map(([cardId, inDeck]) => {
         const card = cardsById.get(cardId);
@@ -168,40 +202,58 @@ export function BuilderView({ deck }: { deck: Deck }) {
       })
       .filter((row): row is NonNullable<typeof row> => row !== null)
       .sort((a, b) => a.card.name.localeCompare(b.card.name));
-  }, [activeVariation, cardsById, ownedQtyById]);
+  }, [activeVariation, variationCards, cardsById, ownedQtyById]);
 
-  const persistCards = async (nextCards: Record<string, number>) => {
+  const persistCards = (nextCards: Record<string, number>) => {
     if (!user || !activeVariation) return;
+    const variationId = activeVariation.id;
+    cardsRef.current = nextCards;
+    setLocalCards(nextCards);
+    pendingWrites.current += 1;
     setSaving(true);
-    try {
-      await setVariationCards(user.uid, deck.id, activeVariation.id, nextCards);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Could not save deck list",
-      );
-    } finally {
-      setSaving(false);
-    }
+    writeChain.current = writeChain.current
+      .then(() =>
+        setVariationCards(user.uid, deck.id, variationId, cardsRef.current),
+      )
+      .catch((error) => {
+        toast.error(
+          error instanceof Error ? error.message : "Could not save deck list",
+        );
+      })
+      .finally(() => {
+        pendingWrites.current = Math.max(0, pendingWrites.current - 1);
+        if (pendingWrites.current === 0) setSaving(false);
+      });
   };
 
   const handleAdd = (card: DeckPoolCard) => {
     if (!activeVariation) return;
-    const current = activeVariation.cards[card.id] ?? 0;
-    if (!canIncrementCopy(card.id, current, constructionRules)) return;
-    void persistCards({
-      ...activeVariation.cards,
+    const current = cardsRef.current[card.id] ?? 0;
+    if (
+      !canAddToDeck(
+        card.id,
+        current,
+        ownedQtyById[card.id] ?? 0,
+        ownedOnly,
+        constructionRules,
+      )
+    ) {
+      return;
+    }
+    persistCards({
+      ...cardsRef.current,
       [card.id]: current + 1,
     });
   };
 
   const handleRemove = (cardId: string) => {
     if (!activeVariation) return;
-    const current = activeVariation.cards[cardId] ?? 0;
+    const current = cardsRef.current[cardId] ?? 0;
     if (current <= 0) return;
-    const next = { ...activeVariation.cards };
+    const next = { ...cardsRef.current };
     if (current === 1) delete next[cardId];
     else next[cardId] = current - 1;
-    void persistCards(next);
+    persistCards(next);
   };
 
   const handleVariationDeleted = () => {
@@ -227,9 +279,12 @@ export function BuilderView({ deck }: { deck: Deck }) {
           <ArrowLeft className="h-4 w-4" />
           Back to decks
         </Link>
-        {saving ? (
-          <span className="text-xs text-[var(--ink-muted)]">Saving…</span>
-        ) : null}
+        <div className="flex items-center gap-3">
+          {saving ? (
+            <span className="text-xs text-[var(--ink-muted)]">Saving…</span>
+          ) : null}
+          <DeckModeToggle deckId={deck.id} mode="edit" />
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
@@ -286,27 +341,42 @@ export function BuilderView({ deck }: { deck: Deck }) {
               />
               Owned only
             </label>
-            <CardsSearchBar
-              value={query}
-              onChange={setQuery}
-              cards={cards}
-              userLabels={allLabels}
+            <NameSearchBar
+              value={filters.text}
+              onChange={(text) => setFilters((prev) => ({ ...prev, text }))}
             />
-            <p className="text-xs text-[var(--ink-muted)]">
-              {searchResults.length.toLocaleString()} shown
-              {searchResults.length >= MAX_RESULTS ? "+" : ""}. Hard filters:
-              Leader colors, construction rules, no Don.
-            </p>
+            <FilterPanel
+              filters={filters}
+              onChange={setFilters}
+              cards={legalPool}
+              labelOptions={allLabels}
+              allowedColors={leader.colors}
+              allowedCategories={["Character", "Event", "Stage"]}
+            />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-[var(--ink-muted)]">
+                {searchResults.length.toLocaleString()} shown
+                {searchResults.length >= MAX_RESULTS ? "+" : ""}. Hard filters:
+                Leader colors, construction rules, no Don.
+              </p>
+              <SortSelect
+                value={sort}
+                onChange={setSort}
+                options={BUILDER_SORTS}
+              />
+            </div>
           </div>
 
           <BuilderCardResults
             cards={searchResults}
-            ownedIds={ownedIds}
-            inDeckById={activeVariation?.cards ?? {}}
+            ownedQtyById={ownedQtyById}
+            inDeckById={variationCards}
             canAdd={(cardId) =>
-              canIncrementCopy(
+              canAddToDeck(
                 cardId,
-                activeVariation?.cards[cardId] ?? 0,
+                variationCards[cardId] ?? 0,
+                ownedQtyById[cardId] ?? 0,
+                ownedOnly,
                 constructionRules,
               )
             }

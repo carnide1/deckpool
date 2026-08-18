@@ -1,6 +1,7 @@
 "use client";
 
 import { CardImage } from "@/components/CardImage";
+import { QuantityStepper } from "@/components/ui/QuantityStepper";
 import type { DeckPoolCard } from "@/types/catalog";
 
 const COLOR_CLASS: Record<string, string> = {
@@ -22,14 +23,20 @@ function borderClass(card: DeckPoolCard): string {
 
 export function CardGrid({
   cards,
-  ownedIds,
+  quantityById,
   preferredImages,
   onSelect,
+  onQuantityDelta,
+  showStepper = false,
+  quantitySaving = false,
 }: {
   cards: DeckPoolCard[];
-  ownedIds: Set<string>;
+  quantityById: Record<string, number>;
   preferredImages: Record<string, string>;
   onSelect: (card: DeckPoolCard) => void;
+  onQuantityDelta?: (card: DeckPoolCard, delta: number) => void;
+  showStepper?: boolean;
+  quantitySaving?: boolean;
 }) {
   if (cards.length === 0) {
     return (
@@ -42,49 +49,59 @@ export function CardGrid({
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
       {cards.map((card) => {
-        const owned = ownedIds.has(card.id);
-        const image =
-          preferredImages[card.id] ?? card.images[0] ?? null;
+        const qty = quantityById[card.id] ?? 0;
+        const image = preferredImages[card.id] ?? card.images[0] ?? null;
         return (
-          <button
+          <article
             key={card.id}
-            type="button"
-            onClick={() => onSelect(card)}
             className={[
-              "poster-panel overflow-hidden border-2 p-2 text-left transition-transform hover:-translate-y-0.5",
+              "poster-panel overflow-hidden border-2 p-2",
               borderClass(card),
             ].join(" ")}
           >
-            {image ? (
-              <CardImage
-                src={image}
-                alt={card.name}
-                width={160}
-                height={224}
-                className="mx-auto w-full max-w-[160px]"
-              />
-            ) : (
-              <div className="mx-auto flex h-[224px] max-w-[160px] items-center justify-center rounded-md bg-[var(--bg-inset)] text-xs text-[var(--ink-muted)]">
-                No art
+            <button
+              type="button"
+              onClick={() => onSelect(card)}
+              className="block w-full text-left transition-transform hover:-translate-y-0.5"
+            >
+              <div className="relative">
+                {image ? (
+                  <CardImage
+                    src={image}
+                    alt={card.name}
+                    width={160}
+                    height={224}
+                    className="mx-auto w-full max-w-[160px]"
+                  />
+                ) : (
+                  <div className="mx-auto flex h-[224px] max-w-[160px] items-center justify-center rounded-md bg-[var(--bg-inset)] text-xs text-[var(--ink-muted)]">
+                    No art
+                  </div>
+                )}
+                {qty > 0 ? (
+                  <span className="absolute top-1 right-1 rounded-md bg-[var(--bg-panel)]/95 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[var(--ink-primary)]">
+                    ×{qty}
+                  </span>
+                ) : null}
               </div>
-            )}
-            <p className="mt-2 truncate text-sm font-semibold">{card.name}</p>
-            <p className="truncate text-xs text-[var(--ink-muted)]">{card.id}</p>
+              <p className="mt-2 truncate text-sm font-semibold">{card.name}</p>
+              <p className="truncate text-xs text-[var(--ink-muted)]">
+                {card.id}
+              </p>
+            </button>
             <div className="mt-1 flex items-center justify-between gap-2">
               <span className="text-[10px] uppercase tracking-wide text-[var(--ink-muted)]">
                 {card.rarity}
               </span>
-              {owned ? (
-                <span className="text-[10px] font-semibold text-[var(--badge-owned)]">
-                  Owned
-                </span>
-              ) : (
-                <span className="text-[10px] text-[var(--badge-unowned)]">
-                  Unowned
-                </span>
-              )}
+              {showStepper && onQuantityDelta ? (
+                <QuantityStepper
+                  value={qty}
+                  disabled={quantitySaving}
+                  onDelta={(delta) => onQuantityDelta(card, delta)}
+                />
+              ) : null}
             </div>
-          </button>
+          </article>
         );
       })}
     </div>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fredoka, Nunito } from "next/font/google";
+import { Cinzel, Nunito } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import { AuthGate } from "@/components/auth/AuthGate";
 import "./globals.css";
@@ -10,9 +10,10 @@ const nunito = Nunito({
   display: "swap",
 });
 
-const fredoka = Fredoka({
-  variable: "--font-fredoka",
+const cinzel = Cinzel({
+  variable: "--font-cinzel",
   subsets: ["latin"],
+  weight: ["600", "700"],
   display: "swap",
 });
 
@@ -29,7 +30,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${nunito.variable} ${fredoka.variable} h-full antialiased`}
+      className={`${nunito.variable} ${cinzel.variable} h-full antialiased`}
     >
       <body className="min-h-full font-sans">
         <Providers>

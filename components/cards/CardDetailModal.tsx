@@ -3,50 +3,66 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { CardImage } from "@/components/CardImage";
+import { LabelEditor } from "@/components/collection/LabelEditor";
+import { QuantityStepper } from "@/components/ui/QuantityStepper";
 import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/contexts/AuthContext";
-import { getPreferredImage, setPreferredImage } from "@/lib/cardPrefs";
+import { setPreferredImage } from "@/lib/cardPrefs";
 import type { DeckPoolCard } from "@/types/catalog";
 
 export function CardDetailModal({
   card,
   open,
   onClose,
+  ownedQty = 0,
+  labels = [],
+  labelSuggestions = [],
+  preferredImageUrl,
+  showCollectionEditor = false,
+  onQuantityDelta,
+  onLabelsChange,
   onPreferredChange,
 }: {
   card: DeckPoolCard | null;
   open: boolean;
   onClose: () => void;
-  onPreferredChange: (cardId: string, url: string) => void;
+  ownedQty?: number;
+  labels?: string[];
+  labelSuggestions?: string[];
+  preferredImageUrl?: string | null;
+  showCollectionEditor?: boolean;
+  onQuantityDelta?: (delta: number) => void;
+  onLabelsChange?: (labels: string[]) => void;
+  onPreferredChange?: (cardId: string, url: string) => void;
 }) {
   const { user } = useAuth();
   const [preferred, setPreferred] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!open || !card || !user) {
+    if (!open || !card) {
       setPreferred(null);
       return;
     }
-    setLoading(true);
-    void getPreferredImage(user.uid, card.id)
-      .then((url) => setPreferred(url ?? card.images[0] ?? null))
-      .finally(() => setLoading(false));
-  }, [open, card, user]);
+    setPreferred(preferredImageUrl ?? card.images[0] ?? null);
+  }, [open, card, preferredImageUrl]);
 
   if (!card) return null;
 
   const selectArt = async (url: string) => {
     if (!user) return;
+    setLoading(true);
     try {
       await setPreferredImage(user.uid, card.id, url);
       setPreferred(url);
-      onPreferredChange(card.id, url);
+      onPreferredChange?.(card.id, url);
       toast.success("Preferred art saved");
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Could not save art preference",
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -63,6 +79,35 @@ export function CardDetailModal({
             className="mx-auto"
             priority
           />
+        ) : null}
+
+        {showCollectionEditor && onQuantityDelta ? (
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-[var(--bg-inset)] px-3 py-2">
+            <span className="text-sm font-medium text-[var(--ink-primary)]">
+              In collection
+            </span>
+            <QuantityStepper value={ownedQty} onDelta={onQuantityDelta} />
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--ink-muted)]">
+            Owned:{" "}
+            <span className="font-semibold tabular-nums text-[var(--ink-primary)]">
+              {ownedQty}
+            </span>
+          </p>
+        )}
+
+        {showCollectionEditor && onLabelsChange ? (
+          <div>
+            <p className="mb-2 text-sm font-medium text-[var(--ink-primary)]">
+              Labels
+            </p>
+            <LabelEditor
+              labels={labels}
+              suggestions={labelSuggestions}
+              onChange={onLabelsChange}
+            />
+          </div>
         ) : null}
 
         <dl className="grid grid-cols-2 gap-3 text-sm">
@@ -98,6 +143,13 @@ export function CardDetailModal({
           </div>
         ) : null}
 
+        {card.trigger ? (
+          <div>
+            <p className="mb-1 text-sm text-[var(--ink-muted)]">Trigger</p>
+            <p className="text-sm leading-relaxed">{card.trigger}</p>
+          </div>
+        ) : null}
+
         {card.images.length > 1 ? (
           <div>
             <p className="mb-2 text-sm font-medium text-[var(--ink-primary)]">
@@ -123,11 +175,6 @@ export function CardDetailModal({
             </div>
           </div>
         ) : null}
-
-        <p className="text-xs text-[var(--ink-muted)]">
-          To change owned quantity, use Collection. To add to a deck, use the
-          Builder.
-        </p>
       </div>
     </Modal>
   );

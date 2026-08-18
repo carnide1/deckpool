@@ -5,6 +5,7 @@ import {
   filterBuilderCatalog,
   isColorLegalForLeader,
 } from "@/lib/builder";
+import { EMPTY_FILTERS } from "@/lib/search/filters";
 import { isForbiddenByLeader } from "@/lib/construction";
 import { validateVariation } from "@/lib/legality";
 import type { DeckPoolCard } from "@/types/catalog";
@@ -106,7 +107,7 @@ describe("construction", () => {
       colors: ["Black"],
       cost: 1,
     });
-    const results = filterBuilderCatalog([event, okEvent], imu, "", {
+    const results = filterBuilderCatalog([event, okEvent], imu, EMPTY_FILTERS, {
       ownedOnly: false,
       ownedIds: new Set(),
       rules,

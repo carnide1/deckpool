@@ -2,12 +2,14 @@ import {
   collection,
   deleteDoc,
   doc,
+  runTransaction,
   serverTimestamp,
   setDoc,
   writeBatch,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { mergeLabels } from "@/lib/labels";
+import { timestampToMillis } from "@/lib/timestamps";
 import type { CollectionItem } from "@/types/collection";
 
 export function userCollectionRef(uid: string) {
@@ -29,7 +31,17 @@ export function parseCollectionItem(
       ? data.labels.filter((l): l is string => typeof l === "string")
       : [],
     updatedAt: data.updatedAt,
+    updatedAtMs: timestampToMillis(data.updatedAt),
   };
+}
+
+export function nextCollectionQuantity(
+  current: number,
+  delta: number,
+  allowCreate: boolean,
+): number | null {
+  if (current <= 0 && delta > 0 && !allowCreate) return null;
+  return Math.max(0, current + delta);
 }
 
 export async function setCollectionQuantity(
@@ -50,6 +62,32 @@ export async function setCollectionQuantity(
   };
   if (labels !== undefined) payload.labels = labels;
   await setDoc(ref, payload, { merge: true });
+}
+
+export async function adjustCollectionQuantity(
+  uid: string,
+  cardId: string,
+  delta: number,
+  allowCreate: boolean,
+): Promise<number> {
+  const ref = collectionDocRef(uid, cardId);
+  return runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(ref);
+    const current =
+      typeof snap.data()?.quantity === "number" ? snap.data()!.quantity : 0;
+    const next = nextCollectionQuantity(current, delta, allowCreate);
+    if (next === null) return current;
+    if (next <= 0) {
+      if (snap.exists()) tx.delete(ref);
+      return 0;
+    }
+    tx.set(
+      ref,
+      { quantity: next, updatedAt: serverTimestamp() },
+      { merge: true },
+    );
+    return next;
+  });
 }
 
 export async function incrementCollectionFromProduct(

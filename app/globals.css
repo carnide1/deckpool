@@ -38,7 +38,7 @@
   --color-background: var(--bg-page);
   --color-foreground: var(--ink-primary);
   --font-sans: var(--font-nunito);
-  --font-display: var(--font-fredoka);
+  --font-display: var(--font-cinzel);
 
   --color-op-red: var(--color-red);
   --color-op-green: var(--color-green);
@@ -71,7 +71,8 @@ body {
 }
 
 .font-display {
-  font-family: var(--font-fredoka), system-ui, sans-serif;
+  font-family: var(--font-cinzel), ui-serif, Georgia, serif;
+  letter-spacing: 0.04em;
 }
 
 /* Wanted-poster panel — reuse on decks, profile, empty states */

@@ -61,7 +61,7 @@ export function CreateDeckModal({
       );
       toast.success("Deck created");
       handleClose();
-      router.push(`/decks/${deckId}`);
+      router.push(`/decks/${deckId}?mode=edit`);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Could not create deck",
@@ -89,13 +89,13 @@ export function CreateDeckModal({
       <div className="space-y-4">
         <p className="text-sm text-[var(--ink-muted)]">
           Pick a Leader you own. You can add unowned cards to the 50 later in
-          the Builder.
+          Edit.
         </p>
 
         {ownedLeaders.length === 0 ? (
           <div className="poster-panel p-4 text-sm text-[var(--ink-muted)]">
-            You do not own any Leaders yet. Log Leaders in Collection or add a
-            starter deck first.
+            You do not own any Leaders yet. Add Leaders on Cards or add a
+            starter deck there first.
           </div>
         ) : (
           <>

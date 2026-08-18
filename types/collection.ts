@@ -3,4 +3,5 @@ export interface CollectionItem {
   quantity: number;
   labels: string[];
   updatedAt?: unknown;
+  updatedAtMs: number;
 }

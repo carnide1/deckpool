@@ -11,14 +11,16 @@ export function VariationTabs({
   onRename,
   onDelete,
   onCompare,
+  readOnly = false,
 }: {
   variations: Variation[];
   activeId: string;
   onSelect: (variationId: string) => void;
-  onClone: () => void;
-  onRename: () => void;
-  onDelete: () => void;
-  onCompare: () => void;
+  onClone?: () => void;
+  onRename?: () => void;
+  onDelete?: () => void;
+  onCompare?: () => void;
+  readOnly?: boolean;
 }) {
   const activeIndex = variations.findIndex((row) => row.id === activeId);
 
@@ -44,47 +46,49 @@ export function VariationTabs({
           );
         })}
       </div>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={onClone}
-          className="inline-flex items-center gap-1 rounded-lg border border-[var(--bg-inset)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-inset)]"
-        >
-          <Copy className="h-3.5 w-3.5" />
-          Clone
-        </button>
-        <button
-          type="button"
-          onClick={onRename}
-          className="inline-flex items-center gap-1 rounded-lg border border-[var(--bg-inset)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-inset)]"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-          Rename
-        </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          disabled={variations.length <= 1}
-          className="inline-flex items-center gap-1 rounded-lg border border-[var(--bg-inset)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-inset)] disabled:opacity-40"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-          Delete
-        </button>
-        <button
-          type="button"
-          onClick={onCompare}
-          disabled={variations.length < 2}
-          className="inline-flex items-center gap-1 rounded-lg border border-[var(--bg-inset)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-inset)] disabled:opacity-40"
-        >
-          <GitCompare className="h-3.5 w-3.5" />
-          Compare
-        </button>
-        {activeIndex > 0 ? (
-          <span className="self-center text-[0.625rem] text-[var(--ink-muted)]">
-            Compare defaults to current vs previous tab
-          </span>
-        ) : null}
-      </div>
+      {readOnly ? null : (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => onClone?.()}
+            className="inline-flex items-center gap-1 rounded-lg border border-[var(--bg-inset)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-inset)]"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            Clone
+          </button>
+          <button
+            type="button"
+            onClick={() => onRename?.()}
+            className="inline-flex items-center gap-1 rounded-lg border border-[var(--bg-inset)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-inset)]"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Rename
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete?.()}
+            disabled={variations.length <= 1}
+            className="inline-flex items-center gap-1 rounded-lg border border-[var(--bg-inset)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-inset)] disabled:opacity-40"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete
+          </button>
+          <button
+            type="button"
+            onClick={() => onCompare?.()}
+            disabled={variations.length < 2}
+            className="inline-flex items-center gap-1 rounded-lg border border-[var(--bg-inset)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-inset)] disabled:opacity-40"
+          >
+            <GitCompare className="h-3.5 w-3.5" />
+            Compare
+          </button>
+          {activeIndex > 0 ? (
+            <span className="self-center text-[0.625rem] text-[var(--ink-muted)]">
+              Compare defaults to current vs previous tab
+            </span>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

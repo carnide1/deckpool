@@ -3,8 +3,12 @@ import {
   getConstructionRules,
   isForbiddenByLeader,
 } from "@/lib/construction";
-import { filterCards } from "@/lib/search/filterCards";
-import { parseQuery } from "@/lib/search/parseQuery";
+import {
+  applySearchFilters,
+  EMPTY_FILTERS,
+  type ApplyFilterContext,
+  type SearchFilters,
+} from "@/lib/search/filters";
 import type { DeckPoolCard } from "@/types/catalog";
 import type { ConstructionRule } from "@/types/construction";
 
@@ -21,32 +25,28 @@ export function isColorLegalForLeader(
   return card.colors.every((color) => leader.colors.includes(color));
 }
 
-export function filterBuilderCatalog(
+export function filterBuilderUniverse(
   cards: DeckPoolCard[],
   leader: DeckPoolCard,
-  query: string,
-  options: {
-    ownedOnly: boolean;
-    ownedIds: Set<string>;
-    labelsByCardId?: Record<string, string[]>;
-    rules?: ConstructionRule[];
-  },
+  rules: ConstructionRule[] = getConstructionRules(),
 ): DeckPoolCard[] {
-  const rules = options.rules ?? getConstructionRules();
-  const expr = parseQuery(query);
-
-  const universe = cards.filter((card) => {
+  return cards.filter((card) => {
     if (!isMainDeckCategory(card.category)) return false;
     if (!isColorLegalForLeader(card, leader)) return false;
     if (isForbiddenByLeader(card, leader.id, rules)) return false;
     return true;
   });
+}
 
-  return filterCards(universe, expr, {
-    ownedOnly: options.ownedOnly,
-    ownedIds: options.ownedIds,
-    labelsByCardId: options.labelsByCardId,
-  });
+export function filterBuilderCatalog(
+  cards: DeckPoolCard[],
+  leader: DeckPoolCard,
+  filters: SearchFilters = EMPTY_FILTERS,
+  options: ApplyFilterContext & { rules?: ConstructionRule[] } = {},
+): DeckPoolCard[] {
+  const rules = options.rules ?? getConstructionRules();
+  const universe = filterBuilderUniverse(cards, leader, rules);
+  return applySearchFilters(universe, filters, options);
 }
 
 export function canIncrementCopy(
@@ -57,6 +57,18 @@ export function canIncrementCopy(
   const limit = copyLimitForCard(cardId, rules);
   if (limit === null) return true;
   return currentInDeck < limit;
+}
+
+export function canAddToDeck(
+  cardId: string,
+  currentInDeck: number,
+  ownedQty: number,
+  ownedOnly: boolean,
+  rules: ConstructionRule[] = getConstructionRules(),
+): boolean {
+  if (!canIncrementCopy(cardId, currentInDeck, rules)) return false;
+  if (ownedOnly && currentInDeck >= ownedQty) return false;
+  return true;
 }
 
 export function stripIllegalCards(

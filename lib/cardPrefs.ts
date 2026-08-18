@@ -1,6 +1,10 @@
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, setDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import type { CardPref } from "@/types/cardPref";
+
+export function userCardPrefsRef(uid: string) {
+  return collection(getFirebaseDb(), "users", uid, "cardPrefs");
+}
 
 function cardPrefRef(uid: string, cardId: string) {
   return doc(getFirebaseDb(), "users", uid, "cardPrefs", cardId);

@@ -1,48 +1,108 @@
 "use client";
 
 import { useDeferredValue, useMemo, useState } from "react";
-import { PackagePlus, Search } from "lucide-react";
-import { AddStarterDeckModal } from "@/components/collection/AddStarterDeckModal";
-import { CollectionRow } from "@/components/collection/CollectionRow";
-import { Button } from "@/components/ui/Button";
+import Link from "next/link";
+import { SlidersHorizontal } from "lucide-react";
+import { CardDetailModal } from "@/components/cards/CardDetailModal";
+import { CardGrid } from "@/components/cards/CardGrid";
+import { FilterPanel } from "@/components/search/FilterPanel";
+import { NameSearchBar } from "@/components/search/NameSearchBar";
+import { SortSelect } from "@/components/search/SortSelect";
+import { useCardPrefs } from "@/contexts/CardPrefsContext";
 import { useCatalog } from "@/contexts/CatalogContext";
 import { useCollection } from "@/contexts/CollectionContext";
-import { searchCatalog } from "@/lib/search/simpleCatalogSearch";
+import { useCollectionWrite } from "@/hooks/useCollectionWrite";
+import {
+  EMPTY_FILTERS,
+  applySearchFilters,
+  type SearchFilters,
+} from "@/lib/search/filters";
+import { sortCards, type SortKey } from "@/lib/search/sortCards";
+import type { DeckPoolCard } from "@/types/catalog";
+
+const COLLECTION_SORTS: SortKey[] = [
+  "recent",
+  "newest",
+  "oldest",
+  "serial",
+  "name",
+  "category",
+  "cost",
+];
 
 export default function CollectionPage() {
   const { cards, loading: catalogLoading } = useCatalog();
   const { ownedMap, allLabels, ownedCardCount, loading: collectionLoading } =
     useCollection();
-  const [query, setQuery] = useState("");
-  const [starterOpen, setStarterOpen] = useState(false);
-  const deferredQuery = useDeferredValue(query);
+  const { preferredByCardId } = useCardPrefs();
+  const { saving, adjustQuantity, setLabels } = useCollectionWrite(false);
 
-  const results = useMemo(
-    () => searchCatalog(cards, deferredQuery),
-    [cards, deferredQuery],
-  );
+  const [filters, setFilters] = useState<SearchFilters>(EMPTY_FILTERS);
+  const [sort, setSort] = useState<SortKey>("recent");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<DeckPoolCard | null>(null);
 
-  const ownedRows = useMemo(() => {
-    return Object.values(ownedMap)
-      .filter((item) => item.quantity > 0)
-      .map((item) => {
-        const card = cards.find((row) => row.id === item.cardId);
-        return card ? { card, item } : null;
-      })
-      .filter((row): row is NonNullable<typeof row> => row !== null)
-      .sort((a, b) => a.card.name.localeCompare(b.card.name));
-  }, [ownedMap, cards]);
+  const deferredFilters = useDeferredValue(filters);
+
+  const ownedCards = useMemo(() => {
+    return cards.filter((card) => (ownedMap[card.id]?.quantity ?? 0) > 0);
+  }, [cards, ownedMap]);
+
+  const ownedIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const card of ownedCards) ids.add(card.id);
+    return ids;
+  }, [ownedCards]);
+
+  const quantityById = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const [cardId, item] of Object.entries(ownedMap)) {
+      map[cardId] = item.quantity;
+    }
+    return map;
+  }, [ownedMap]);
+
+  const labelsByCardId = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const [cardId, item] of Object.entries(ownedMap)) {
+      if (item.labels.length) map[cardId] = item.labels;
+    }
+    return map;
+  }, [ownedMap]);
+
+  const updatedAtById = useMemo(() => {
+    const map: Record<string, unknown> = {};
+    for (const [cardId, item] of Object.entries(ownedMap)) {
+      map[cardId] = item.updatedAtMs;
+    }
+    return map;
+  }, [ownedMap]);
+
+  const results = useMemo(() => {
+    const filtered = applySearchFilters(ownedCards, deferredFilters, {
+      ownedOnly: true,
+      ownedIds,
+      labelsByCardId,
+    });
+    return sortCards(filtered, sort, { updatedAtById });
+  }, [ownedCards, deferredFilters, ownedIds, labelsByCardId, sort, updatedAtById]);
+
+  const selectedOwned = selectedCard ? ownedMap[selectedCard.id] : undefined;
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
             Collection
           </h1>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            Search the full catalog and log what you own. Labels are overlapping
-            views — not separate binders.
+            Your binder — browse art, change copies, and pick scans. Add new
+            card numbers from{" "}
+            <Link href="/cards" className="text-[var(--accent-ocean)] hover:underline">
+              Cards
+            </Link>
+            .
           </p>
           {!collectionLoading ? (
             <p className="mt-2 text-sm tabular-nums text-[var(--ink-muted)]">
@@ -53,70 +113,111 @@ export default function CollectionPage() {
             </p>
           ) : null}
         </div>
-        <Button onClick={() => setStarterOpen(true)} className="shrink-0">
-          <PackagePlus className="h-4 w-4" />
-          Add starter deck
-        </Button>
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((open) => !open)}
+          className="inline-flex items-center gap-2 rounded-lg border border-[var(--bg-inset)] bg-[var(--bg-panel)] px-3 py-2 text-sm font-semibold lg:hidden"
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          Filters
+        </button>
       </div>
 
-      <label className="relative block">
-        <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" />
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search by name or id — e.g. OP08-072"
-          className="h-11 w-full rounded-xl border border-[var(--bg-inset)] bg-[var(--bg-panel)] pr-4 pl-10 text-[var(--ink-primary)] shadow-[var(--shadow-paper)] placeholder:text-[var(--ink-muted)] focus:border-[var(--accent-ocean)] focus:outline-none"
-        />
-      </label>
-
-      {deferredQuery.trim() ? (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-[var(--ink-muted)]">
-            {catalogLoading
-              ? "Searching…"
-              : `${results.length} result${results.length === 1 ? "" : "s"}`}
-          </h2>
-          {results.length === 0 && !catalogLoading ? (
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+        <div className="order-2 min-w-0 flex-1 lg:order-1">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-[var(--ink-muted)]">
-              No cards match that search.
+              {catalogLoading || collectionLoading
+                ? "Loading binder…"
+                : `${results.length.toLocaleString()} shown`}
             </p>
-          ) : null}
-          {results.map((card) => (
-            <CollectionRow
-              key={card.id}
-              card={card}
-              owned={ownedMap[card.id]}
-              labelSuggestions={allLabels}
+            <SortSelect
+              value={sort}
+              onChange={setSort}
+              options={COLLECTION_SORTS}
             />
-          ))}
-        </section>
-      ) : ownedRows.length > 0 ? (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-[var(--ink-muted)]">
-            Your binder
-          </h2>
-          {ownedRows.map(({ card, item }) => (
-            <CollectionRow
-              key={card.id}
-              card={card}
-              owned={item}
-              labelSuggestions={allLabels}
-            />
-          ))}
-        </section>
-      ) : (
-        <div className="poster-panel p-6 text-center">
-          <p className="poster-stamp mb-3">Empty binder</p>
-          <p className="text-sm text-[var(--ink-muted)]">
-            Search for a card above or add a starter deck to begin. The Builder
-            will default to cards you mark here.
-          </p>
-        </div>
-      )}
+          </div>
 
-      <AddStarterDeckModal
-        open={starterOpen}
-        onClose={() => setStarterOpen(false)}
+          {catalogLoading || collectionLoading ? (
+            <p className="text-sm text-[var(--ink-muted)]">Loading binder…</p>
+          ) : ownedCards.length === 0 ? (
+            <div className="poster-panel p-6 text-center">
+              <p className="poster-stamp mb-3">Empty binder</p>
+              <p className="text-sm text-[var(--ink-muted)]">
+                Search the catalog on Cards to add what you own, or add a
+                starter deck from there.
+              </p>
+              <Link
+                href="/cards"
+                className="mt-4 inline-block text-sm font-semibold text-[var(--accent-ocean)] hover:underline"
+              >
+                Go to Cards
+              </Link>
+            </div>
+          ) : (
+            <CardGrid
+              cards={results}
+              quantityById={quantityById}
+              preferredImages={preferredByCardId}
+              onSelect={setSelectedCard}
+              onQuantityDelta={(card, delta) => {
+                void adjustQuantity(card.id, delta);
+                const next = (quantityById[card.id] ?? 0) + delta;
+                if (next <= 0 && selectedCard?.id === card.id) {
+                  setSelectedCard(null);
+                }
+              }}
+              showStepper
+              quantitySaving={saving}
+            />
+          )}
+        </div>
+
+        <aside
+          className={[
+            "order-1 shrink-0 lg:sticky lg:top-4 lg:order-2 lg:w-64",
+            filtersOpen ? "block" : "hidden lg:block",
+          ].join(" ")}
+        >
+          <div className="poster-panel flex flex-col gap-4 p-4">
+            <NameSearchBar
+              value={filters.text}
+              onChange={(text) => setFilters((prev) => ({ ...prev, text }))}
+              placeholder="Search your binder"
+            />
+            <FilterPanel
+              layout="sidebar"
+              filters={filters}
+              onChange={setFilters}
+              cards={ownedCards}
+              labelOptions={allLabels}
+            />
+          </div>
+        </aside>
+      </div>
+
+      <CardDetailModal
+        card={selectedCard}
+        open={selectedCard !== null}
+        onClose={() => setSelectedCard(null)}
+        ownedQty={selectedOwned?.quantity ?? 0}
+        labels={selectedOwned?.labels ?? []}
+        labelSuggestions={allLabels}
+        preferredImageUrl={
+          selectedCard
+            ? preferredByCardId[selectedCard.id] ?? selectedCard.images[0]
+            : null
+        }
+        showCollectionEditor
+        onQuantityDelta={(delta) => {
+          if (!selectedCard) return;
+          const next = (selectedOwned?.quantity ?? 0) + delta;
+          void adjustQuantity(selectedCard.id, delta);
+          if (next <= 0) setSelectedCard(null);
+        }}
+        onLabelsChange={(nextLabels) => {
+          if (selectedCard) void setLabels(selectedCard.id, nextLabels);
+        }}
       />
     </div>
   );

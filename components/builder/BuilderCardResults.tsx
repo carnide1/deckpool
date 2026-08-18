@@ -22,13 +22,13 @@ function borderClass(card: DeckPoolCard): string {
 
 export function BuilderCardResults({
   cards,
-  ownedIds,
+  ownedQtyById,
   inDeckById,
   canAdd,
   onAdd,
 }: {
   cards: DeckPoolCard[];
-  ownedIds: Set<string>;
+  ownedQtyById: Record<string, number>;
   inDeckById: Record<string, number>;
   canAdd: (cardId: string) => boolean;
   onAdd: (card: DeckPoolCard) => void;
@@ -44,7 +44,7 @@ export function BuilderCardResults({
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
       {cards.map((card) => {
-        const owned = ownedIds.has(card.id);
+        const ownedQty = ownedQtyById[card.id] ?? 0;
         const inDeck = inDeckById[card.id] ?? 0;
         const addable = canAdd(card.id);
 
@@ -58,7 +58,7 @@ export function BuilderCardResults({
               "poster-panel overflow-hidden border-2 p-2 text-left transition-transform",
               addable
                 ? "hover:-translate-y-0.5 cursor-pointer"
-                : "cursor-not-allowed opacity-60",
+                : "cursor-not-allowed opacity-40 grayscale",
               borderClass(card),
             ].join(" ")}
           >
@@ -77,15 +77,19 @@ export function BuilderCardResults({
             <p className="truncate text-[0.625rem] text-[var(--ink-muted)]">
               {card.id}
             </p>
-            <div className="mt-1 flex flex-wrap gap-1 text-[0.625rem] font-semibold">
+            <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[0.625rem] font-semibold">
               <span className="tabular-nums text-[var(--ink-primary)]">
                 In deck: {inDeck}
               </span>
-              {owned ? (
-                <span className="text-[var(--badge-owned)]">Owned</span>
-              ) : (
-                <span className="text-[var(--badge-unowned)]">Unowned</span>
-              )}
+              <span
+                className={
+                  ownedQty > 0
+                    ? "tabular-nums text-[var(--badge-owned)]"
+                    : "tabular-nums text-[var(--badge-unowned)]"
+                }
+              >
+                Owned: {ownedQty}
+              </span>
             </div>
           </button>
         );
