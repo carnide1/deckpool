@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+:root {
+  --bg-page: #faf3e6;
+  --bg-panel: #fffdf8;
+  --bg-inset: #f0e4ce;
+  --ink-primary: #1a1208;
+  --ink-muted: #5c4a3a;
+  --accent-pirate-red: #d7000f;
+  --accent-ocean: #2e63a4;
+  --accent-sky: #60bff5;
+  --accent-gold: #ffce00;
+}
+
+@theme inline {
+  --color-background: var(--bg-page);
+  --color-foreground: var(--ink-primary);
+  --font-sans: var(--font-nunito);
+  --font-display: var(--font-fredoka);
+}
+
+body {
+  background: var(--bg-page);
+  color: var(--ink-primary);
+  font-family: var(--font-nunito), system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-fredoka), system-ui, sans-serif;
+}

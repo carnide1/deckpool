@@ -1,0 +1,47 @@
+[
+  {
+    "kind": "copyLimit",
+    "cardId": "OP01-075",
+    "max": null
+  },
+  {
+    "kind": "copyLimit",
+    "cardId": "OP08-072",
+    "max": null
+  },
+  {
+    "kind": "forbid",
+    "whenLeader": "OP12-001",
+    "match": {
+      "cost": {
+        "op": ">=",
+        "value": 5
+      }
+    }
+  },
+  {
+    "kind": "forbid",
+    "whenLeader": "OP13-079",
+    "match": {
+      "category": "Event",
+      "cost": {
+        "op": ">=",
+        "value": 2
+      }
+    }
+  },
+  {
+    "kind": "copyLimit",
+    "cardId": "OP16-042",
+    "max": null
+  },
+  {
+    "kind": "forbid",
+    "whenLeader": "P-117",
+    "match": {
+      "requireTypes": [
+        "East Blue"
+      ]
+    }
+  }
+]

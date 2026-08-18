@@ -1,0 +1,533 @@
+[
+  {
+    "id": "569001",
+    "rawTitle": "STARTER DECK -Straw Hat Crew- [ST-01]",
+    "prefix": "STARTER DECK",
+    "label": "ST-01",
+    "title": "Straw Hat Crew",
+    "series": "ST",
+    "setCode": "ST01"
+  },
+  {
+    "id": "569002",
+    "rawTitle": "STARTER DECK -Worst Generation- [ST-02]",
+    "prefix": "STARTER DECK",
+    "label": "ST-02",
+    "title": "Worst Generation",
+    "series": "ST",
+    "setCode": "ST02"
+  },
+  {
+    "id": "569003",
+    "rawTitle": "STARTER DECK -The Seven Warlords of the Sea- [ST-03]",
+    "prefix": "STARTER DECK",
+    "label": "ST-03",
+    "title": "The Seven Warlords of the Sea",
+    "series": "ST",
+    "setCode": "ST03"
+  },
+  {
+    "id": "569004",
+    "rawTitle": "STARTER DECK -Animal Kingdom Pirates- [ST-04]",
+    "prefix": "STARTER DECK",
+    "label": "ST-04",
+    "title": "Animal Kingdom Pirates",
+    "series": "ST",
+    "setCode": "ST04"
+  },
+  {
+    "id": "569005",
+    "rawTitle": "STARTER DECK -ONE PIECE FILM edition- [ST-05]",
+    "prefix": "STARTER DECK",
+    "label": "ST-05",
+    "title": "ONE PIECE FILM edition",
+    "series": "ST",
+    "setCode": "ST05"
+  },
+  {
+    "id": "569006",
+    "rawTitle": "STARTER DECK -Absolute Justice- [ST-06]",
+    "prefix": "STARTER DECK",
+    "label": "ST-06",
+    "title": "Absolute Justice",
+    "series": "ST",
+    "setCode": "ST06"
+  },
+  {
+    "id": "569007",
+    "rawTitle": "STARTER DECK -Big Mom Pirates- [ST-07]",
+    "prefix": "STARTER DECK",
+    "label": "ST-07",
+    "title": "Big Mom Pirates",
+    "series": "ST",
+    "setCode": "ST07"
+  },
+  {
+    "id": "569008",
+    "rawTitle": "STARTER DECK -Monkey D. Luffy- [ST-08]",
+    "prefix": "STARTER DECK",
+    "label": "ST-08",
+    "title": "Monkey D. Luffy",
+    "series": "ST",
+    "setCode": "ST08"
+  },
+  {
+    "id": "569009",
+    "rawTitle": "STARTER DECK -Yamato- [ST-09]",
+    "prefix": "STARTER DECK",
+    "label": "ST-09",
+    "title": "Yamato",
+    "series": "ST",
+    "setCode": "ST09"
+  },
+  {
+    "id": "569010",
+    "rawTitle": "ULTRA DECK -The Three Captains- [ST-10]",
+    "prefix": "ULTRA DECK",
+    "label": "ST-10",
+    "title": "The Three Captains",
+    "series": "ST",
+    "setCode": "ST10"
+  },
+  {
+    "id": "569011",
+    "rawTitle": "STARTER DECK -Uta- [ST-11]",
+    "prefix": "STARTER DECK",
+    "label": "ST-11",
+    "title": "Uta",
+    "series": "ST",
+    "setCode": "ST11"
+  },
+  {
+    "id": "569012",
+    "rawTitle": "STARTER DECK -Zoro and Sanji- [ST-12]",
+    "prefix": "STARTER DECK",
+    "label": "ST-12",
+    "title": "Zoro and Sanji",
+    "series": "ST",
+    "setCode": "ST12"
+  },
+  {
+    "id": "569013",
+    "rawTitle": "ULTRA DECK -The Three Brothers- [ST-13]",
+    "prefix": "ULTRA DECK",
+    "label": "ST-13",
+    "title": "The Three Brothers",
+    "series": "ST",
+    "setCode": "ST13"
+  },
+  {
+    "id": "569014",
+    "rawTitle": "STARTER DECK -3D2Y- [ST-14]",
+    "prefix": "STARTER DECK",
+    "label": "ST-14",
+    "title": "3D2Y",
+    "series": "ST",
+    "setCode": "ST14"
+  },
+  {
+    "id": "569015",
+    "rawTitle": "STARTER DECK -Red Edward.Newgate- [ST-15]",
+    "prefix": "STARTER DECK",
+    "label": "ST-15",
+    "title": "Red Edward.Newgate",
+    "series": "ST",
+    "setCode": "ST15"
+  },
+  {
+    "id": "569016",
+    "rawTitle": "STARTER DECK -Green Uta- [ST-16]",
+    "prefix": "STARTER DECK",
+    "label": "ST-16",
+    "title": "Green Uta",
+    "series": "ST",
+    "setCode": "ST16"
+  },
+  {
+    "id": "569017",
+    "rawTitle": "STARTER DECK -Blue Donquixote Doflamingo- [ST-17]",
+    "prefix": "STARTER DECK",
+    "label": "ST-17",
+    "title": "Blue Donquixote Doflamingo",
+    "series": "ST",
+    "setCode": "ST17"
+  },
+  {
+    "id": "569018",
+    "rawTitle": "STARTER DECK -Purple Monkey.D.Luffy- [ST-18]",
+    "prefix": "STARTER DECK",
+    "label": "ST-18",
+    "title": "Purple Monkey.D.Luffy",
+    "series": "ST",
+    "setCode": "ST18"
+  },
+  {
+    "id": "569019",
+    "rawTitle": "STARTER DECK -Black Smoker- [ST-19]",
+    "prefix": "STARTER DECK",
+    "label": "ST-19",
+    "title": "Black Smoker",
+    "series": "ST",
+    "setCode": "ST19"
+  },
+  {
+    "id": "569020",
+    "rawTitle": "STARTER DECK -Yellow Charlotte Katakuri- [ST-20]",
+    "prefix": "STARTER DECK",
+    "label": "ST-20",
+    "title": "Yellow Charlotte Katakuri",
+    "series": "ST",
+    "setCode": "ST20"
+  },
+  {
+    "id": "569021",
+    "rawTitle": "STARTER DECK EX -GEAR5- [ST-21]",
+    "prefix": "STARTER DECK EX",
+    "label": "ST-21",
+    "title": "GEAR5",
+    "series": "ST",
+    "setCode": "ST21"
+  },
+  {
+    "id": "569022",
+    "rawTitle": "STARTER DECK -Ace & Newgate- [ST-22]",
+    "prefix": "STARTER DECK",
+    "label": "ST-22",
+    "title": "Ace & Newgate",
+    "series": "ST",
+    "setCode": "ST22"
+  },
+  {
+    "id": "569023",
+    "rawTitle": "STARTER DECK -RED Shanks- [ST-23]",
+    "prefix": "STARTER DECK",
+    "label": "ST-23",
+    "title": "RED Shanks",
+    "series": "ST",
+    "setCode": "ST23"
+  },
+  {
+    "id": "569024",
+    "rawTitle": "STARTER DECK -GREEN Jewelry Bonney- [ST-24]",
+    "prefix": "STARTER DECK",
+    "label": "ST-24",
+    "title": "GREEN Jewelry Bonney",
+    "series": "ST",
+    "setCode": "ST24"
+  },
+  {
+    "id": "569025",
+    "rawTitle": "STARTER DECK -BLUE Buggy- [ST-25]",
+    "prefix": "STARTER DECK",
+    "label": "ST-25",
+    "title": "BLUE Buggy",
+    "series": "ST",
+    "setCode": "ST25"
+  },
+  {
+    "id": "569026",
+    "rawTitle": "STARTER DECK -PURPLE/BLACK Monkey.D.Luffy- [ST-26]",
+    "prefix": "STARTER DECK",
+    "label": "ST-26",
+    "title": "PURPLE/BLACK Monkey.D.Luffy",
+    "series": "ST",
+    "setCode": "ST26"
+  },
+  {
+    "id": "569027",
+    "rawTitle": "STARTER DECK -BLACK Marshall.D.Teach- [ST-27]",
+    "prefix": "STARTER DECK",
+    "label": "ST-27",
+    "title": "BLACK Marshall.D.Teach",
+    "series": "ST",
+    "setCode": "ST27"
+  },
+  {
+    "id": "569028",
+    "rawTitle": "STARTER DECK -GREEN/YELLOW Yamato- [ST-28]",
+    "prefix": "STARTER DECK",
+    "label": "ST-28",
+    "title": "GREEN/YELLOW Yamato",
+    "series": "ST",
+    "setCode": "ST28"
+  },
+  {
+    "id": "569029",
+    "rawTitle": "STARTER DECK -Egghead- [ST-29]",
+    "prefix": "STARTER DECK",
+    "label": "ST-29",
+    "title": "Egghead",
+    "series": "ST",
+    "setCode": "ST29"
+  },
+  {
+    "id": "569030",
+    "rawTitle": "STARTER DECK EX -Luffy & Ace- [ST-30]",
+    "prefix": "STARTER DECK EX",
+    "label": "ST-30",
+    "title": "Luffy & Ace",
+    "series": "ST",
+    "setCode": "ST30"
+  },
+  {
+    "id": "569031",
+    "rawTitle": "STARTER DECK -RED Monkey.D.Luffy- [ST-31]",
+    "prefix": "STARTER DECK",
+    "label": "ST-31",
+    "title": "RED Monkey.D.Luffy",
+    "series": "ST",
+    "setCode": "ST31"
+  },
+  {
+    "id": "569032",
+    "rawTitle": "STARTER DECK -GREEN Roronoa Zoro- [ST-32]",
+    "prefix": "STARTER DECK",
+    "label": "ST-32",
+    "title": "GREEN Roronoa Zoro",
+    "series": "ST",
+    "setCode": "ST32"
+  },
+  {
+    "id": "569033",
+    "rawTitle": "STARTER DECK -BLUE Kuzan- [ST-33]",
+    "prefix": "STARTER DECK",
+    "label": "ST-33",
+    "title": "BLUE Kuzan",
+    "series": "ST",
+    "setCode": "ST33"
+  },
+  {
+    "id": "569034",
+    "rawTitle": "STARTER DECK -PURPLE Charlotte Katakuri- [ST-34]",
+    "prefix": "STARTER DECK",
+    "label": "ST-34",
+    "title": "PURPLE Charlotte Katakuri",
+    "series": "ST",
+    "setCode": "ST34"
+  },
+  {
+    "id": "569035",
+    "rawTitle": "STARTER DECK -RED/BLACK Sabo- [ST-35]",
+    "prefix": "STARTER DECK",
+    "label": "ST-35",
+    "title": "RED/BLACK Sabo",
+    "series": "ST",
+    "setCode": "ST35"
+  },
+  {
+    "id": "569036",
+    "rawTitle": "STARTER DECK -YELLOW Eustass\"Captain\"Kid- [ST-36]",
+    "prefix": "STARTER DECK",
+    "label": "ST-36",
+    "title": "YELLOW Eustass\"Captain\"Kid",
+    "series": "ST",
+    "setCode": "ST36"
+  },
+  {
+    "id": "569101",
+    "rawTitle": "BOOSTER PACK -ROMANCE DAWN- [OP-01]",
+    "prefix": "BOOSTER PACK",
+    "label": "OP-01",
+    "title": "ROMANCE DAWN",
+    "series": "OP",
+    "setCode": "OP01"
+  },
+  {
+    "id": "569102",
+    "rawTitle": "BOOSTER PACK -PARAMOUNT WAR- [OP-02]",
+    "prefix": "BOOSTER PACK",
+    "label": "OP-02",
+    "title": "PARAMOUNT WAR",
+    "series": "OP",
+    "setCode": "OP02"
+  },
+  {
+    "id": "569103",
+    "rawTitle": "BOOSTER PACK -PILLARS OF STRENGTH- [OP-03]",
+    "prefix": "BOOSTER PACK",
+    "label": "OP-03",
+    "title": "PILLARS OF STRENGTH",
+    "series": "OP",
+    "setCode": "OP03"
+  },
+  {
+    "id": "569104",
+    "rawTitle": "BOOSTER PACK -KINGDOMS OF INTRIGUE- [OP-04]",
+    "prefix": "BOOSTER PACK",
+    "label": "OP-04",
+    "title": "KINGDOMS OF INTRIGUE",
+    "series": "OP",
+    "setCode": "OP04"
+  },
+  {
+    "id": "569105",
+    "rawTitle": "BOOSTER PACK -AWAKENING OF THE NEW ERA- [OP-05]",
+    "prefix": "BOOSTER PACK",
+    "label": "OP-05",
+    "title": "AWAKENING OF THE NEW ERA",
+    "series": "OP",
+    "setCode": "OP05"
+  },
+  {
+    "id": "569106",
+    "rawTitle": "BOOSTER PACK -WINGS OF THE CAPTAIN- [OP-06]",
+    "prefix": "BOOSTER PACK",
+    "label": "OP-06",
+    "title": "WINGS OF THE CAPTAIN",
+    "series": "OP",
+    "setCode": "OP06"
+  },
+  {
+    "id": "569107",
+    "rawTitle": "BOOSTER PACK -500 YEARS IN THE FUTURE- [OP-07]",
+    "prefix": "BOOSTER PACK",
+    "label": "OP-07",
+    "title": "500 YEARS IN THE FUTURE",
+    "series": "OP",
+    "setCode": "OP07"
+  },
+  {
+    "id": "569108",
+    "rawTitle": "BOOSTER PACK -TWO LEGENDS- [OP-08]",
+    "prefix": "BOOSTER PACK",
+    "label": "OP-08",
+    "title": "TWO LEGENDS",
+    "series": "OP",
+    "setCode": "OP08"
+  },
+  {
+    "id": "569109",
+    "rawTitle": "BOOSTER PACK -EMPERORS IN THE NEW WORLD- [OP-09]",
+    "prefix": "BOOSTER PACK",
+    "label": "OP-09",
+    "title": "EMPERORS IN THE NEW WORLD",
+    "series": "OP",
+    "setCode": "OP09"
+  },
+  {
+    "id": "569110",
+    "rawTitle": "BOOSTER PACK -ROYAL BLOOD- [OP-10]",
+    "prefix": "BOOSTER PACK",
+    "label": "OP-10",
+    "title": "ROYAL BLOOD",
+    "series": "OP",
+    "setCode": "OP10"
+  },
+  {
+    "id": "569111",
+    "rawTitle": "BOOSTER PACK -A FIST OF DIVINE SPEED- [OP-11]",
+    "prefix": "BOOSTER PACK",
+    "label": "OP-11",
+    "title": "A FIST OF DIVINE SPEED",
+    "series": "OP",
+    "setCode": "OP11"
+  },
+  {
+    "id": "569112",
+    "rawTitle": "BOOSTER PACK -LEGACY OF THE MASTER- [OP-12]",
+    "prefix": "BOOSTER PACK",
+    "label": "OP-12",
+    "title": "LEGACY OF THE MASTER",
+    "series": "OP",
+    "setCode": "OP12"
+  },
+  {
+    "id": "569113",
+    "rawTitle": "BOOSTER PACK -CARRYING ON HIS WILL- [OP-13]",
+    "prefix": "BOOSTER PACK",
+    "label": "OP-13",
+    "title": "CARRYING ON HIS WILL",
+    "series": "OP",
+    "setCode": "OP13"
+  },
+  {
+    "id": "569114",
+    "rawTitle": "BOOSTER PACK -THE AZURE SEA’S SEVEN- [OP14-EB04]",
+    "prefix": "BOOSTER PACK",
+    "label": "OP14-EB04",
+    "title": "THE AZURE SEA’S SEVEN",
+    "series": "OP",
+    "setCode": "OP14EB04"
+  },
+  {
+    "id": "569115",
+    "rawTitle": "BOOSTER PACK [OP15-EB04]",
+    "prefix": null,
+    "label": "OP15-EB04",
+    "title": "BOOSTER PACK",
+    "series": "OP15EB",
+    "setCode": "OP15EB04"
+  },
+  {
+    "id": "569116",
+    "rawTitle": "BOOSTER PACK -THE TIME OF BATTLE- [OP-16]",
+    "prefix": "BOOSTER PACK",
+    "label": "OP-16",
+    "title": "THE TIME OF BATTLE",
+    "series": "OP",
+    "setCode": "OP16"
+  },
+  {
+    "id": "569201",
+    "rawTitle": "EXTRA BOOSTER -MEMORIAL COLLECTION- [EB-01]",
+    "prefix": "EXTRA BOOSTER",
+    "label": "EB-01",
+    "title": "MEMORIAL COLLECTION",
+    "series": "EB",
+    "setCode": "EB01"
+  },
+  {
+    "id": "569202",
+    "rawTitle": "EXTRA BOOSTER -Anime 25th Collection- [EB-02]",
+    "prefix": "EXTRA BOOSTER",
+    "label": "EB-02",
+    "title": "Anime 25th Collection",
+    "series": "EB",
+    "setCode": "EB02"
+  },
+  {
+    "id": "569203",
+    "rawTitle": "EXTRA BOOSTER -ONE PIECE HEROINES EDITION- [EB-03]",
+    "prefix": "EXTRA BOOSTER",
+    "label": "EB-03",
+    "title": "ONE PIECE HEROINES EDITION",
+    "series": "EB",
+    "setCode": "EB03"
+  },
+  {
+    "id": "569301",
+    "rawTitle": "PREMIUM BOOSTER -ONE PIECE CARD THE BEST- [PRB-01]",
+    "prefix": "PREMIUM BOOSTER",
+    "label": "PRB-01",
+    "title": "ONE PIECE CARD THE BEST",
+    "series": "PRB",
+    "setCode": "PRB01"
+  },
+  {
+    "id": "569302",
+    "rawTitle": "PREMIUM BOOSTER -ONE PIECE CARD THE BEST vol.2- [PRB-02]",
+    "prefix": "PREMIUM BOOSTER",
+    "label": "PRB-02",
+    "title": "ONE PIECE CARD THE BEST vol.2",
+    "series": "PRB",
+    "setCode": "PRB02"
+  },
+  {
+    "id": "569801",
+    "rawTitle": "Other Product Card",
+    "prefix": null,
+    "label": null,
+    "title": "Other Product Card",
+    "series": "P",
+    "setCode": "P"
+  },
+  {
+    "id": "569901",
+    "rawTitle": "Promotion card",
+    "prefix": null,
+    "label": null,
+    "title": "Promotion card",
+    "series": "P",
+    "setCode": "P"
+  }
+]

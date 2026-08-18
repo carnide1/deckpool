@@ -1,0 +1,254 @@
+[
+  {
+    "id": "ST01",
+    "packId": "569001",
+    "name": "Starter Deck — Straw Hat Crew",
+    "leaderId": "ST01-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST02",
+    "packId": "569002",
+    "name": "Starter Deck — Worst Generation",
+    "leaderId": "ST02-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST03",
+    "packId": "569003",
+    "name": "Starter Deck — The Seven Warlords of the Sea",
+    "leaderId": "ST03-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST04",
+    "packId": "569004",
+    "name": "Starter Deck — Animal Kingdom Pirates",
+    "leaderId": "ST04-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST05",
+    "packId": "569005",
+    "name": "Starter Deck — ONE PIECE FILM edition",
+    "leaderId": "ST05-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST06",
+    "packId": "569006",
+    "name": "Starter Deck — Absolute Justice",
+    "leaderId": "ST06-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST07",
+    "packId": "569007",
+    "name": "Starter Deck — Big Mom Pirates",
+    "leaderId": "ST07-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST08",
+    "packId": "569008",
+    "name": "Starter Deck — Monkey D. Luffy",
+    "leaderId": "ST08-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST09",
+    "packId": "569009",
+    "name": "Starter Deck — Yamato",
+    "leaderId": "ST09-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST10",
+    "packId": "569010",
+    "name": "Ultra Deck — The Three Captains",
+    "leaderId": "ST10-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST11",
+    "packId": "569011",
+    "name": "Starter Deck — Uta",
+    "leaderId": "ST11-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST12",
+    "packId": "569012",
+    "name": "Starter Deck — Zoro and Sanji",
+    "leaderId": "ST12-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST13",
+    "packId": "569013",
+    "name": "Ultra Deck — The Three Brothers",
+    "leaderId": "ST13-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST14",
+    "packId": "569014",
+    "name": "Starter Deck — 3D2Y",
+    "leaderId": "ST14-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST15",
+    "packId": "569015",
+    "name": "Starter Deck — Red Edward.Newgate",
+    "leaderId": "OP02-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST16",
+    "packId": "569016",
+    "name": "Starter Deck — Green Uta",
+    "leaderId": "ST11-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST17",
+    "packId": "569017",
+    "name": "Starter Deck — Blue Donquixote Doflamingo",
+    "leaderId": "OP01-060",
+    "type": "starter"
+  },
+  {
+    "id": "ST18",
+    "packId": "569018",
+    "name": "Starter Deck — Purple Monkey.D.Luffy",
+    "leaderId": "OP05-060",
+    "type": "starter"
+  },
+  {
+    "id": "ST19",
+    "packId": "569019",
+    "name": "Starter Deck — Black Smoker",
+    "leaderId": "OP02-093",
+    "type": "starter"
+  },
+  {
+    "id": "ST20",
+    "packId": "569020",
+    "name": "Starter Deck — Yellow Charlotte Katakuri",
+    "leaderId": "OP03-099",
+    "type": "starter"
+  },
+  {
+    "id": "ST21",
+    "packId": "569021",
+    "name": "Starter Deck EX — GEAR5",
+    "leaderId": "ST21-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST22",
+    "packId": "569022",
+    "name": "Starter Deck — Ace & Newgate",
+    "leaderId": "ST22-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST23",
+    "packId": "569023",
+    "name": "Starter Deck — RED Shanks",
+    "leaderId": "OP09-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST24",
+    "packId": "569024",
+    "name": "Starter Deck — GREEN Jewelry Bonney",
+    "leaderId": "OP07-019",
+    "type": "starter"
+  },
+  {
+    "id": "ST25",
+    "packId": "569025",
+    "name": "Starter Deck — BLUE Buggy",
+    "leaderId": "OP09-042",
+    "type": "starter"
+  },
+  {
+    "id": "ST26",
+    "packId": "569026",
+    "name": "Starter Deck — PURPLE/BLACK Monkey.D.Luffy",
+    "leaderId": "OP09-061",
+    "type": "starter"
+  },
+  {
+    "id": "ST27",
+    "packId": "569027",
+    "name": "Starter Deck — BLACK Marshall.D.Teach",
+    "leaderId": "OP09-081",
+    "type": "starter"
+  },
+  {
+    "id": "ST28",
+    "packId": "569028",
+    "name": "Starter Deck — GREEN/YELLOW Yamato",
+    "leaderId": "OP06-022",
+    "type": "starter"
+  },
+  {
+    "id": "ST29",
+    "packId": "569029",
+    "name": "Starter Deck — Egghead",
+    "leaderId": "ST29-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST30",
+    "packId": "569030",
+    "name": "Starter Deck EX — Luffy & Ace",
+    "leaderId": "ST30-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST31",
+    "packId": "569031",
+    "name": "Starter Deck — RED Monkey.D.Luffy",
+    "leaderId": "ST21-001",
+    "type": "starter"
+  },
+  {
+    "id": "ST32",
+    "packId": "569032",
+    "name": "Starter Deck — GREEN Roronoa Zoro",
+    "leaderId": "OP12-020",
+    "type": "starter"
+  },
+  {
+    "id": "ST33",
+    "packId": "569033",
+    "name": "Starter Deck — BLUE Kuzan",
+    "leaderId": "OP12-040",
+    "type": "starter"
+  },
+  {
+    "id": "ST34",
+    "packId": "569034",
+    "name": "Starter Deck — PURPLE Charlotte Katakuri",
+    "leaderId": "OP11-062",
+    "type": "starter"
+  },
+  {
+    "id": "ST35",
+    "packId": "569035",
+    "name": "Starter Deck — RED/BLACK Sabo",
+    "leaderId": "OP13-004",
+    "type": "starter"
+  },
+  {
+    "id": "ST36",
+    "packId": "569036",
+    "name": "Starter Deck — YELLOW Eustass\"Captain\"Kid",
+    "leaderId": "OP10-099",
+    "type": "starter"
+  }
+]

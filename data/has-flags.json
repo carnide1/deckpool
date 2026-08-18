@@ -1,0 +1,11 @@
+{
+  "flags": [
+    "banish",
+    "blocker",
+    "counter",
+    "double-attack",
+    "effect",
+    "rush",
+    "trigger"
+  ]
+}
