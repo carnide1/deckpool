@@ -10,6 +10,7 @@ export function FacetMultiSelect({
   onChange,
   emptyMessage = "No matches",
   renderOption,
+  optionLabel,
   fullWidth = false,
 }: {
   label: string;
@@ -18,6 +19,7 @@ export function FacetMultiSelect({
   onChange: (next: string[]) => void;
   emptyMessage?: string;
   renderOption?: (option: string) => ReactNode;
+  optionLabel?: (option: string) => string;
   fullWidth?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -36,9 +38,13 @@ export function FacetMultiSelect({
     return () => window.removeEventListener("mousedown", onPointer);
   }, [open]);
 
-  const filtered = options.filter((option) =>
-    option.toLowerCase().includes(query.trim().toLowerCase()),
-  );
+  const filtered = options.filter((option) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    if (option.toLowerCase().includes(q)) return true;
+    const named = optionLabel?.(option) ?? "";
+    return named.toLowerCase().includes(q);
+  });
 
   const toggle = (option: string) => {
     onChange(

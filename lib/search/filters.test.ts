@@ -129,20 +129,21 @@ describe("applySearchFilters", () => {
     );
   });
 
-  it("ANDs selected labels", () => {
+  it("ORs selected decks", () => {
     const results = applySearchFilters(
       cards,
-      filters({ labels: ["core", "trade"] }),
+      filters({ deckIds: ["d1", "d2"] }),
       {
-        labelsByCardId: {
-          "ST07-002": ["core", "trade"],
-          "ST07-003": ["core"],
+        deckIdsByCardId: {
+          "ST07-002": ["d1"],
+          "OP03-114": ["d2"],
+          "ST07-003": ["d1", "d2"],
         },
       },
     );
     assert.deepEqual(
-      results.map((card) => card.id),
-      ["ST07-002"],
+      results.map((card) => card.id).sort(),
+      ["OP03-114", "ST07-002", "ST07-003"],
     );
   });
 

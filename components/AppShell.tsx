@@ -66,8 +66,8 @@ function NavLink({
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-[var(--bg-page)] md:flex-row">
-      <header className="border-b border-[var(--bg-inset)] bg-[var(--bg-panel)] px-4 py-3 shadow-[var(--shadow-paper)] md:hidden">
+    <div className="flex h-dvh max-h-dvh flex-col overflow-hidden bg-[var(--bg-page)] md:flex-row">
+      <header className="shrink-0 border-b border-[var(--bg-inset)] bg-[var(--bg-panel)] px-4 py-3 shadow-[var(--shadow-paper)] md:hidden">
         <span className="font-display text-lg font-bold text-[var(--accent-pirate-red)]">
           DeckPool
         </span>
@@ -90,9 +90,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+        <main className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
 
-        <nav className="flex justify-around border-t border-[var(--bg-inset)] bg-[var(--bg-panel)] px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-[var(--shadow-paper)] md:hidden">
+        <nav className="flex shrink-0 justify-around border-t border-[var(--bg-inset)] bg-[var(--bg-panel)] px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-[var(--shadow-paper)] md:hidden">
           {NAV.map((item) => (
             <NavLink key={item.href} layout="bottom" {...item} />
           ))}

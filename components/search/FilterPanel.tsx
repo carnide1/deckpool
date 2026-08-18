@@ -31,6 +31,7 @@ export function FilterPanel({
   onChange,
   cards,
   labelOptions = [],
+  deckOptions,
   allowedColors,
   allowedCategories,
   layout = "inline",
@@ -39,11 +40,17 @@ export function FilterPanel({
   onChange: (next: SearchFilters) => void;
   cards: DeckPoolCard[];
   labelOptions?: string[];
+  deckOptions?: { id: string; name: string }[];
   allowedColors?: OptcgColor[];
   allowedCategories?: CardCategory[];
   layout?: "inline" | "sidebar";
 }) {
   const options = useMemo(() => uniqueFilterOptions(cards), [cards]);
+  const deckNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const deck of deckOptions ?? []) map[deck.id] = deck.name;
+    return map;
+  }, [deckOptions]);
   const colors = allowedColors ?? OPTCG_COLORS;
   const categories = allowedCategories ?? CARD_CATEGORIES;
   const stacked = layout === "sidebar";
@@ -135,6 +142,18 @@ export function FilterPanel({
         selected={filters.sets}
         onChange={(sets) => patch({ sets })}
       />
+      {deckOptions ? (
+        <FacetMultiSelect
+          label="Decks"
+          fullWidth={stacked}
+          options={deckOptions.map((deck) => deck.id)}
+          selected={filters.deckIds}
+          onChange={(deckIds) => patch({ deckIds })}
+          optionLabel={(id) => deckNameById[id] ?? id}
+          renderOption={(id) => deckNameById[id] ?? id}
+          emptyMessage="None"
+        />
+      ) : null}
       <FacetMultiSelect
         label="Labels"
         fullWidth={stacked}

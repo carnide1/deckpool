@@ -29,6 +29,7 @@ export type SearchFilters = {
   sets: string[];
   has: string[];
   labels: string[];
+  deckIds: string[];
 };
 
 export const EMPTY_FILTERS: SearchFilters = {
@@ -42,6 +43,7 @@ export const EMPTY_FILTERS: SearchFilters = {
   sets: [],
   has: [],
   labels: [],
+  deckIds: [],
 };
 
 export function cloneFilters(filters: SearchFilters): SearchFilters {
@@ -56,6 +58,7 @@ export function cloneFilters(filters: SearchFilters): SearchFilters {
     sets: [...filters.sets],
     has: [...filters.has],
     labels: [...filters.labels],
+    deckIds: [...filters.deckIds],
   };
 }
 
@@ -70,7 +73,8 @@ export function hasActiveFilters(filters: SearchFilters): boolean {
     filters.attributes.length > 0 ||
     filters.sets.length > 0 ||
     filters.has.length > 0 ||
-    filters.labels.length > 0
+    filters.labels.length > 0 ||
+    filters.deckIds.length > 0
   );
 }
 
@@ -136,6 +140,7 @@ export type ApplyFilterContext = {
   ownedOnly?: boolean;
   ownedIds?: Set<string>;
   labelsByCardId?: Record<string, string[]>;
+  deckIdsByCardId?: Record<string, string[]>;
 };
 
 export function applySearchFilters(
@@ -193,6 +198,13 @@ export function applySearchFilters(
       if (!includesAll(labels, filters.labels)) return false;
     }
 
+    if (filters.deckIds.length > 0) {
+      const memberOf = ctx.deckIdsByCardId?.[card.id] ?? [];
+      if (!filters.deckIds.some((deckId) => memberOf.includes(deckId))) {
+        return false;
+      }
+    }
+
     return true;
   });
 }
@@ -243,6 +255,7 @@ export function filtersFromSearchParams(params: URLSearchParams): SearchFilters 
     sets: readList(params, "set"),
     has: readList(params, "has"),
     labels: readList(params, "label"),
+    deckIds: readList(params, "deck"),
   };
 }
 
@@ -270,6 +283,7 @@ export function writeFiltersToSearchParams(
   writeList(params, "set", filters.sets);
   writeList(params, "has", filters.has);
   writeList(params, "label", filters.labels);
+  writeList(params, "deck", filters.deckIds);
 }
 
 export function filtersEqual(a: SearchFilters, b: SearchFilters): boolean {

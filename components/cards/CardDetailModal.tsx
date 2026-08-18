@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import toast from "react-hot-toast";
 import { CardImage } from "@/components/CardImage";
 import { LabelEditor } from "@/components/collection/LabelEditor";
@@ -17,6 +18,7 @@ export function CardDetailModal({
   ownedQty = 0,
   labels = [],
   labelSuggestions = [],
+  inDecks = [],
   preferredImageUrl,
   showCollectionEditor = false,
   onQuantityDelta,
@@ -29,6 +31,7 @@ export function CardDetailModal({
   ownedQty?: number;
   labels?: string[];
   labelSuggestions?: string[];
+  inDecks?: { id: string; name: string }[];
   preferredImageUrl?: string | null;
   showCollectionEditor?: boolean;
   onQuantityDelta?: (delta: number) => void;
@@ -107,6 +110,25 @@ export function CardDetailModal({
               suggestions={labelSuggestions}
               onChange={onLabelsChange}
             />
+          </div>
+        ) : null}
+
+        {inDecks.length > 0 ? (
+          <div>
+            <p className="mb-2 text-sm font-medium text-[var(--ink-primary)]">
+              In decks
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {inDecks.map((deck) => (
+                <Link
+                  key={deck.id}
+                  href={`/decks/${deck.id}`}
+                  className="rounded-full bg-[var(--bg-inset)] px-2 py-0.5 text-xs font-medium text-[var(--ink-primary)] hover:text-[var(--accent-ocean)]"
+                >
+                  {deck.name}
+                </Link>
+              ))}
+            </div>
           </div>
         ) : null}
 
