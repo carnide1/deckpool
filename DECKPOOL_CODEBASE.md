@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-08-18  
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `d659bed` — “Add a Wanted board so extra copies to buy stay a shopping list instead of a fifth tab.”)  
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `06431e9` — “Pin a main variation, add list stats, and cap builder card art on mobile.”)  
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
