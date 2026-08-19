@@ -5,6 +5,8 @@ import { Pencil, Trash2 } from "lucide-react";
 import { CardImage } from "@/components/CardImage";
 import { ColorPills } from "@/components/decks/ColorPills";
 import { DeckStatusBadges } from "@/components/decks/DeckStatusBadges";
+import { useCardPrefs } from "@/contexts/CardPrefsContext";
+import { imageForCard } from "@/lib/cardPrefs";
 import type { DeckPoolCard } from "@/types/catalog";
 import type { Deck } from "@/types/deck";
 
@@ -30,6 +32,8 @@ export function DeckRow({
   onRename: () => void;
   onDelete: () => void;
 }) {
+  const { preferredByCardId } = useCardPrefs();
+  const leaderImage = leader ? imageForCard(leader, preferredByCardId) : null;
   const borderClass =
     leader?.colors[0] && COLOR_BORDER[leader.colors[0]]
       ? COLOR_BORDER[leader.colors[0]]
@@ -46,10 +50,10 @@ export function DeckRow({
             borderClass,
           ].join(" ")}
         >
-          {leader?.images[0] ? (
+          {leaderImage ? (
             <CardImage
-              src={leader.images[0]}
-              alt={leader.name}
+              src={leaderImage}
+              alt={leader?.name ?? deck.name}
               width={72}
               height={100}
             />

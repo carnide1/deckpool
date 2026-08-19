@@ -22,6 +22,7 @@ import { useDecks } from "@/contexts/DecksContext";
 import { useWanted } from "@/contexts/WantedContext";
 import { useCollectionWrite } from "@/hooks/useCollectionWrite";
 import { useWantedWrite } from "@/hooks/useWantedWrite";
+import { imageForCard } from "@/lib/cardPrefs";
 import {
   deckIdsByCardIdFromIndex,
   indexDeckMembership,
@@ -292,9 +293,7 @@ export function WantedBoard() {
         labelSuggestions={allLabels}
         inDecks={selectedDecks}
         preferredImageUrl={
-          selectedCard
-            ? preferredByCardId[selectedCard.id] ?? selectedCard.images[0]
-            : null
+          selectedCard ? imageForCard(selectedCard, preferredByCardId) : null
         }
         showCollectionEditor
         onQuantityDelta={(delta) => {

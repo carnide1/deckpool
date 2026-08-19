@@ -26,6 +26,7 @@ import { validateVariation } from "@/lib/legality";
 import { sortCards } from "@/lib/search/sortCards";
 import { computeVariationStats } from "@/lib/variationStats";
 import { resolveFavoriteVariationId } from "@/lib/variations";
+import { imageForCard } from "@/lib/cardPrefs";
 import type { CardCategory, DeckPoolCard } from "@/types/catalog";
 import type { Deck } from "@/types/deck";
 
@@ -47,6 +48,7 @@ export function DeckView({ deck }: { deck: Deck }) {
     variations,
   );
   const leader = cardsById.get(deck.leaderId) ?? null;
+  const leaderImage = leader ? imageForCard(leader, preferredByCardId) : null;
   const constructionRules = useMemo(() => getConstructionRules(), []);
 
   const [activeVariationId, setActiveVariationId] = useState("");
@@ -170,9 +172,9 @@ export function DeckView({ deck }: { deck: Deck }) {
 
       <div className="poster-panel p-4">
         <div className="flex flex-wrap items-start gap-4">
-          {leader.images[0] ? (
+          {leaderImage ? (
             <CardImage
-              src={preferredByCardId[leader.id] ?? leader.images[0]}
+              src={leaderImage}
               alt={leader.name}
               width={96}
               height={134}
@@ -243,9 +245,7 @@ export function DeckView({ deck }: { deck: Deck }) {
           if (selectedCard) void adjustWanted(selectedCard.id, delta);
         }}
         preferredImageUrl={
-          selectedCard
-            ? preferredByCardId[selectedCard.id] ?? selectedCard.images[0]
-            : null
+          selectedCard ? imageForCard(selectedCard, preferredByCardId) : null
         }
       />
     </div>

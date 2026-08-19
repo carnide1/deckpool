@@ -2,6 +2,8 @@
 
 import { CardImage } from "@/components/CardImage";
 import { WantedStamp } from "@/components/wanted/WantedStamp";
+import { useCardPrefs } from "@/contexts/CardPrefsContext";
+import { imageForCard } from "@/lib/cardPrefs";
 import type { DeckPoolCard } from "@/types/catalog";
 
 const COLOR_CLASS: Record<string, string> = {
@@ -40,6 +42,7 @@ export function BuilderCardResults({
   onToggleWanted: (card: DeckPoolCard) => void;
   wantedSaving?: boolean;
 }) {
+  const { preferredByCardId } = useCardPrefs();
   if (cards.length === 0) {
     return (
       <p className="text-sm text-[var(--ink-muted)]">
@@ -55,6 +58,7 @@ export function BuilderCardResults({
         const inDeck = inDeckById[card.id] ?? 0;
         const wantedQty = wantedQtyById[card.id] ?? 0;
         const addable = canAdd(card.id);
+        const image = imageForCard(card, preferredByCardId);
 
         return (
           <article
@@ -76,9 +80,9 @@ export function BuilderCardResults({
                     : "cursor-not-allowed opacity-40 grayscale",
                 ].join(" ")}
               >
-                {card.images[0] ? (
+                {image ? (
                   <CardImage
-                    src={card.images[0]}
+                    src={image}
                     alt={card.name}
                     width={120}
                     height={168}

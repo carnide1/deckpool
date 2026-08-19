@@ -8,6 +8,8 @@ import { ColorPills } from "@/components/decks/ColorPills";
 import { Modal, ModalActions } from "@/components/ui/Modal";
 import { TextInput } from "@/components/ui/TextInput";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCardPrefs } from "@/contexts/CardPrefsContext";
+import { imageForCard } from "@/lib/cardPrefs";
 import { createDeck } from "@/lib/decks";
 import { searchCatalog } from "@/lib/search/simpleCatalogSearch";
 import type { DeckPoolCard } from "@/types/catalog";
@@ -23,6 +25,7 @@ export function CreateDeckModal({
 }) {
   const router = useRouter();
   const { user } = useAuth();
+  const { preferredByCardId } = useCardPrefs();
   const [query, setQuery] = useState("");
   const [selectedLeaderId, setSelectedLeaderId] = useState("");
   const [name, setName] = useState("");
@@ -109,6 +112,7 @@ export function CreateDeckModal({
             <div className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
               {filteredLeaders.map((leader) => {
                 const selected = leader.id === selectedLeaderId;
+                const image = imageForCard(leader, preferredByCardId);
                 return (
                   <button
                     key={leader.id}
@@ -124,9 +128,9 @@ export function CreateDeckModal({
                         : "border-[var(--bg-inset)] hover:border-[var(--accent-ocean)]",
                     ].join(" ")}
                   >
-                    {leader.images[0] ? (
+                    {image ? (
                       <CardImage
-                        src={leader.images[0]}
+                        src={image}
                         alt={leader.name}
                         width={96}
                         height={134}

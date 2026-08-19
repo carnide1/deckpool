@@ -3,6 +3,7 @@
 import { CardImage } from "@/components/CardImage";
 import { QuantityStepper } from "@/components/ui/QuantityStepper";
 import { WantedStamp } from "@/components/wanted/WantedStamp";
+import { imageForCard } from "@/lib/cardPrefs";
 import type { DeckPoolCard } from "@/types/catalog";
 import type { ReactNode } from "react";
 
@@ -63,7 +64,7 @@ export function CardGrid({
       {cards.map((card) => {
         const qty = quantityById[card.id] ?? 0;
         const wantedQty = wantedQtyById?.[card.id] ?? 0;
-        const image = preferredImages[card.id] ?? card.images[0] ?? null;
+        const image = imageForCard(card, preferredImages);
         return (
           <article
             key={card.id}

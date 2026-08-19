@@ -221,13 +221,14 @@ users/{uid}                          displayName, email, createdAt
 - Create: search **owned Leaders only**, name the deck, create variation `Main` empty, pin it as the favorite.
 - Rename / delete with confirm. Delete also deletes variations.
 - Legal / Owned badges on each row come from the **favorite** variation only (not “any variation”).
+- Leader art on the row uses the account’s preferred print when one is saved.
 
 ### Builder (`/decks/[id]?mode=edit`)
 
 - Search defaults to **owned only** (toggle off to add unowned copies).
 - Hard filters always: Leader colors (card colors must be a subset of Leader colors), Leader forbid rules, no Leaders/Don in the 50.
 - Click a result to add a copy. Cap is construction copy limit (usually 4), **not** owned qty. Minus on the list to remove.
-- Result tiles are a dense 3-column grid on mobile, images capped at 120px wide (`h-auto w-full`) so they do not blow up versus View.
+- Result tiles are a dense 3-column grid on mobile, images capped at 120px wide (`h-auto w-full`) so they do not blow up versus View. Leader portrait and result tiles use preferred art.
 - WANTED stamp on results does **not** add to the 50. **Post all unowned** raises Wanted to `in this variation − owned` for the active variation (does not stack on top of an existing bounty).
 - Manifest lines show id, category, cost, and power, plus in-deck / owned. Status panel: Legal/Illegal, Owned/Unowned, reason bullets for the **active tab**.
 - List summary (active tab): average cost, average power, Character/Event/Stage counts, blocker/rush/banish/double-attack/trigger counts, counter 1000 vs 2000.
@@ -239,7 +240,7 @@ users/{uid}                          displayName, email, createdAt
 
 - Read-only look at the active variation. Opens on the favorite. Switch to Edit to brew.
 - Same tab order, star-to-pin, and list summary as Edit. Legal/Owned follow the tab you are looking at.
-- WANTED stamp and bounty stepper still work from this page.
+- Leader portrait uses preferred art. WANTED stamp and bounty stepper still work from this page.
 
 ### Profile
 
@@ -296,7 +297,7 @@ Do **not** call a language model to decide legality.
 | `scripts/ingest-catalog.ts` | From punk-records English JSON |
 | `scripts/ingest-products.ts` | From One Piece Player HTML, with `scripts/product-urls.json` and `scripts/product-overrides/` |
 
-Card shape: `types/catalog.ts` (`DeckPoolCard`). `cost` on a Leader is Life. `images[]` is every known scan for that number; user picks one per account in `cardPrefs`.
+Card shape: `types/catalog.ts` (`DeckPoolCard`). `cost` on a Leader is Life. `images[]` is every known scan for that number; user picks one per account in `cardPrefs`. Grids, deck rows, builder portraits, and Leader pickers all use `imageForCard` so a saved print wins over the first scan (often a SAMPLE stamp). If that URL is gone after ingest, the first scan is used.
 
 When a new set releases: pull punk-records, run both ingest scripts, commit `data/`, then ship. Do not guess starter counts as “1 of each id.”
 
@@ -309,7 +310,7 @@ app/                    routes + layouts + globals.css
 components/             UI by area: auth, builder, cards, collection, decks, profile, search, ui, wanted
 contexts/               Auth, UserProfile, Catalog, Collection, Wanted, CardPrefs, Decks
 hooks/                  useCollectionWrite, useWantedWrite
-lib/                    firebase, users, collection, wanted, variations, decks, legality, builder, search, tests
+lib/                    firebase, users, collection, wanted, cardPrefs, variations, decks, legality, builder, search, tests
 types/                  catalog, collection, wanted, deck, user, cardPref, construction, product
 data/                   committed snapshots
 scripts/                ingest + product URL/override JSON
@@ -327,6 +328,7 @@ Key libraries:
 | `lib/users.ts` | Signup doc, `ensureUserDoc`, display name, owned-count for routing |
 | `lib/collection.ts` | Qty set/adjust, label merge, batch starter add |
 | `lib/wanted.ts` | Bounty qty, catch transaction, raise gaps from a variation |
+| `lib/cardPrefs.ts` | Preferred art read/write; `imageForCard` picks saved art or the first catalog scan |
 | `lib/variations.ts` | Favorite resolve + tab order (resolved favorite first, then recency) |
 | `lib/variationStats.ts` | Average cost/power, category and keyword counts for a list |
 | `lib/decks.ts` | Deck/variation CRUD, favorite pin, starter→deck, change Leader, delete cascade |

@@ -30,6 +30,7 @@ import { SortSelect } from "@/components/search/SortSelect";
 import { ColorPills } from "@/components/decks/ColorPills";
 import { RenameDeckModal } from "@/components/decks/RenameDeckModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCardPrefs } from "@/contexts/CardPrefsContext";
 import { useCatalog } from "@/contexts/CatalogContext";
 import { useCollection } from "@/contexts/CollectionContext";
 import { useWanted } from "@/contexts/WantedContext";
@@ -43,6 +44,7 @@ import {
 } from "@/lib/builder";
 import { getConstructionRules } from "@/lib/construction";
 import { setFavoriteVariation, setVariationCards } from "@/lib/decks";
+import { imageForCard } from "@/lib/cardPrefs";
 import { validateVariation } from "@/lib/legality";
 import {
   EMPTY_FILTERS,
@@ -61,6 +63,7 @@ const BUILDER_SORTS: SortKey[] = ["newest", "serial", "name", "cost", "category"
 export function BuilderView({ deck }: { deck: Deck }) {
   const { user } = useAuth();
   const { cards, cardsById } = useCatalog();
+  const { preferredByCardId } = useCardPrefs();
   const { ownedMap, allLabels } = useCollection();
   const { wantedMap } = useWanted();
   const { togglePosted, postGaps, saving: wantedSaving } = useWantedWrite();
@@ -72,6 +75,7 @@ export function BuilderView({ deck }: { deck: Deck }) {
     variations,
   );
   const leader = cardsById.get(deck.leaderId) ?? null;
+  const leaderImage = leader ? imageForCard(leader, preferredByCardId) : null;
   const constructionRules = useMemo(() => getConstructionRules(), []);
 
   const [activeVariationId, setActiveVariationId] = useState("");
@@ -342,9 +346,9 @@ export function BuilderView({ deck }: { deck: Deck }) {
           <div className="poster-panel p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-3">
-                {leader.images[0] ? (
+                {leaderImage ? (
                   <CardImage
-                    src={leader.images[0]}
+                    src={leaderImage}
                     alt={leader.name}
                     width={72}
                     height={100}

@@ -28,6 +28,7 @@ import { useCollectionWrite } from "@/hooks/useCollectionWrite";
 import { useWanted } from "@/contexts/WantedContext";
 import { useWantedWrite } from "@/hooks/useWantedWrite";
 import { computeCollectionBreakdown } from "@/lib/collectionBreakdown";
+import { imageForCard } from "@/lib/cardPrefs";
 import {
   deckIdsByCardIdFromIndex,
   indexDeckMembership,
@@ -364,9 +365,7 @@ function CollectionPageContent() {
           labelSuggestions={allLabels}
           inDecks={selectedDecks}
           preferredImageUrl={
-            selectedCard
-              ? preferredByCardId[selectedCard.id] ?? selectedCard.images[0]
-              : null
+            selectedCard ? imageForCard(selectedCard, preferredByCardId) : null
           }
           showCollectionEditor
           onQuantityDelta={(delta) => {

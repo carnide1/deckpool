@@ -22,6 +22,7 @@ import { useCollection } from "@/contexts/CollectionContext";
 import { useWanted } from "@/contexts/WantedContext";
 import { useCollectionWrite } from "@/hooks/useCollectionWrite";
 import { useWantedWrite } from "@/hooks/useWantedWrite";
+import { imageForCard } from "@/lib/cardPrefs";
 import {
   applySearchFilters,
   cardsSearchString,
@@ -275,9 +276,7 @@ function CardsPageContent() {
         labels={selectedOwned?.labels ?? []}
         labelSuggestions={allLabels}
         preferredImageUrl={
-          selectedCard
-            ? preferredByCardId[selectedCard.id] ?? selectedCard.images[0]
-            : null
+          selectedCard ? imageForCard(selectedCard, preferredByCardId) : null
         }
         showCollectionEditor
         onQuantityDelta={(delta) => {
