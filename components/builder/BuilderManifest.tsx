@@ -49,7 +49,14 @@ export function BuilderManifest({
                     {card.name}
                   </p>
                   <p className="truncate text-xs text-[var(--ink-muted)]">
-                    {card.id}
+                    {[
+                      card.id,
+                      card.category,
+                      card.cost != null ? `${card.cost}c` : null,
+                      card.power != null ? String(card.power) : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </p>
                 </div>
                 <p

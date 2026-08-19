@@ -1,6 +1,9 @@
+import { mainDeckCount, isColorLegalForLeader } from "@/lib/builder";
 import { copyLimitForCard, isForbiddenByLeader } from "@/lib/construction";
+import { resolveFavoriteVariationId } from "@/lib/variations";
 import type { DeckPoolCard } from "@/types/catalog";
 import type { ConstructionRule } from "@/types/construction";
+import type { Variation } from "@/types/deck";
 
 export type VariationStatus = {
   legal: boolean;
@@ -10,11 +13,9 @@ export type VariationStatus = {
 
 export type DeckSummaryStatus = {
   variationCount: number;
-  anyLegal: boolean;
-  anyOwned: boolean;
+  legal: boolean;
+  owned: boolean;
 };
-
-import { mainDeckCount, isColorLegalForLeader } from "@/lib/builder";
 
 export function validateVariation(
   leaderId: string,
@@ -92,29 +93,33 @@ export function validateVariation(
 
 export function summarizeDeck(
   leaderId: string,
-  variations: { cards: Record<string, number> }[],
+  variations: Variation[],
   cardsById: Map<string, DeckPoolCard>,
   ownedQtyById: Record<string, number>,
   rules: ConstructionRule[],
+  favoriteVariationId?: string | null,
 ): DeckSummaryStatus {
-  let anyLegal = false;
-  let anyOwned = false;
-
-  for (const variation of variations) {
-    const status = validateVariation(
-      leaderId,
-      variation.cards,
-      cardsById,
-      ownedQtyById,
-      rules,
-    );
-    if (status.legal) anyLegal = true;
-    if (status.owned) anyOwned = true;
+  if (variations.length === 0) {
+    return { variationCount: 0, legal: false, owned: false };
   }
+
+  const favoriteId = resolveFavoriteVariationId(
+    favoriteVariationId,
+    variations,
+  );
+  const favorite =
+    variations.find((row) => row.id === favoriteId) ?? variations[0];
+  const status = validateVariation(
+    leaderId,
+    favorite.cards,
+    cardsById,
+    ownedQtyById,
+    rules,
+  );
 
   return {
     variationCount: variations.length,
-    anyLegal,
-    anyOwned,
+    legal: status.legal,
+    owned: status.owned,
   };
 }

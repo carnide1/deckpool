@@ -16,6 +16,7 @@ import {
   parseVariation,
   userDecksRef,
 } from "@/lib/decks";
+import { orderVariations } from "@/lib/variations";
 import type { Deck, Variation } from "@/types/deck";
 
 type DecksContextValue = {
@@ -80,7 +81,10 @@ export function DecksProvider({ children }: { children: ReactNode }) {
     setVariationsByDeckId((prev) => {
       const next: Record<string, Variation[]> = {};
       for (const deck of decks) {
-        next[deck.id] = prev[deck.id] ?? [];
+        next[deck.id] = orderVariations(
+          prev[deck.id] ?? [],
+          deck.favoriteVariationId,
+        );
       }
       return next;
     });
@@ -95,10 +99,9 @@ export function DecksProvider({ children }: { children: ReactNode }) {
               docSnap.data() as Record<string, unknown>,
             ),
           );
-          variations.sort((a, b) => a.name.localeCompare(b.name));
           setVariationsByDeckId((prev) => ({
             ...prev,
-            [deck.id]: variations,
+            [deck.id]: orderVariations(variations, deck.favoriteVariationId),
           }));
         },
         (err) => console.error(err),

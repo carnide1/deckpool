@@ -13,7 +13,7 @@ export function BuilderStatusPanel({
 }) {
   return (
     <div className="poster-panel p-4">
-      <DeckStatusBadges anyLegal={legal} anyOwned={owned} />
+          <DeckStatusBadges legal={legal} owned={owned} />
       {reasons.length > 0 ? (
         <ul className="mt-3 space-y-1 text-xs text-[var(--ink-muted)]">
           {reasons.slice(0, 8).map((reason) => (

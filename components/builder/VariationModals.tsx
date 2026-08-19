@@ -137,12 +137,14 @@ export function DeleteVariationModal({
   open,
   onClose,
   onDeleted,
+  nextFavoriteId,
 }: {
   variation: Variation | null;
   deckId: string;
   open: boolean;
   onClose: () => void;
   onDeleted: () => void;
+  nextFavoriteId?: string | null;
 }) {
   const { user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
@@ -151,7 +153,12 @@ export function DeleteVariationModal({
     if (!user || !variation) return;
     setSubmitting(true);
     try {
-      await deleteVariation(user.uid, deckId, variation.id);
+      await deleteVariation(
+        user.uid,
+        deckId,
+        variation.id,
+        nextFavoriteId ?? undefined,
+      );
       toast.success("Variation deleted");
       onDeleted();
       onClose();

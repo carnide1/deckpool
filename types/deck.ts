@@ -2,6 +2,8 @@ export interface Deck {
   id: string;
   name: string;
   leaderId: string;
+  /** Variation the owner usually plays. Missing on older decks. */
+  favoriteVariationId?: string;
   createdAt?: unknown;
   updatedAt?: unknown;
 }

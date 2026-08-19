@@ -95,6 +95,7 @@ export default function DecksPage() {
               cardsById,
               ownedQtyById,
               constructionRules,
+              deck.favoriteVariationId,
             );
 
             return (

@@ -1,12 +1,14 @@
 "use client";
 
-import { Copy, GitCompare, Pencil, Trash2 } from "lucide-react";
+import { Copy, GitCompare, Pencil, Star, Trash2 } from "lucide-react";
 import type { Variation } from "@/types/deck";
 
 export function VariationTabs({
   variations,
   activeId,
+  favoriteId,
   onSelect,
+  onSetFavorite,
   onClone,
   onRename,
   onDelete,
@@ -15,7 +17,9 @@ export function VariationTabs({
 }: {
   variations: Variation[];
   activeId: string;
+  favoriteId?: string | null;
   onSelect: (variationId: string) => void;
+  onSetFavorite?: (variationId: string) => void;
   onClone?: () => void;
   onRename?: () => void;
   onDelete?: () => void;
@@ -23,31 +27,77 @@ export function VariationTabs({
   readOnly?: boolean;
 }) {
   const activeIndex = variations.findIndex((row) => row.id === activeId);
+  const activeIsFavorite = Boolean(favoriteId && activeId === favoriteId);
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-2">
         {variations.map((variation) => {
           const active = variation.id === activeId;
+          const favorite = variation.id === favoriteId;
           return (
-            <button
+            <div
               key={variation.id}
-              type="button"
-              onClick={() => onSelect(variation.id)}
               className={[
-                "rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
+                "inline-flex items-center overflow-hidden rounded-full border text-xs font-semibold",
                 active
                   ? "border-[var(--accent-pirate-red)] bg-[var(--bg-inset)] text-[var(--ink-primary)]"
-                  : "border-[var(--bg-inset)] bg-[var(--bg-panel)] text-[var(--ink-muted)] hover:border-[var(--accent-ocean)]",
+                  : "border-[var(--bg-inset)] bg-[var(--bg-panel)] text-[var(--ink-muted)]",
               ].join(" ")}
             >
-              {variation.name}
-            </button>
+              <button
+                type="button"
+                onClick={() => onSelect(variation.id)}
+                className="px-3 py-1 hover:text-[var(--ink-primary)]"
+              >
+                {variation.name}
+              </button>
+              {onSetFavorite ? (
+                <button
+                  type="button"
+                  onClick={() => onSetFavorite(variation.id)}
+                  className={[
+                    "border-l border-[var(--bg-inset)] px-2 py-1",
+                    favorite
+                      ? "text-[var(--accent-gold)]"
+                      : "text-[var(--ink-muted)] hover:text-[var(--accent-gold)]",
+                  ].join(" ")}
+                  aria-label={
+                    favorite
+                      ? `${variation.name} is the main variation`
+                      : `Set ${variation.name} as main`
+                  }
+                  aria-pressed={favorite}
+                >
+                  <Star
+                    className="h-3.5 w-3.5"
+                    fill={favorite ? "currentColor" : "none"}
+                  />
+                </button>
+              ) : favorite ? (
+                <span
+                  className="border-l border-[var(--bg-inset)] px-2 py-1 text-[var(--accent-gold)]"
+                  aria-label={`${variation.name} is the main variation`}
+                >
+                  <Star className="h-3.5 w-3.5" fill="currentColor" />
+                </span>
+              ) : null}
+            </div>
           );
         })}
       </div>
       {readOnly ? null : (
         <div className="flex flex-wrap gap-2">
+          {onSetFavorite && !activeIsFavorite && activeId ? (
+            <button
+              type="button"
+              onClick={() => onSetFavorite(activeId)}
+              className="inline-flex items-center gap-1 rounded-lg border border-[var(--bg-inset)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-inset)]"
+            >
+              <Star className="h-3.5 w-3.5" />
+              Set as main
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => onClone?.()}

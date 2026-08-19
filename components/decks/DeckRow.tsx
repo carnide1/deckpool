@@ -26,7 +26,7 @@ export function DeckRow({
 }: {
   deck: Deck;
   leader: DeckPoolCard | null;
-  summary: { anyLegal: boolean; anyOwned: boolean; variationCount: number };
+  summary: { legal: boolean; owned: boolean; variationCount: number };
   onRename: () => void;
   onDelete: () => void;
 }) {
@@ -80,8 +80,8 @@ export function DeckRow({
 
           <div className="mt-2">
             <DeckStatusBadges
-              anyLegal={summary.anyLegal}
-              anyOwned={summary.anyOwned}
+              legal={summary.legal}
+              owned={summary.owned}
             />
           </div>
         </div>

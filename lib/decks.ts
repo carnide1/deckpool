@@ -33,6 +33,10 @@ export function parseDeck(deckId: string, data: Record<string, unknown>): Deck {
     id: deckId,
     name: typeof data.name === "string" ? data.name : "Untitled deck",
     leaderId: typeof data.leaderId === "string" ? data.leaderId : "",
+    favoriteVariationId:
+      typeof data.favoriteVariationId === "string" && data.favoriteVariationId
+        ? data.favoriteVariationId
+        : undefined,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
   };
@@ -78,19 +82,23 @@ export async function createDeckFromStarter(
   contents: ProductContents,
   cardsById: Map<string, DeckPoolCard>,
 ): Promise<string> {
-  const deckRef = await addDoc(userDecksRef(uid), {
+  const db = getFirebaseDb();
+  const deckRef = doc(userDecksRef(uid));
+  const variationRef = doc(deckVariationsRef(uid, deckRef.id));
+  const batch = writeBatch(db);
+  batch.set(deckRef, {
     name: product.name,
     leaderId: product.leaderId,
+    favoriteVariationId: variationRef.id,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-
-  await addDoc(deckVariationsRef(uid, deckRef.id), {
+  batch.set(variationRef, {
     name: "Main",
     cards: mainDeckFromProductContents(contents, cardsById),
     updatedAt: serverTimestamp(),
   });
-
+  await batch.commit();
   return deckRef.id;
 }
 
@@ -99,19 +107,23 @@ export async function createDeck(
   name: string,
   leaderId: string,
 ): Promise<string> {
-  const deckRef = await addDoc(userDecksRef(uid), {
+  const db = getFirebaseDb();
+  const deckRef = doc(userDecksRef(uid));
+  const variationRef = doc(deckVariationsRef(uid, deckRef.id));
+  const batch = writeBatch(db);
+  batch.set(deckRef, {
     name: name.trim() || "Untitled deck",
     leaderId,
+    favoriteVariationId: variationRef.id,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-
-  await addDoc(deckVariationsRef(uid, deckRef.id), {
+  batch.set(variationRef, {
     name: "Main",
     cards: {},
     updatedAt: serverTimestamp(),
   });
-
+  await batch.commit();
   return deckRef.id;
 }
 
@@ -194,15 +206,29 @@ export async function renameVariation(
   });
 }
 
-export async function deleteVariation(
+export async function setFavoriteVariation(
   uid: string,
   deckId: string,
   variationId: string,
 ): Promise<void> {
-  await deleteDoc(variationDocRef(uid, deckId, variationId));
   await updateDoc(deckDocRef(uid, deckId), {
+    favoriteVariationId: variationId,
     updatedAt: serverTimestamp(),
   });
+}
+
+export async function deleteVariation(
+  uid: string,
+  deckId: string,
+  variationId: string,
+  nextFavoriteId?: string | null,
+): Promise<void> {
+  await deleteDoc(variationDocRef(uid, deckId, variationId));
+  const patch: Record<string, unknown> = {
+    updatedAt: serverTimestamp(),
+  };
+  if (nextFavoriteId) patch.favoriteVariationId = nextFavoriteId;
+  await updateDoc(deckDocRef(uid, deckId), patch);
 }
 
 export async function changeDeckLeader(

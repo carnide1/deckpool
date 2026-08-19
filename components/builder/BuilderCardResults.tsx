@@ -49,7 +49,7 @@ export function BuilderCardResults({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-3">
       {cards.map((card) => {
         const ownedQty = ownedQtyById[card.id] ?? 0;
         const inDeck = inDeckById[card.id] ?? 0;
@@ -60,11 +60,11 @@ export function BuilderCardResults({
           <article
             key={card.id}
             className={[
-              "poster-panel overflow-hidden border-2 p-2 text-left",
+              "poster-panel overflow-hidden border-2 p-1.5 text-left sm:p-2",
               borderClass(card),
             ].join(" ")}
           >
-            <div className="relative">
+            <div className="relative mx-auto w-full max-w-[120px]">
               <button
                 type="button"
                 onClick={() => onAdd(card)}
@@ -80,9 +80,9 @@ export function BuilderCardResults({
                   <CardImage
                     src={card.images[0]}
                     alt={card.name}
-                    width={140}
-                    height={196}
-                    className="mx-auto w-full"
+                    width={120}
+                    height={168}
+                    className="h-auto w-full"
                   />
                 ) : null}
               </button>

@@ -27,7 +27,7 @@ export function CardImage({
       height={height}
       priority={priority}
       className={[
-        "rounded-md bg-[var(--bg-inset)] object-cover shadow-[var(--shadow-paper)]",
+        "h-auto rounded-md bg-[var(--bg-inset)] object-cover shadow-[var(--shadow-paper)]",
         className,
       ].join(" ")}
     />

@@ -7,7 +7,7 @@ import {
 } from "@/lib/builder";
 import { EMPTY_FILTERS } from "@/lib/search/filters";
 import { isForbiddenByLeader } from "@/lib/construction";
-import { validateVariation } from "@/lib/legality";
+import { summarizeDeck, validateVariation } from "@/lib/legality";
 import type { DeckPoolCard } from "@/types/catalog";
 import type { ConstructionRule } from "@/types/construction";
 
@@ -177,5 +177,41 @@ describe("legality", () => {
     const dual = mainCard("DUAL-001", { colors: ["Red", "Green"] });
     const redLeader = leader("RED-001", ["Red"]);
     assert.equal(isColorLegalForLeader(dual, redLeader), false);
+  });
+
+  it("summarizes Legal/Owned from the favorite variation only", () => {
+    const unlimitedFiller = [
+      ...rules,
+      { kind: "copyLimit" as const, cardId: "ST01-002", max: null },
+    ];
+    const legalOwned = { "ST01-002": 50 };
+    const illegal = { "ST01-002": 46 };
+    const variations = [
+      { id: "main", name: "Main", cards: illegal },
+      { id: "tech", name: "Tech", cards: legalOwned },
+    ];
+    const ownedQty = { "OP12-001": 1, "ST01-002": 50 };
+
+    const fromStored = summarizeDeck(
+      "OP12-001",
+      variations,
+      cardsById,
+      ownedQty,
+      unlimitedFiller,
+      "tech",
+    );
+    assert.equal(fromStored.legal, true);
+    assert.equal(fromStored.owned, true);
+    assert.equal(fromStored.variationCount, 2);
+
+    const fromNamedMain = summarizeDeck(
+      "OP12-001",
+      variations,
+      cardsById,
+      ownedQty,
+      unlimitedFiller,
+    );
+    assert.equal(fromNamedMain.legal, false);
+    assert.equal(fromNamedMain.owned, true);
   });
 });

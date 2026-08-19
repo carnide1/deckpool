@@ -21,6 +21,7 @@ import {
   DeleteVariationModal,
   RenameVariationModal,
 } from "@/components/builder/VariationModals";
+import { VariationStatsPanel } from "@/components/builder/VariationStatsPanel";
 import { VariationTabs } from "@/components/builder/VariationTabs";
 import { DeckModeToggle } from "@/components/builder/DeckModeToggle";
 import { FilterPanel } from "@/components/search/FilterPanel";
@@ -41,13 +42,15 @@ import {
   mainDeckCount,
 } from "@/lib/builder";
 import { getConstructionRules } from "@/lib/construction";
-import { setVariationCards } from "@/lib/decks";
+import { setFavoriteVariation, setVariationCards } from "@/lib/decks";
 import { validateVariation } from "@/lib/legality";
 import {
   EMPTY_FILTERS,
   type SearchFilters,
 } from "@/lib/search/filters";
 import { sortCards, type SortKey } from "@/lib/search/sortCards";
+import { computeVariationStats } from "@/lib/variationStats";
+import { resolveFavoriteVariationId } from "@/lib/variations";
 import { gapsFromVariation } from "@/lib/wanted";
 import type { DeckPoolCard } from "@/types/catalog";
 import type { Deck } from "@/types/deck";
@@ -64,6 +67,10 @@ export function BuilderView({ deck }: { deck: Deck }) {
   const { variationsByDeckId } = useDecks();
 
   const variations = variationsByDeckId[deck.id] ?? [];
+  const favoriteId = resolveFavoriteVariationId(
+    deck.favoriteVariationId,
+    variations,
+  );
   const leader = cardsById.get(deck.leaderId) ?? null;
   const constructionRules = useMemo(() => getConstructionRules(), []);
 
@@ -180,6 +187,11 @@ export function BuilderView({ deck }: { deck: Deck }) {
 
   const deckCount = mainDeckCount(variationCards);
 
+  const variationStats = useMemo(
+    () => computeVariationStats(variationCards, cardsById),
+    [variationCards, cardsById],
+  );
+
   const status = useMemo(() => {
     if (!activeVariation) {
       return { legal: false, owned: false, reasons: ["No variation selected."] };
@@ -279,6 +291,25 @@ export function BuilderView({ deck }: { deck: Deck }) {
     const remaining = variations.filter((row) => row.id !== activeVariationId);
     setActiveVariationId(remaining[0]?.id ?? "");
   };
+
+  const handleSetFavorite = (variationId: string) => {
+    if (!user || variationId === deck.favoriteVariationId) return;
+    void setFavoriteVariation(user.uid, deck.id, variationId).catch((error) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not set the main variation",
+      );
+    });
+  };
+
+  const nextFavoriteId =
+    activeVariation && favoriteId === activeVariation.id
+      ? resolveFavoriteVariationId(
+          undefined,
+          variations.filter((row) => row.id !== activeVariation.id),
+        )
+      : null;
 
   if (!leader) {
     return (
@@ -423,7 +454,9 @@ export function BuilderView({ deck }: { deck: Deck }) {
           <VariationTabs
             variations={variations}
             activeId={activeVariationId}
+            favoriteId={favoriteId}
             onSelect={setActiveVariationId}
+            onSetFavorite={handleSetFavorite}
             onClone={() => setCloneOpen(true)}
             onRename={() => setRenameVariationOpen(true)}
             onDelete={() => setDeleteVariationOpen(true)}
@@ -434,6 +467,7 @@ export function BuilderView({ deck }: { deck: Deck }) {
             owned={status.owned}
             reasons={status.reasons}
           />
+          <VariationStatsPanel stats={variationStats} />
           <BuilderManifest
             lines={manifestLines}
             deckCount={deckCount}
@@ -486,6 +520,7 @@ export function BuilderView({ deck }: { deck: Deck }) {
         open={deleteVariationOpen}
         onClose={() => setDeleteVariationOpen(false)}
         onDeleted={handleVariationDeleted}
+        nextFavoriteId={nextFavoriteId}
       />
     </div>
   );

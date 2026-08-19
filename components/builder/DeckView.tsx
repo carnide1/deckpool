@@ -3,13 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import toast from "react-hot-toast";
 import { CardImage } from "@/components/CardImage";
 import { CardDetailModal } from "@/components/cards/CardDetailModal";
 import { CardGrid } from "@/components/cards/CardGrid";
 import { DeckModeToggle } from "@/components/builder/DeckModeToggle";
+import { VariationStatsPanel } from "@/components/builder/VariationStatsPanel";
 import { VariationTabs } from "@/components/builder/VariationTabs";
 import { ColorPills } from "@/components/decks/ColorPills";
 import { DeckStatusBadges } from "@/components/decks/DeckStatusBadges";
+import { useAuth } from "@/contexts/AuthContext";
 import { useCardPrefs } from "@/contexts/CardPrefsContext";
 import { useCatalog } from "@/contexts/CatalogContext";
 import { useCollection } from "@/contexts/CollectionContext";
@@ -18,14 +21,18 @@ import { useWantedWrite } from "@/hooks/useWantedWrite";
 import { useDecks } from "@/contexts/DecksContext";
 import { getConstructionRules } from "@/lib/construction";
 import { mainDeckCount } from "@/lib/builder";
+import { setFavoriteVariation } from "@/lib/decks";
 import { validateVariation } from "@/lib/legality";
 import { sortCards } from "@/lib/search/sortCards";
+import { computeVariationStats } from "@/lib/variationStats";
+import { resolveFavoriteVariationId } from "@/lib/variations";
 import type { CardCategory, DeckPoolCard } from "@/types/catalog";
 import type { Deck } from "@/types/deck";
 
 const VIEW_GROUPS: CardCategory[] = ["Character", "Event", "Stage"];
 
 export function DeckView({ deck }: { deck: Deck }) {
+  const { user } = useAuth();
   const { cardsById } = useCatalog();
   const { ownedMap } = useCollection();
   const { wantedMap } = useWanted();
@@ -35,6 +42,10 @@ export function DeckView({ deck }: { deck: Deck }) {
     useWantedWrite();
 
   const variations = variationsByDeckId[deck.id] ?? [];
+  const favoriteId = resolveFavoriteVariationId(
+    deck.favoriteVariationId,
+    variations,
+  );
   const leader = cardsById.get(deck.leaderId) ?? null;
   const constructionRules = useMemo(() => getConstructionRules(), []);
 
@@ -120,6 +131,22 @@ export function DeckView({ deck }: { deck: Deck }) {
 
   const deckCount = activeVariation ? mainDeckCount(activeVariation.cards) : 0;
 
+  const variationStats = useMemo(
+    () => computeVariationStats(activeVariation?.cards ?? {}, cardsById),
+    [activeVariation, cardsById],
+  );
+
+  const handleSetFavorite = (variationId: string) => {
+    if (!user || variationId === deck.favoriteVariationId) return;
+    void setFavoriteVariation(user.uid, deck.id, variationId).catch((error) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not set the main variation",
+      );
+    });
+  };
+
   if (!leader) {
     return (
       <p className="text-sm text-[var(--ink-muted)]">
@@ -161,8 +188,8 @@ export function DeckView({ deck }: { deck: Deck }) {
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <DeckStatusBadges
-                anyLegal={status.legal}
-                anyOwned={status.owned}
+                legal={status.legal}
+                owned={status.owned}
               />
               <span className="text-sm tabular-nums text-[var(--ink-muted)]">
                 {deckCount}/50 cards
@@ -175,9 +202,13 @@ export function DeckView({ deck }: { deck: Deck }) {
       <VariationTabs
         variations={variations}
         activeId={activeVariationId}
+        favoriteId={favoriteId}
         onSelect={setActiveVariationId}
+        onSetFavorite={handleSetFavorite}
         readOnly
       />
+
+      <VariationStatsPanel stats={variationStats} />
 
       {grouped.length === 0 ? (
         <div className="poster-panel p-8 text-center text-sm text-[var(--ink-muted)]">

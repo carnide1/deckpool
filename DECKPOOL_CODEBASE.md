@@ -88,7 +88,7 @@ From `C:\DeckPool`:
 |---|---|
 | `npm run dev` | Local app at `http://localhost:3000` |
 | `npm run build` / `npm run start` | Production build and serve |
-| `npm test` | Unit tests for search, legality, builder, collection helpers |
+| `npm test` | Unit tests for search, legality, builder, variations, collection helpers |
 | `npm run lint` | ESLint |
 | `npm run ingest-catalog -- --input <punk-records english folder>` | Rebuild `data/cards.json`, packs, construction rules, has-flags |
 | `npm run ingest-products` | Rebuild `data/products/` (ST01–ST36) from One Piece Player pages |
@@ -169,7 +169,7 @@ users/{uid}                          displayName, email, createdAt
   collection/{cardId}                quantity, labels[], updatedAt
   wanted/{cardId}                    quantity (extra copies to buy), updatedAt
   cardPrefs/{cardId}                 preferredImageUrl
-  decks/{deckId}                     name, leaderId, createdAt, updatedAt
+  decks/{deckId}                     name, leaderId, favoriteVariationId, createdAt, updatedAt
     variations/{variationId}         name, cards { [cardId]: number }, updatedAt
 ```
 
@@ -180,6 +180,7 @@ users/{uid}                          displayName, email, createdAt
 - **Caught** writes binder and Wanted in one Firestore transaction. Collection `+` while a poster exists uses that same catch helper.
 - Decrementing owned qty does **not** put the bounty back.
 - Variation `cards` is a full count map of the 50 (or draft). Leader is **not** in that map.
+- `favoriteVariationId` is the list the owner usually plays. New decks set it in the same write as `Main`. Older decks without the field fall back to a variation named `Main`, then to the most recently edited list. Tab order and first-opened tab use that same resolve. Deleting the favorite points it at another remaining variation.
 - Catalog, construction rules, products, and `has:` flags are **files**, not Firestore.
 
 ---
@@ -217,23 +218,27 @@ users/{uid}                          displayName, email, createdAt
 ### Decks (`/decks`)
 
 - Grouped by Leader. Multiple decks per Leader are allowed.
-- Create: search **owned Leaders only**, name the deck, create variation `Main` empty.
+- Create: search **owned Leaders only**, name the deck, create variation `Main` empty, pin it as the favorite.
 - Rename / delete with confirm. Delete also deletes variations.
+- Legal / Owned badges on each row come from the **favorite** variation only (not “any variation”).
 
 ### Builder (`/decks/[id]?mode=edit`)
 
 - Search defaults to **owned only** (toggle off to add unowned copies).
 - Hard filters always: Leader colors (card colors must be a subset of Leader colors), Leader forbid rules, no Leaders/Don in the 50.
 - Click a result to add a copy. Cap is construction copy limit (usually 4), **not** owned qty. Minus on the list to remove.
+- Result tiles are a dense 3-column grid on mobile, images capped at 120px wide (`h-auto w-full`) so they do not blow up versus View.
 - WANTED stamp on results does **not** add to the 50. **Post all unowned** raises Wanted to `in this variation − owned` for the active variation (does not stack on top of an existing bounty).
-- List lines show in-deck / owned. Status panel: 50-count, Legal/Illegal, Owned/Unowned, reason bullets.
-- Variations: tabs, clone, rename, delete (cannot delete the last). Compare modal shows count diffs only.
+- Manifest lines show id, category, cost, and power, plus in-deck / owned. Status panel: Legal/Illegal, Owned/Unowned, reason bullets for the **active tab**.
+- List summary (active tab): average cost, average power, Character/Event/Stage counts, blocker/rush/banish/double-attack/trigger counts, counter 1000 vs 2000.
+- Variations: tabs ordered **favorite first**, then most recently edited. Opening the page selects the favorite. Star a tab (or **Set as main**) to pin it. Clone, rename, delete (cannot delete the last). Compare modal shows count diffs only.
 - Change Leader: warning, then strip illegal cards from **every** variation of that deck.
 - Writes go to Firestore through a queued `setVariationCards` so rapid clicks do not race.
 
 ### Deck view (`/decks/[id]` without `mode=edit`)
 
-- Read-only look at the active variation. Switch to Edit to brew.
+- Read-only look at the active variation. Opens on the favorite. Switch to Edit to brew.
+- Same tab order, star-to-pin, and list summary as Edit. Legal/Owned follow the tab you are looking at.
 - WANTED stamp and bounty stepper still work from this page.
 
 ### Profile
@@ -304,7 +309,7 @@ app/                    routes + layouts + globals.css
 components/             UI by area: auth, builder, cards, collection, decks, profile, search, ui, wanted
 contexts/               Auth, UserProfile, Catalog, Collection, Wanted, CardPrefs, Decks
 hooks/                  useCollectionWrite, useWantedWrite
-lib/                    firebase, users, collection, wanted, decks, legality, builder, search, tests
+lib/                    firebase, users, collection, wanted, variations, decks, legality, builder, search, tests
 types/                  catalog, collection, wanted, deck, user, cardPref, construction, product
 data/                   committed snapshots
 scripts/                ingest + product URL/override JSON
@@ -322,7 +327,9 @@ Key libraries:
 | `lib/users.ts` | Signup doc, `ensureUserDoc`, display name, owned-count for routing |
 | `lib/collection.ts` | Qty set/adjust, label merge, batch starter add |
 | `lib/wanted.ts` | Bounty qty, catch transaction, raise gaps from a variation |
-| `lib/decks.ts` | Deck/variation CRUD, starter→deck, change Leader, delete cascade |
+| `lib/variations.ts` | Favorite resolve + tab order (resolved favorite first, then recency) |
+| `lib/variationStats.ts` | Average cost/power, category and keyword counts for a list |
+| `lib/decks.ts` | Deck/variation CRUD, favorite pin, starter→deck, change Leader, delete cascade |
 | `lib/labels.ts` | Union-merge labels |
 | `lib/variationDiff.ts` | Compare two count maps |
 | `lib/profileStats.ts` | Profile numbers |
@@ -345,6 +352,7 @@ The blueprint is still the product source of truth for **rules** (color identity
 | Display font Fredoka | Cinzel |
 | Builder search state may stay in the component | True. View vs Edit is `?mode=edit`. |
 | Paste-a-list import, match history, LLM, scanner | Not built. See `DECKPOOL_FUTURE_FEATURES.md`. |
+| Compact Legal/Owned on `/decks` is **any** variation | Compact Legal/Owned is the **favorite** variation. Profile still counts every variation. |
 | Wishlist (future-features #5) | Built as **Wanted**: extra copies to buy, Collection third mode, Cards `wanted=1`, catch into the binder. |
 
 Do not silently revert Collection to a full-catalog logger, or rip out the filter UI to restore `color:purple` in the box, without the user asking.
@@ -356,6 +364,7 @@ Do not silently revert Collection to a full-catalog logger, or rip out the filte
 - Client components for anything that uses Firebase or hooks. Keep legality/search as pure functions with tests.
 - Firestore writes: owner tree only. New subcollections need a matching `firestore.rules` change **and a deploy**.
 - Collection qty 0 = delete the document. Wanted qty 0 = delete the document.
+- One favorite variation per deck (`favoriteVariationId`). `/decks` Legal/Owned uses that list. View/Edit badges follow the open tab.
 - Do not auto-add Wanted cards to decks. Caught only touches the binder.
 - Do not add Google/Apple login, dark mode, Don cards, or a public deck gallery in V1.
 - Prefer npm. Do not add Yarn.

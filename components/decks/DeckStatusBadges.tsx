@@ -1,31 +1,31 @@
 export function DeckStatusBadges({
-  anyLegal,
-  anyOwned,
+  legal,
+  owned,
 }: {
-  anyLegal: boolean;
-  anyOwned: boolean;
+  legal: boolean;
+  owned: boolean;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
       <span
         className={[
           "rounded-full px-2 py-0.5 text-[0.625rem] font-bold uppercase tracking-wide",
-          anyLegal
+          legal
             ? "bg-[var(--badge-legal)]/15 text-[var(--badge-legal)]"
             : "border border-[var(--badge-illegal)] text-[var(--badge-illegal)]",
         ].join(" ")}
       >
-        {anyLegal ? "Legal" : "Illegal"}
+        {legal ? "Legal" : "Illegal"}
       </span>
       <span
         className={[
           "rounded-full px-2 py-0.5 text-[0.625rem] font-bold uppercase tracking-wide",
-          anyOwned
+          owned
             ? "bg-[var(--badge-owned)]/15 text-[var(--badge-owned)]"
             : "bg-[var(--badge-unowned)]/15 text-[var(--badge-unowned)]",
         ].join(" ")}
       >
-        {anyOwned ? "Owned" : "Unowned"}
+        {owned ? "Owned" : "Unowned"}
       </span>
     </div>
   );
