@@ -1,6 +1,7 @@
 "use client";
 
 import { CardImage } from "@/components/CardImage";
+import { WantedStamp } from "@/components/wanted/WantedStamp";
 import type { DeckPoolCard } from "@/types/catalog";
 
 const COLOR_CLASS: Record<string, string> = {
@@ -24,14 +25,20 @@ export function BuilderCardResults({
   cards,
   ownedQtyById,
   inDeckById,
+  wantedQtyById,
   canAdd,
   onAdd,
+  onToggleWanted,
+  wantedSaving = false,
 }: {
   cards: DeckPoolCard[];
   ownedQtyById: Record<string, number>;
   inDeckById: Record<string, number>;
+  wantedQtyById: Record<string, number>;
   canAdd: (cardId: string) => boolean;
   onAdd: (card: DeckPoolCard) => void;
+  onToggleWanted: (card: DeckPoolCard) => void;
+  wantedSaving?: boolean;
 }) {
   if (cards.length === 0) {
     return (
@@ -46,52 +53,71 @@ export function BuilderCardResults({
       {cards.map((card) => {
         const ownedQty = ownedQtyById[card.id] ?? 0;
         const inDeck = inDeckById[card.id] ?? 0;
+        const wantedQty = wantedQtyById[card.id] ?? 0;
         const addable = canAdd(card.id);
 
         return (
-          <button
+          <article
             key={card.id}
-            type="button"
-            onClick={() => onAdd(card)}
-            disabled={!addable}
             className={[
-              "poster-panel overflow-hidden border-2 p-2 text-left transition-transform",
-              addable
-                ? "hover:-translate-y-0.5 cursor-pointer"
-                : "cursor-not-allowed opacity-40 grayscale",
+              "poster-panel overflow-hidden border-2 p-2 text-left",
               borderClass(card),
             ].join(" ")}
           >
-            {card.images[0] ? (
-              <CardImage
-                src={card.images[0]}
-                alt={card.name}
-                width={140}
-                height={196}
-                className="mx-auto w-full"
-              />
-            ) : null}
-            <p className="mt-2 truncate text-xs font-semibold text-[var(--ink-primary)]">
-              {card.name}
-            </p>
-            <p className="truncate text-[0.625rem] text-[var(--ink-muted)]">
-              {card.id}
-            </p>
-            <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[0.625rem] font-semibold">
-              <span className="tabular-nums text-[var(--ink-primary)]">
-                In deck: {inDeck}
-              </span>
-              <span
-                className={
-                  ownedQty > 0
-                    ? "tabular-nums text-[var(--badge-owned)]"
-                    : "tabular-nums text-[var(--badge-unowned)]"
-                }
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => onAdd(card)}
+                disabled={!addable}
+                className={[
+                  "block w-full text-left",
+                  addable
+                    ? "cursor-pointer transition-transform hover:-translate-y-0.5"
+                    : "cursor-not-allowed opacity-40 grayscale",
+                ].join(" ")}
               >
-                Owned: {ownedQty}
-              </span>
+                {card.images[0] ? (
+                  <CardImage
+                    src={card.images[0]}
+                    alt={card.name}
+                    width={140}
+                    height={196}
+                    className="mx-auto w-full"
+                  />
+                ) : null}
+              </button>
+              <div className="absolute right-1 bottom-1 z-10">
+                <WantedStamp
+                  posted={wantedQty > 0}
+                  count={wantedQty}
+                  disabled={wantedSaving}
+                  onClick={() => onToggleWanted(card)}
+                />
+              </div>
             </div>
-          </button>
+            <div className={addable ? "" : "opacity-40 grayscale"}>
+              <p className="mt-2 truncate text-xs font-semibold text-[var(--ink-primary)]">
+                {card.name}
+              </p>
+              <p className="truncate text-[0.625rem] text-[var(--ink-muted)]">
+                {card.id}
+              </p>
+              <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[0.625rem] font-semibold">
+                <span className="tabular-nums text-[var(--ink-primary)]">
+                  In deck: {inDeck}
+                </span>
+                <span
+                  className={
+                    ownedQty > 0
+                      ? "tabular-nums text-[var(--badge-owned)]"
+                      : "tabular-nums text-[var(--badge-unowned)]"
+                  }
+                >
+                  Owned: {ownedQty}
+                </span>
+              </div>
+            </div>
+          </article>
         );
       })}
     </div>

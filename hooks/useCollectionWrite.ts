@@ -4,14 +4,17 @@ import { useCallback, useState } from "react";
 import toast from "react-hot-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCollection } from "@/contexts/CollectionContext";
+import { useWanted } from "@/contexts/WantedContext";
 import {
   adjustCollectionQuantity,
   setCollectionQuantity,
 } from "@/lib/collection";
+import { catchWantedCopies } from "@/lib/wanted";
 
 export function useCollectionWrite(allowCreate: boolean) {
   const { user } = useAuth();
   const { ownedMap } = useCollection();
+  const { wantedMap } = useWanted();
   const [saving, setSaving] = useState(false);
 
   const adjustQuantity = useCallback(
@@ -19,6 +22,14 @@ export function useCollectionWrite(allowCreate: boolean) {
       if (!user || delta === 0) return;
       setSaving(true);
       try {
+        const wantedQty = wantedMap[cardId]?.quantity ?? 0;
+        if (delta > 0 && wantedQty > 0) {
+          const result = await catchWantedCopies(user.uid, cardId, delta);
+          if (result.caught > 0) {
+            toast.success(`Caught ×${result.caught} · ${cardId}`);
+            return;
+          }
+        }
         await adjustCollectionQuantity(user.uid, cardId, delta, allowCreate);
       } catch (error) {
         toast.error(
@@ -30,7 +41,7 @@ export function useCollectionWrite(allowCreate: boolean) {
         setSaving(false);
       }
     },
-    [user, allowCreate],
+    [user, allowCreate, wantedMap],
   );
 
   const setLabels = useCallback(

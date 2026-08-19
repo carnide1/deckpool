@@ -19,7 +19,9 @@ import { Button } from "@/components/ui/Button";
 import { useCardPrefs } from "@/contexts/CardPrefsContext";
 import { useCatalog } from "@/contexts/CatalogContext";
 import { useCollection } from "@/contexts/CollectionContext";
+import { useWanted } from "@/contexts/WantedContext";
 import { useCollectionWrite } from "@/hooks/useCollectionWrite";
+import { useWantedWrite } from "@/hooks/useWantedWrite";
 import {
   applySearchFilters,
   cardsSearchString,
@@ -50,8 +52,11 @@ function CardsPageContent() {
   const searchParams = useSearchParams();
   const { cards, loading: catalogLoading, error: catalogError } = useCatalog();
   const { ownedMap, allLabels } = useCollection();
+  const { wantedMap } = useWanted();
   const { preferredByCardId } = useCardPrefs();
   const { saving, adjustQuantity, setLabels } = useCollectionWrite(true);
+  const { saving: wantedSaving, togglePosted, adjustQuantity: adjustWanted } =
+    useWantedWrite();
 
   const urlKey = searchParams.toString();
   const urlFilters = useMemo(
@@ -59,6 +64,7 @@ function CardsPageContent() {
     [searchParams],
   );
   const ownedOnly = searchParams.get("owned") === "1";
+  const wantedOnly = searchParams.get("wanted") === "1";
   const urlSort = parseSort(searchParams.get("sort"));
 
   const [filters, setFilters] = useState<SearchFilters>(urlFilters);
@@ -79,7 +85,7 @@ function CardsPageContent() {
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [deferredFilters, ownedOnly, sort]);
+  }, [deferredFilters, ownedOnly, wantedOnly, sort]);
 
   const ownedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -88,6 +94,22 @@ function CardsPageContent() {
     }
     return ids;
   }, [ownedMap]);
+
+  const wantedIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const [cardId, item] of Object.entries(wantedMap)) {
+      if (item.quantity > 0) ids.add(cardId);
+    }
+    return ids;
+  }, [wantedMap]);
+
+  const wantedQtyById = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const [cardId, item] of Object.entries(wantedMap)) {
+      map[cardId] = item.quantity;
+    }
+    return map;
+  }, [wantedMap]);
 
   const quantityById = useMemo(() => {
     const map: Record<string, number> = {};
@@ -109,21 +131,32 @@ function CardsPageContent() {
     const next = applySearchFilters(cards, deferredFilters, {
       ownedOnly,
       ownedIds,
+      wantedOnly,
+      wantedIds,
       labelsByCardId,
     });
     return sortCards(next, sort);
-  }, [cards, deferredFilters, ownedOnly, ownedIds, labelsByCardId, sort]);
+  }, [
+    cards,
+    deferredFilters,
+    ownedOnly,
+    ownedIds,
+    wantedOnly,
+    wantedIds,
+    labelsByCardId,
+    sort,
+  ]);
 
   const results = filtered.slice(0, visibleCount);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      const search = cardsSearchString(filters, ownedOnly, sort);
+      const search = cardsSearchString(filters, ownedOnly, sort, wantedOnly);
       if (search === urlKey) return;
       router.replace(search ? `/cards?${search}` : "/cards", { scroll: false });
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [filters, ownedOnly, sort, urlKey, router]);
+  }, [filters, ownedOnly, wantedOnly, sort, urlKey, router]);
 
   const selectedOwned = selectedCard ? ownedMap[selectedCard.id] : undefined;
 
@@ -148,6 +181,7 @@ function CardsPageContent() {
                   filters,
                   event.target.checked,
                   sort,
+                  wantedOnly,
                 );
                 router.replace(search ? `/cards?${search}` : "/cards", {
                   scroll: false,
@@ -156,6 +190,25 @@ function CardsPageContent() {
               className="rounded border-[var(--bg-inset)]"
             />
             Owned only
+          </label>
+          <label className="inline-flex items-center gap-2 text-sm font-medium text-[var(--ink-primary)]">
+            <input
+              type="checkbox"
+              checked={wantedOnly}
+              onChange={(event) => {
+                const search = cardsSearchString(
+                  filters,
+                  ownedOnly,
+                  sort,
+                  event.target.checked,
+                );
+                router.replace(search ? `/cards?${search}` : "/cards", {
+                  scroll: false,
+                });
+              }}
+              className="rounded border-[var(--bg-inset)]"
+            />
+            Wanted
           </label>
           <Button onClick={() => setStarterOpen(true)} className="shrink-0">
             <PackagePlus className="h-4 w-4" />
@@ -198,6 +251,9 @@ function CardsPageContent() {
         onQuantityDelta={(card, delta) => void adjustQuantity(card.id, delta)}
         showStepper
         quantitySaving={saving}
+        wantedQtyById={wantedQtyById}
+        onToggleWanted={(card) => void togglePosted(card.id)}
+        wantedSaving={wantedSaving}
       />
 
       {visibleCount < filtered.length ? (
@@ -226,6 +282,12 @@ function CardsPageContent() {
         showCollectionEditor
         onQuantityDelta={(delta) => {
           if (selectedCard) void adjustQuantity(selectedCard.id, delta);
+        }}
+        wantedQty={
+          selectedCard ? wantedMap[selectedCard.id]?.quantity ?? 0 : 0
+        }
+        onWantedDelta={(delta) => {
+          if (selectedCard) void adjustWanted(selectedCard.id, delta);
         }}
         onLabelsChange={(nextLabels) => {
           if (selectedCard) void setLabels(selectedCard.id, nextLabels);

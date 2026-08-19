@@ -2,7 +2,9 @@
 
 import { CardImage } from "@/components/CardImage";
 import { QuantityStepper } from "@/components/ui/QuantityStepper";
+import { WantedStamp } from "@/components/wanted/WantedStamp";
 import type { DeckPoolCard } from "@/types/catalog";
+import type { ReactNode } from "react";
 
 const COLOR_CLASS: Record<string, string> = {
   Red: "border-[var(--color-red)]",
@@ -29,6 +31,11 @@ export function CardGrid({
   onQuantityDelta,
   showStepper = false,
   quantitySaving = false,
+  wantedQtyById,
+  onToggleWanted,
+  showWantedCount = false,
+  wantedSaving = false,
+  tileFooter,
 }: {
   cards: DeckPoolCard[];
   quantityById: Record<string, number>;
@@ -37,6 +44,11 @@ export function CardGrid({
   onQuantityDelta?: (card: DeckPoolCard, delta: number) => void;
   showStepper?: boolean;
   quantitySaving?: boolean;
+  wantedQtyById?: Record<string, number>;
+  onToggleWanted?: (card: DeckPoolCard) => void;
+  showWantedCount?: boolean;
+  wantedSaving?: boolean;
+  tileFooter?: (card: DeckPoolCard) => ReactNode;
 }) {
   if (cards.length === 0) {
     return (
@@ -50,6 +62,7 @@ export function CardGrid({
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
       {cards.map((card) => {
         const qty = quantityById[card.id] ?? 0;
+        const wantedQty = wantedQtyById?.[card.id] ?? 0;
         const image = preferredImages[card.id] ?? card.images[0] ?? null;
         return (
           <article
@@ -59,22 +72,22 @@ export function CardGrid({
               borderClass(card),
             ].join(" ")}
           >
-            <button
-              type="button"
-              onClick={() => onSelect(card)}
-              className="block w-full text-left transition-transform hover:-translate-y-0.5"
-            >
-              <div className="relative">
+            <div className="relative mx-auto w-full max-w-[160px]">
+              <button
+                type="button"
+                onClick={() => onSelect(card)}
+                className="block w-full text-left transition-transform hover:-translate-y-0.5"
+              >
                 {image ? (
                   <CardImage
                     src={image}
                     alt={card.name}
                     width={160}
                     height={224}
-                    className="mx-auto w-full max-w-[160px]"
+                    className="w-full"
                   />
                 ) : (
-                  <div className="mx-auto flex h-[224px] max-w-[160px] items-center justify-center rounded-md bg-[var(--bg-inset)] text-xs text-[var(--ink-muted)]">
+                  <div className="flex h-[224px] items-center justify-center rounded-md bg-[var(--bg-inset)] text-xs text-[var(--ink-muted)]">
                     No art
                   </div>
                 )}
@@ -83,8 +96,25 @@ export function CardGrid({
                     ×{qty}
                   </span>
                 ) : null}
-              </div>
-              <p className="mt-2 truncate text-sm font-semibold">{card.name}</p>
+              </button>
+              {onToggleWanted ? (
+                <div className="absolute right-1 bottom-1 z-10">
+                  <WantedStamp
+                    posted={wantedQty > 0}
+                    count={wantedQty}
+                    showCount={showWantedCount}
+                    disabled={wantedSaving}
+                    onClick={() => onToggleWanted(card)}
+                  />
+                </div>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              onClick={() => onSelect(card)}
+              className="mt-2 block w-full text-left"
+            >
+              <p className="truncate text-sm font-semibold">{card.name}</p>
               <p className="truncate text-xs text-[var(--ink-muted)]">
                 {card.id}
               </p>
@@ -101,6 +131,7 @@ export function CardGrid({
                 />
               ) : null}
             </div>
+            {tileFooter ? tileFooter(card) : null}
           </article>
         );
       })}

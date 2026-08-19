@@ -24,6 +24,8 @@ export function CardDetailModal({
   onQuantityDelta,
   onLabelsChange,
   onPreferredChange,
+  wantedQty = 0,
+  onWantedDelta,
 }: {
   card: DeckPoolCard | null;
   open: boolean;
@@ -37,6 +39,8 @@ export function CardDetailModal({
   onQuantityDelta?: (delta: number) => void;
   onLabelsChange?: (labels: string[]) => void;
   onPreferredChange?: (cardId: string, url: string) => void;
+  wantedQty?: number;
+  onWantedDelta?: (delta: number) => void;
 }) {
   const { user } = useAuth();
   const [preferred, setPreferred] = useState<string | null>(null);
@@ -99,6 +103,20 @@ export function CardDetailModal({
             </span>
           </p>
         )}
+
+        {onWantedDelta ? (
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-[var(--bg-inset)] px-3 py-2">
+            <div>
+              <p className="text-sm font-medium text-[var(--ink-primary)]">
+                Bounty
+              </p>
+              <p className="text-xs text-[var(--ink-muted)]">
+                Extra copies to buy
+              </p>
+            </div>
+            <QuantityStepper value={wantedQty} onDelta={onWantedDelta} />
+          </div>
+        ) : null}
 
         {showCollectionEditor && onLabelsChange ? (
           <div>

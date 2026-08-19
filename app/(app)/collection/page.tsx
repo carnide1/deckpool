@@ -13,8 +13,9 @@ import { useSearchParams } from "next/navigation";
 import { SlidersHorizontal } from "lucide-react";
 import { CardDetailModal } from "@/components/cards/CardDetailModal";
 import { CardGrid } from "@/components/cards/CardGrid";
-import { CollectionModeToggle } from "@/components/collection/CollectionModeToggle";
+import { CollectionModeToggle, type CollectionView } from "@/components/collection/CollectionModeToggle";
 import { CollectionSummary } from "@/components/collection/CollectionSummary";
+import { WantedBoard } from "@/components/wanted/WantedBoard";
 import { FilterPanel } from "@/components/search/FilterPanel";
 import { NameSearchBar } from "@/components/search/NameSearchBar";
 import { SortSelect } from "@/components/search/SortSelect";
@@ -24,6 +25,8 @@ import { useCatalog } from "@/contexts/CatalogContext";
 import { useCollection } from "@/contexts/CollectionContext";
 import { useDecks } from "@/contexts/DecksContext";
 import { useCollectionWrite } from "@/hooks/useCollectionWrite";
+import { useWanted } from "@/contexts/WantedContext";
+import { useWantedWrite } from "@/hooks/useWantedWrite";
 import { computeCollectionBreakdown } from "@/lib/collectionBreakdown";
 import {
   deckIdsByCardIdFromIndex,
@@ -49,15 +52,24 @@ const COLLECTION_SORTS: SortKey[] = [
 ];
 const PAGE_SIZE = 60;
 
+function parseCollectionView(raw: string | null): CollectionView {
+  if (raw === "summary") return "summary";
+  if (raw === "wanted") return "wanted";
+  return "binder";
+}
+
 function CollectionPageContent() {
   const searchParams = useSearchParams();
-  const view = searchParams.get("view") === "summary" ? "summary" : "binder";
+  const view = parseCollectionView(searchParams.get("view"));
   const { cards, cardsById, loading: catalogLoading } = useCatalog();
   const { ownedMap, allLabels, ownedCardCount, loading: collectionLoading } =
     useCollection();
   const { decks, variationsByDeckId } = useDecks();
   const { preferredByCardId } = useCardPrefs();
   const { saving, adjustQuantity, setLabels } = useCollectionWrite(false);
+  const { wantedMap } = useWanted();
+  const { saving: wantedSaving, togglePosted, adjustQuantity: adjustWanted } =
+    useWantedWrite();
 
   const [filters, setFilters] = useState<SearchFilters>(EMPTY_FILTERS);
   const [sort, setSort] = useState<SortKey>("recent");
@@ -85,6 +97,14 @@ function CollectionPageContent() {
     }
     return map;
   }, [ownedMap]);
+
+  const wantedQtyById = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const [cardId, item] of Object.entries(wantedMap)) {
+      map[cardId] = item.quantity;
+    }
+    return map;
+  }, [wantedMap]);
 
   const labelsByCardId = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -179,18 +199,40 @@ function CollectionPageContent() {
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
-            Collection
-          </h1>
-          <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            Your binder — browse art, change copies, and pick scans. Add new
-            card numbers from{" "}
-            <Link href="/cards" className="text-[var(--accent-ocean)] hover:underline">
-              Cards
-            </Link>
-            .
-          </p>
-          {!collectionLoading ? (
+          <div
+            className={
+              view === "wanted"
+                ? "relative overflow-hidden rounded-xl"
+                : undefined
+            }
+          >
+            {view === "wanted" ? (
+              <div className="absolute top-0 right-0 left-0 h-1.5 bg-[var(--accent-pirate-red)]" />
+            ) : null}
+            <div className={view === "wanted" ? "pt-3" : undefined}>
+              <h1 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
+                {view === "wanted" ? "Wanted" : "Collection"}
+              </h1>
+              <p className="mt-1 text-sm text-[var(--ink-muted)]">
+                {view === "wanted" ? (
+                  "Copies to hunt — extra cards to buy, not a deck list."
+                ) : (
+                  <>
+                    Your binder — browse art, change copies, and pick scans. Add
+                    new card numbers from{" "}
+                    <Link
+                      href="/cards"
+                      className="text-[var(--accent-ocean)] hover:underline"
+                    >
+                      Cards
+                    </Link>
+                    .
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+          {view !== "wanted" && !collectionLoading ? (
             <p className="mt-2 text-sm tabular-nums text-[var(--ink-muted)]">
               <span className="font-semibold text-[var(--ink-primary)]">
                 {ownedCardCount}
@@ -220,6 +262,8 @@ function CollectionPageContent() {
         ) : (
           <CollectionSummary breakdown={breakdown} />
         )
+      ) : view === "wanted" ? (
+        <WantedBoard />
       ) : (
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <div className="order-2 min-w-0 flex-1 lg:order-1">
@@ -271,6 +315,9 @@ function CollectionPageContent() {
                   }}
                   showStepper
                   quantitySaving={saving}
+                  wantedQtyById={wantedQtyById}
+                  onToggleWanted={(card) => void togglePosted(card.id)}
+                  wantedSaving={wantedSaving}
                 />
                 <Pagination
                   page={currentPage}
@@ -307,30 +354,38 @@ function CollectionPageContent() {
         </div>
       )}
 
-      <CardDetailModal
-        card={selectedCard}
-        open={selectedCard !== null}
-        onClose={() => setSelectedCard(null)}
-        ownedQty={selectedOwned?.quantity ?? 0}
-        labels={selectedOwned?.labels ?? []}
-        labelSuggestions={allLabels}
-        inDecks={selectedDecks}
-        preferredImageUrl={
-          selectedCard
-            ? preferredByCardId[selectedCard.id] ?? selectedCard.images[0]
-            : null
-        }
-        showCollectionEditor
-        onQuantityDelta={(delta) => {
-          if (!selectedCard) return;
-          const next = (selectedOwned?.quantity ?? 0) + delta;
-          void adjustQuantity(selectedCard.id, delta);
-          if (next <= 0) setSelectedCard(null);
-        }}
-        onLabelsChange={(nextLabels) => {
-          if (selectedCard) void setLabels(selectedCard.id, nextLabels);
-        }}
-      />
+      {view === "binder" ? (
+        <CardDetailModal
+          card={selectedCard}
+          open={selectedCard !== null}
+          onClose={() => setSelectedCard(null)}
+          ownedQty={selectedOwned?.quantity ?? 0}
+          labels={selectedOwned?.labels ?? []}
+          labelSuggestions={allLabels}
+          inDecks={selectedDecks}
+          preferredImageUrl={
+            selectedCard
+              ? preferredByCardId[selectedCard.id] ?? selectedCard.images[0]
+              : null
+          }
+          showCollectionEditor
+          onQuantityDelta={(delta) => {
+            if (!selectedCard) return;
+            const next = (selectedOwned?.quantity ?? 0) + delta;
+            void adjustQuantity(selectedCard.id, delta);
+            if (next <= 0) setSelectedCard(null);
+          }}
+          wantedQty={
+            selectedCard ? wantedMap[selectedCard.id]?.quantity ?? 0 : 0
+          }
+          onWantedDelta={(delta) => {
+            if (selectedCard) void adjustWanted(selectedCard.id, delta);
+          }}
+          onLabelsChange={(nextLabels) => {
+            if (selectedCard) void setLabels(selectedCard.id, nextLabels);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

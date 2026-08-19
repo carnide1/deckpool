@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   applySearchFilters,
+  cardsSearchString,
   EMPTY_FILTERS,
   filtersFromSearchParams,
   writeFiltersToSearchParams,
@@ -154,6 +155,17 @@ describe("applySearchFilters", () => {
       ["OP03-114", "ST07-002"],
     );
   });
+
+  it("filters wanted posters", () => {
+    const results = applySearchFilters(cards, EMPTY_FILTERS, {
+      wantedOnly: true,
+      wantedIds: new Set(["ST07-002", "OP03-114"]),
+    });
+    assert.deepEqual(
+      results.map((card) => card.id).sort(),
+      ["OP03-114", "ST07-002"],
+    );
+  });
 });
 
 describe("filter URL params", () => {
@@ -171,6 +183,16 @@ describe("filter URL params", () => {
     assert.deepEqual(parsed.colors, ["Red", "Blue"]);
     assert.deepEqual(parsed.categories, ["Character"]);
     assert.deepEqual(parsed.types, ["Straw Hat Crew"]);
+  });
+
+  it("writes owned and wanted pool flags", () => {
+    const withBoth = cardsSearchString(EMPTY_FILTERS, true, "newest", true);
+    assert.equal(withBoth.includes("owned=1"), true);
+    assert.equal(withBoth.includes("wanted=1"), true);
+    const ownedOnly = cardsSearchString(EMPTY_FILTERS, true, "newest", false);
+    assert.equal(ownedOnly, "owned=1");
+    const wantedOnly = cardsSearchString(EMPTY_FILTERS, false, "newest", true);
+    assert.equal(wantedOnly, "wanted=1");
   });
 });
 

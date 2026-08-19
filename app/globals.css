@@ -95,6 +95,32 @@ body {
   text-transform: uppercase;
 }
 
+.wanted-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  border-radius: var(--radius-sm);
+  padding: 0.125rem 0.35rem;
+  font-family: var(--font-cinzel), ui-serif, Georgia, serif;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.wanted-stamp-posted {
+  background: var(--accent-pirate-red);
+  color: white;
+  border: 1px solid var(--accent-pirate-red);
+}
+
+.wanted-stamp-empty {
+  background: rgb(255 253 248 / 92%);
+  color: var(--accent-pirate-red);
+  border: 1px solid var(--accent-pirate-red);
+}
+
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }

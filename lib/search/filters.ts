@@ -139,6 +139,8 @@ function includesAny(haystack: string[], needles: string[]): boolean {
 export type ApplyFilterContext = {
   ownedOnly?: boolean;
   ownedIds?: Set<string>;
+  wantedOnly?: boolean;
+  wantedIds?: Set<string>;
   labelsByCardId?: Record<string, string[]>;
   deckIdsByCardId?: Record<string, string[]>;
 };
@@ -149,9 +151,11 @@ export function applySearchFilters(
   ctx: ApplyFilterContext = {},
 ): DeckPoolCard[] {
   const ownedIds = ctx.ownedIds ?? new Set<string>();
+  const wantedIds = ctx.wantedIds ?? new Set<string>();
 
   return cards.filter((card) => {
     if (ctx.ownedOnly && !ownedIds.has(card.id)) return false;
+    if (ctx.wantedOnly && !wantedIds.has(card.id)) return false;
     if (!matchesText(card, filters.text)) return false;
 
     if (filters.colors.length > 0) {
@@ -294,10 +298,12 @@ export function cardsSearchString(
   filters: SearchFilters,
   ownedOnly: boolean,
   sort: string,
+  wantedOnly = false,
 ): string {
   const params = new URLSearchParams();
   writeFiltersToSearchParams(params, filters);
   if (ownedOnly) params.set("owned", "1");
+  if (wantedOnly) params.set("wanted", "1");
   if (sort && sort !== "newest") params.set("sort", sort);
   return params.toString();
 }

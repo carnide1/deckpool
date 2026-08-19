@@ -12,6 +12,9 @@ service cloud.firestore {
       match /cardPrefs/{cardId} {
         allow read, write: if isOwner(uid);
       }
+      match /wanted/{cardId} {
+        allow read, write: if isOwner(uid);
+      }
       match /decks/{deckId} {
         allow read, write: if isOwner(uid);
         match /variations/{variationId} {

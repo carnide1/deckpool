@@ -31,6 +31,8 @@ import { RenameDeckModal } from "@/components/decks/RenameDeckModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCatalog } from "@/contexts/CatalogContext";
 import { useCollection } from "@/contexts/CollectionContext";
+import { useWanted } from "@/contexts/WantedContext";
+import { useWantedWrite } from "@/hooks/useWantedWrite";
 import { useDecks } from "@/contexts/DecksContext";
 import {
   canAddToDeck,
@@ -46,6 +48,7 @@ import {
   type SearchFilters,
 } from "@/lib/search/filters";
 import { sortCards, type SortKey } from "@/lib/search/sortCards";
+import { gapsFromVariation } from "@/lib/wanted";
 import type { DeckPoolCard } from "@/types/catalog";
 import type { Deck } from "@/types/deck";
 
@@ -56,6 +59,8 @@ export function BuilderView({ deck }: { deck: Deck }) {
   const { user } = useAuth();
   const { cards, cardsById } = useCatalog();
   const { ownedMap, allLabels } = useCollection();
+  const { wantedMap } = useWanted();
+  const { togglePosted, postGaps, saving: wantedSaving } = useWantedWrite();
   const { variationsByDeckId } = useDecks();
 
   const variations = variationsByDeckId[deck.id] ?? [];
@@ -119,6 +124,14 @@ export function BuilderView({ deck }: { deck: Deck }) {
     }
     return map;
   }, [ownedMap]);
+
+  const wantedQtyById = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const [cardId, item] of Object.entries(wantedMap)) {
+      map[cardId] = item.quantity;
+    }
+    return map;
+  }, [wantedMap]);
 
   const labelsByCardId = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -203,6 +216,12 @@ export function BuilderView({ deck }: { deck: Deck }) {
       .filter((row): row is NonNullable<typeof row> => row !== null)
       .sort((a, b) => a.card.name.localeCompare(b.card.name));
   }, [activeVariation, variationCards, cardsById, ownedQtyById]);
+
+  const unownedGaps = useMemo(
+    () => gapsFromVariation(variationCards, ownedQtyById),
+    [variationCards, ownedQtyById],
+  );
+  const unownedGapCount = Object.keys(unownedGaps).length;
 
   const persistCards = (nextCards: Record<string, number>) => {
     if (!user || !activeVariation) return;
@@ -371,6 +390,7 @@ export function BuilderView({ deck }: { deck: Deck }) {
             cards={searchResults}
             ownedQtyById={ownedQtyById}
             inDeckById={variationCards}
+            wantedQtyById={wantedQtyById}
             canAdd={(cardId) =>
               canAddToDeck(
                 cardId,
@@ -381,7 +401,22 @@ export function BuilderView({ deck }: { deck: Deck }) {
               )
             }
             onAdd={handleAdd}
+            onToggleWanted={(card) => void togglePosted(card.id)}
+            wantedSaving={wantedSaving}
           />
+          <div className="poster-panel flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-[var(--ink-muted)]">
+              Add every gap in this variation to Wanted.
+            </p>
+            <button
+              type="button"
+              onClick={() => void postGaps(unownedGaps)}
+              disabled={wantedSaving || unownedGapCount === 0}
+              className="inline-flex items-center justify-center rounded-lg bg-[var(--accent-pirate-red)] px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Post all unowned
+            </button>
+          </div>
         </section>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-4">

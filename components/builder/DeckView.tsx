@@ -13,6 +13,8 @@ import { DeckStatusBadges } from "@/components/decks/DeckStatusBadges";
 import { useCardPrefs } from "@/contexts/CardPrefsContext";
 import { useCatalog } from "@/contexts/CatalogContext";
 import { useCollection } from "@/contexts/CollectionContext";
+import { useWanted } from "@/contexts/WantedContext";
+import { useWantedWrite } from "@/hooks/useWantedWrite";
 import { useDecks } from "@/contexts/DecksContext";
 import { getConstructionRules } from "@/lib/construction";
 import { mainDeckCount } from "@/lib/builder";
@@ -26,8 +28,11 @@ const VIEW_GROUPS: CardCategory[] = ["Character", "Event", "Stage"];
 export function DeckView({ deck }: { deck: Deck }) {
   const { cardsById } = useCatalog();
   const { ownedMap } = useCollection();
+  const { wantedMap } = useWanted();
   const { preferredByCardId } = useCardPrefs();
   const { variationsByDeckId } = useDecks();
+  const { saving: wantedSaving, togglePosted, adjustQuantity: adjustWanted } =
+    useWantedWrite();
 
   const variations = variationsByDeckId[deck.id] ?? [];
   const leader = cardsById.get(deck.leaderId) ?? null;
@@ -59,6 +64,14 @@ export function DeckView({ deck }: { deck: Deck }) {
     }
     return map;
   }, [ownedMap]);
+
+  const wantedQtyById = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const [cardId, item] of Object.entries(wantedMap)) {
+      map[cardId] = item.quantity;
+    }
+    return map;
+  }, [wantedMap]);
 
   const status = useMemo(() => {
     if (!activeVariation) {
@@ -181,6 +194,9 @@ export function DeckView({ deck }: { deck: Deck }) {
               quantityById={group.quantityById}
               preferredImages={preferredByCardId}
               onSelect={setSelectedCard}
+              wantedQtyById={wantedQtyById}
+              onToggleWanted={(card) => void togglePosted(card.id)}
+              wantedSaving={wantedSaving}
             />
           </section>
         ))
@@ -191,6 +207,10 @@ export function DeckView({ deck }: { deck: Deck }) {
         open={selectedCard !== null}
         onClose={() => setSelectedCard(null)}
         ownedQty={selectedCard ? ownedQtyById[selectedCard.id] ?? 0 : 0}
+        wantedQty={selectedCard ? wantedQtyById[selectedCard.id] ?? 0 : 0}
+        onWantedDelta={(delta) => {
+          if (selectedCard) void adjustWanted(selectedCard.id, delta);
+        }}
         preferredImageUrl={
           selectedCard
             ? preferredByCardId[selectedCard.id] ?? selectedCard.images[0]
