@@ -71,7 +71,7 @@ V1 cost rules still in force in code: no paid search service, no language-model 
 | Theme | Bright only. Parchment cream, pirate red, ocean blue. No dark mode. |
 | Auth | Firebase Auth, **email/password only**. Client `AuthGate`. No `middleware.ts`. |
 | Data | Cloud Firestore, nested under `users/{uid}/…`. Client SDK writes. |
-| Catalog | Static JSON in `data/`, loaded in the browser. ~**2665** English cards. Don cards stripped at ingest. |
+| Catalog | Static JSON in `data/`, loaded in the browser. ~**2785** English cards. Don cards stripped at ingest. |
 | Images | Hotlink `en.onepiece-cardgame.com` via plain `<img>` in `CardImage` (not `next/image` / not `/_next/image`). Optional mirror via `NEXT_PUBLIC_CARD_IMAGE_ORIGIN`. |
 | Hosting (intended) | Vercel Hobby. No `vercel.json` in the repo. `.vercel/` is gitignored. |
 | Package manager | **npm** (`package-lock.json`) |
@@ -289,7 +289,7 @@ Do **not** call a language model to decide legality.
 
 | File | Role |
 |---|---|
-| `data/cards.json` | All searchable cards (~2665). No Don. |
+| `data/cards.json` | All searchable cards (~2785). No Don. |
 | `data/packs.json` | Set/pack metadata |
 | `data/construction-rules.json` | copyLimit + forbid |
 | `data/has-flags.json` | Flags such as blocker, rush, banish, double-attack, counter, effect, trigger |
