@@ -22,5 +22,38 @@ service cloud.firestore {
         }
       }
     }
+
+    // Public read-only deck list snapshots for SMS share links (/s/{id}).
+    // Owner decks under users/{uid}/decks stay private.
+    // get (single doc) is public; list is denied so shares are not a browsable gallery.
+    match /shares/{shareId} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.keys().hasAll([
+          'ownerUid',
+          'deckId',
+          'variationId',
+          'deckName',
+          'leaderId',
+          'variationName',
+          'cards',
+          'preferredImages',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.deckName is string
+        && request.resource.data.leaderId is string
+        && request.resource.data.leaderId.size() > 0
+        && request.resource.data.variationName is string
+        && request.resource.data.cards is map
+        && request.resource.data.preferredImages is map
+        && request.resource.data.deckId is string
+        && request.resource.data.variationId is string;
+      allow update: if false;
+      allow delete: if request.auth != null
+        && resource.data.ownerUid == request.auth.uid;
+    }
   }
 }

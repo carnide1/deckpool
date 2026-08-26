@@ -1,8 +1,8 @@
 # DeckPool — Codebase snapshot
 
 **Status:** Living summary of the **as-built** app  
-**Last updated:** 2026-08-25  
-**Git:** `main` at `https://github.com/carnide1/deckpool.git`  
+**Last updated:** 2026-08-26  
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `072b025` — “Add SMS-friendly public share links for deck variations.”)  
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -128,8 +128,8 @@ Never commit `.env.local`. Never put a language-model key in the browser.
 
 ## Routes
 
-**Public (logged out):** `/`, `/login`, `/signup`, `/forgot-password`  
-Logged-in users on those routes are sent to `/decks`, or `/collection` if they own zero cards (`lib/auth-routing.ts`).
+**Public (logged out):** `/`, `/login`, `/signup`, `/forgot-password`, and **`/s/[shareId]`** (shared deck snapshot).  
+Logged-in users on the auth landing routes (`/`, `/login`, `/signup`, `/forgot-password`) are sent to `/decks`, or `/collection` if they own zero cards (`lib/auth-routing.ts`). Logged-in users **stay** on `/s/…` (AuthGate treats share links as public but not as auth landings).
 
 **App (requires login), nav in `AppShell`:** Collection, Cards, Decks, Profile. Desktop sidebar, mobile bottom nav.
 
@@ -140,6 +140,7 @@ Logged-in users on those routes are sent to `/decks`, or `/collection` if they o
 | `/decks` | List decks, grouped by Leader. Create / rename / delete. |
 | `/decks/[id]` | **View** by default (`DeckView`). **Edit** at `?mode=edit` (`BuilderView`). |
 | `/profile` | Display name (Auth + Firestore), email, stats, logout. |
+| `/s/[shareId]` | **Public shared deck.** Snapshot of one variation (name, Leader, card counts + preferred art). No login. Outside `AppShell`. |
 | `/card-art/[file]` | **Image proxy** (not a page). Allowlisted `*.png` under Bandai `cardlist/card/` only. |
 
 There is **no** `/api/*` folder. Card art uses App Router `GET /card-art/[file]` (Bandai card PNGs only).
@@ -173,11 +174,14 @@ users/{uid}                          displayName, email, createdAt
   cardPrefs/{cardId}                 preferredImageUrl
   decks/{deckId}                     name, leaderId, favoriteVariationId, createdAt, updatedAt
     variations/{variationId}         name, cards { [cardId]: number }, updatedAt
+shares/{shareId}                     public snapshot: ownerUid, deckId, variationId,
+                                     deckName, leaderId, variationName, cards,
+                                     preferredImages, createdAt, updatedAt
 ```
 
 - Collection document **id** is the card number. Qty 0 **deletes** the doc.
 - Wanted document **id** is the same card number. Qty is extra copies to buy, not a total target. Qty 0 **deletes** the doc.
-- After changing `firestore.rules`, run `firebase deploy --only firestore:rules`. Until that is published, Wanted reads/writes fail.
+- **Shares** are immutable snapshots (create + single-doc public get; **list denied** so there is no gallery). Owner decks stay private. Create requires signed-in `ownerUid`. After changing `firestore.rules`, run `firebase deploy --only firestore:rules`. Until that is published, Wanted and Share reads/writes fail.
 - Labels live only on owned collection rows. Unowned Wanted cards have no labels.
 - **Caught** writes binder and Wanted in one Firestore transaction. Collection `+` while a poster exists uses that same catch helper.
 - Decrementing owned qty does **not** put the bounty back.
@@ -243,6 +247,13 @@ users/{uid}                          displayName, email, createdAt
 - Read-only look at the active variation. Opens on the favorite. Switch to Edit to brew.
 - Same tab order, star-to-pin, and list summary as Edit. Legal/Owned follow the tab you are looking at.
 - Leader portrait uses preferred art. WANTED stamp and bounty stepper still work from this page.
+- **Copy share link** creates a public `shares/{id}` snapshot of the **active** variation (deck name, Leader, variation name, card counts, preferred art URLs), copies `{origin}/s/{id}` to the clipboard for texting. Empty lists cannot be shared. The link is a frozen snapshot — later edits do not change old links.
+
+### Shared deck (`/s/[shareId]`)
+
+- Public, no login. CatalogProvider only (no binder / Wanted / AppShell).
+- Shows Leader art, deck name, variation name, Character / Event / Stage grids with counts. Tap a card for effect text.
+- Does not expose ownership, Wanted, or other variations. Unknown catalog ids are noted if the snapshot is newer than the shipped JSON.
 
 ### Profile
 
@@ -310,13 +321,14 @@ When a new set releases: pull punk-records, run both ingest scripts, commit `dat
 ## Folder map
 
 ```
-app/                    routes + layouts + globals.css
-components/             UI by area: auth, builder, cards, collection, decks, profile, search, ui, wanted
+app/                    routes + layouts + globals.css + card-art/[file] proxy
+components/             UI by area: auth, builder, cards, collection, decks, profile, search, share, ui, wanted
 contexts/               Auth, UserProfile, Catalog, Collection, Wanted, CardPrefs, Decks
 hooks/                  useCollectionWrite, useWantedWrite
-lib/                    firebase, users, collection, wanted, cardPrefs, variations, decks, legality, builder, search, tests
-types/                  catalog, collection, wanted, deck, user, cardPref, construction, product
-data/                   committed snapshots
+lib/                    firebase, users, collection, wanted, shares, cardPrefs, cardArt*, cardImageUrl, variations, decks, legality, builder, search, tests
+types/                  catalog, collection, wanted, deck, share, user, cardPref, construction, product
+app/s/[shareId]/         public shared-deck page (+ CatalogProvider layout)
+data/                   committed snapshots (~2785 cards; includes OP17)
 scripts/                ingest + product URL/override JSON
 firestore.rules
 firebase.json
@@ -339,6 +351,7 @@ Key libraries:
 | `lib/variations.ts` | Favorite resolve + tab order (resolved favorite first, then recency) |
 | `lib/variationStats.ts` | Average cost/power, category and keyword counts for a list |
 | `lib/decks.ts` | Deck/variation CRUD, favorite pin, starter→deck, change Leader, delete cascade |
+| `lib/shares.ts` | Public share snapshots: create, parse, SMS URL helpers, clipboard copy |
 | `lib/labels.ts` | Union-merge labels |
 | `lib/variationDiff.ts` | Compare two count maps |
 | `lib/profileStats.ts` | Profile numbers |
@@ -363,6 +376,7 @@ The blueprint is still the product source of truth for **rules** (color identity
 | Paste-a-list import, match history, LLM, scanner | Not built. See `DECKPOOL_FUTURE_FEATURES.md`. |
 | Compact Legal/Owned on `/decks` is **any** variation | Compact Legal/Owned is the **favorite** variation. Profile still counts every variation. |
 | Wishlist (future-features #5) | Built as **Wanted**: extra copies to buy, Collection third mode, Cards `wanted=1`, catch into the binder. |
+| No public deck gallery / share network | **Share links** only: owner copies `/s/{id}` for one variation snapshot. Not a browseable gallery. |
 
 Do not silently revert Collection to a full-catalog logger, or rip out the filter UI to restore `color:purple` in the box, without the user asking.
 
@@ -375,7 +389,8 @@ Do not silently revert Collection to a full-catalog logger, or rip out the filte
 - Collection qty 0 = delete the document. Wanted qty 0 = delete the document.
 - One favorite variation per deck (`favoriteVariationId`). `/decks` Legal/Owned uses that list. View/Edit badges follow the open tab.
 - Do not auto-add Wanted cards to decks. Caught only touches the binder.
-- Do not add Google/Apple login, dark mode, Don cards, or a public deck gallery in V1.
+- Do not add Google/Apple login, dark mode, Don cards, or a browseable public deck gallery in V1. Per-variation **share links** (`/s/{id}`) are allowed.
+- New public routes must be allowlisted in `AuthGate` without treating them as auth landings (logged-in users must not be bounced off `/s/…`).
 - Prefer npm. Do not add Yarn.
 - Mobile-first; Builder is allowed to feel denser.
 

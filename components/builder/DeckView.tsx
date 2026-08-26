@@ -12,6 +12,7 @@ import { VariationStatsPanel } from "@/components/builder/VariationStatsPanel";
 import { VariationTabs } from "@/components/builder/VariationTabs";
 import { ColorPills } from "@/components/decks/ColorPills";
 import { DeckStatusBadges } from "@/components/decks/DeckStatusBadges";
+import { ShareLinkButton } from "@/components/share/ShareLinkButton";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCardPrefs } from "@/contexts/CardPrefsContext";
 import { useCatalog } from "@/contexts/CatalogContext";
@@ -169,7 +170,17 @@ export function DeckView({ deck }: { deck: Deck }) {
           <ArrowLeft className="h-4 w-4" />
           Back to decks
         </Link>
-        <DeckModeToggle deckId={deck.id} mode="view" />
+        <div className="flex flex-wrap items-center gap-2">
+          {user ? (
+            <ShareLinkButton
+              uid={user.uid}
+              deck={deck}
+              variation={activeVariation}
+              preferredImages={preferredByCardId}
+            />
+          ) : null}
+          <DeckModeToggle deckId={deck.id} mode="view" />
+        </div>
       </div>
 
       <div className="poster-panel p-4">
