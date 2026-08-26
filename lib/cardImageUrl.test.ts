@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  displayImageCandidates,
+  getCardImageMirrorOrigin,
   imageCandidates,
   imageForCard,
   publicImageUrl,
-} from "@/lib/cardPrefs";
+  urlsForCatalogImage,
+} from "@/lib/cardImageUrl";
 
 const card = {
   id: "OP03-072",
@@ -14,6 +17,18 @@ const card = {
     "https://en.onepiece-cardgame.com/images/cardlist/card/OP03-072.png",
   ],
 };
+
+function withOrigin<T>(origin: string | undefined, run: () => T): T {
+  const prev = process.env.NEXT_PUBLIC_CARD_IMAGE_ORIGIN;
+  if (origin === undefined) delete process.env.NEXT_PUBLIC_CARD_IMAGE_ORIGIN;
+  else process.env.NEXT_PUBLIC_CARD_IMAGE_ORIGIN = origin;
+  try {
+    return run();
+  } finally {
+    if (prev === undefined) delete process.env.NEXT_PUBLIC_CARD_IMAGE_ORIGIN;
+    else process.env.NEXT_PUBLIC_CARD_IMAGE_ORIGIN = prev;
+  }
+}
 
 describe("imageForCard", () => {
   it("uses preferred art when that url is still in the catalog list", () => {
@@ -56,27 +71,25 @@ describe("imageCandidates", () => {
   });
 });
 
-describe("publicImageUrl", () => {
+describe("publicImageUrl / mirror origin", () => {
   it("leaves urls unchanged when no mirror origin is set", () => {
-    const prev = process.env.NEXT_PUBLIC_CARD_IMAGE_ORIGIN;
-    delete process.env.NEXT_PUBLIC_CARD_IMAGE_ORIGIN;
-    try {
+    withOrigin(undefined, () => {
+      assert.equal(getCardImageMirrorOrigin(), null);
       assert.equal(
         publicImageUrl(
           "https://en.onepiece-cardgame.com/images/cardlist/card/OP09-092.png",
         ),
         "https://en.onepiece-cardgame.com/images/cardlist/card/OP09-092.png",
       );
-    } finally {
-      if (prev === undefined) delete process.env.NEXT_PUBLIC_CARD_IMAGE_ORIGIN;
-      else process.env.NEXT_PUBLIC_CARD_IMAGE_ORIGIN = prev;
-    }
+    });
   });
 
   it("rewrites Bandai host to the configured mirror origin", () => {
-    const prev = process.env.NEXT_PUBLIC_CARD_IMAGE_ORIGIN;
-    process.env.NEXT_PUBLIC_CARD_IMAGE_ORIGIN = "https://cdn.example.test/";
-    try {
+    withOrigin("https://cdn.example.test/", () => {
+      assert.equal(
+        getCardImageMirrorOrigin(),
+        "https://cdn.example.test",
+      );
       assert.equal(
         publicImageUrl(
           "https://en.onepiece-cardgame.com/images/cardlist/card/OP09-092.png",
@@ -87,9 +100,48 @@ describe("publicImageUrl", () => {
         publicImageUrl("https://example.test/other.png"),
         "https://example.test/other.png",
       );
-    } finally {
-      if (prev === undefined) delete process.env.NEXT_PUBLIC_CARD_IMAGE_ORIGIN;
-      else process.env.NEXT_PUBLIC_CARD_IMAGE_ORIGIN = prev;
-    }
+    });
+  });
+
+  it("ignores an invalid mirror origin", () => {
+    withOrigin("not a url", () => {
+      assert.equal(getCardImageMirrorOrigin(), null);
+      assert.equal(
+        publicImageUrl(
+          "https://en.onepiece-cardgame.com/images/cardlist/card/P-155.png",
+        ),
+        "https://en.onepiece-cardgame.com/images/cardlist/card/P-155.png",
+      );
+    });
+  });
+});
+
+describe("urlsForCatalogImage / displayImageCandidates", () => {
+  it("returns only the catalog url when no mirror is set", () => {
+    withOrigin(undefined, () => {
+      assert.deepEqual(
+        urlsForCatalogImage(
+          "https://en.onepiece-cardgame.com/images/cardlist/card/P-155.png",
+        ),
+        ["https://en.onepiece-cardgame.com/images/cardlist/card/P-155.png"],
+      );
+    });
+  });
+
+  it("tries mirror then Bandai for each Bandai catalog url", () => {
+    withOrigin("https://cdn.example.test", () => {
+      assert.deepEqual(
+        displayImageCandidates([
+          "https://en.onepiece-cardgame.com/images/cardlist/card/P-155.png",
+          "https://en.onepiece-cardgame.com/images/cardlist/card/P-155_p1.png",
+        ]),
+        [
+          "https://cdn.example.test/images/cardlist/card/P-155.png",
+          "https://en.onepiece-cardgame.com/images/cardlist/card/P-155.png",
+          "https://cdn.example.test/images/cardlist/card/P-155_p1.png",
+          "https://en.onepiece-cardgame.com/images/cardlist/card/P-155_p1.png",
+        ],
+      );
+    });
   });
 });
