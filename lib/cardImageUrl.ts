@@ -1,3 +1,8 @@
+import {
+  bandaiCardArtFile,
+  cardArtProxyPath,
+} from "@/lib/cardArtPath";
+
 const BANDAI_IMAGE_HOST = "en.onepiece-cardgame.com";
 
 let warnedInvalidOrigin = false;
@@ -38,7 +43,8 @@ export function publicImageUrl(url: string): string {
   try {
     const parsed = new URL(url);
     if (parsed.hostname !== BANDAI_IMAGE_HOST) return url;
-    return `${origin}${parsed.pathname}${parsed.search}`;
+    // Drop query for stable mirror keys (ingest already strips these).
+    return `${origin}${parsed.pathname}`;
   } catch {
     return url;
   }
@@ -46,23 +52,11 @@ export function publicImageUrl(url: string): string {
 
 /**
  * Browser-safe URL for a catalog image.
- * Bandai hosts are loaded via same-origin `/card-art` (avoids CORP + Vercel
- * Image Optimization 402). Non-Bandai URLs pass through unchanged.
+ * Bandai → `/card-art/{file}.png` (same-origin proxy).
  */
 export function browserImageUrl(catalogUrl: string): string {
-  try {
-    const parsed = new URL(catalogUrl);
-    if (
-      parsed.protocol === "https:" &&
-      parsed.hostname === BANDAI_IMAGE_HOST &&
-      parsed.pathname.startsWith("/images/")
-    ) {
-      const normalized = `https://${BANDAI_IMAGE_HOST}${parsed.pathname}${parsed.search}`;
-      return `/card-art?url=${encodeURIComponent(normalized)}`;
-    }
-  } catch {
-    // fall through
-  }
+  const file = bandaiCardArtFile(catalogUrl);
+  if (file) return cardArtProxyPath(file);
   return catalogUrl;
 }
 

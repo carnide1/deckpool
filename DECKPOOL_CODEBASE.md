@@ -72,7 +72,7 @@ V1 cost rules still in force in code: no paid search service, no language-model 
 | Auth | Firebase Auth, **email/password only**. Client `AuthGate`. No `middleware.ts`. |
 | Data | Cloud Firestore, nested under `users/{uid}/…`. Client SDK writes. |
 | Catalog | Static JSON in `data/`, loaded in the browser. ~**2785** English cards. Don cards stripped at ingest. |
-| Images | Same-origin `/card-art?url=…` proxy for Bandai (avoids Chrome **CORP** and Vercel `/_next/image` **402** quota). Optional CDN mirror first via `NEXT_PUBLIC_CARD_IMAGE_ORIGIN`. Retries + **Retry** UI. |
+| Images | Same-origin `/card-art/{file}.png` proxy for Bandai (avoids Chrome **CORP** and Vercel `/_next/image` **402**). Strict filename allowlist, upstream timeout, ETag/304, in-flight coalesce, long cache. Optional CDN mirror first via `NEXT_PUBLIC_CARD_IMAGE_ORIGIN`. Retries + **Retry** UI. |
 | Hosting (intended) | Vercel Hobby. No `vercel.json` in the repo. `.vercel/` is gitignored. |
 | Package manager | **npm** (`package-lock.json`) |
 | Tests | `npm test` → `tsx --test lib/**/*.test.ts` |
@@ -140,9 +140,9 @@ Logged-in users on those routes are sent to `/decks`, or `/collection` if they o
 | `/decks` | List decks, grouped by Leader. Create / rename / delete. |
 | `/decks/[id]` | **View** by default (`DeckView`). **Edit** at `?mode=edit` (`BuilderView`). |
 | `/profile` | Display name (Auth + Firestore), email, stats, logout. |
-| `/card-art` | **Image proxy** (not a page). `GET ?url=` https Bandai `/images/**` only. |
+| `/card-art/[file]` | **Image proxy** (not a page). Allowlisted `*.png` under Bandai `cardlist/card/` only. |
 
-There is **no** `/api/*` folder. Card art uses App Router route `GET /card-art?url=` (Bandai host allowlisted only).
+There is **no** `/api/*` folder. Card art uses App Router `GET /card-art/[file]` (Bandai card PNGs only).
 
 ---
 
@@ -299,9 +299,9 @@ Do **not** call a language model to decide legality.
 | `scripts/ingest-catalog.ts` | From punk-records English JSON |
 | `scripts/ingest-products.ts` | From One Piece Player HTML, with `scripts/product-urls.json` and `scripts/product-overrides/` |
 
-Card shape: `types/catalog.ts` (`DeckPoolCard`). `cost` on a Leader is Life. `images[]` is every known scan for that number; user picks one per account in `cardPrefs`. Grids, deck rows, builder portraits, and Leader pickers all use `imageCandidates` → `CardImage`. Load order is built in `lib/cardImageUrl.ts` (`displayImageCandidates`: preferred/other scans → optional mirror, then `/card-art?url=` for Bandai). `CardImage` uses a plain `<img>` (not `/_next/image`) so Hobby Image Optimization **402**s do not blank the grid; `/card-art` keeps the browser same-origin so Bandai **CORP** does not apply. One retry per URL, then the next candidate; then “No art” + **Retry**. If the preferred URL is gone after ingest, `imageForCard` falls back to the first scan.
+Card shape: `types/catalog.ts` (`DeckPoolCard`). `cost` on a Leader is Life. `images[]` is every known scan for that number; user picks one per account in `cardPrefs`. Grids, deck rows, builder portraits, and Leader pickers all use `imageCandidates` → `CardImage`. Load order is built in `lib/cardImageUrl.ts` (`displayImageCandidates`: preferred/other scans → optional mirror, then `/card-art/{file}.png`). `CardImage` uses a plain `<img>` (not `/_next/image`). The proxy (`lib/cardArtPath.ts` + `lib/cardArtFetch.ts` + `app/card-art/[file]/route.ts`) validates filenames, times out upstream fetches, coalesces concurrent loads, returns ETag/304, and sets long cache headers. One retry per URL, then the next candidate; then “No art” + **Retry**.
 
-**Note:** Catalog JSON is still committed offline. `/card-art` only fetches **image bytes** on demand (cached). It is not catalog scrape-at-runtime.
+**Note:** Catalog JSON is still committed offline. `/card-art` only fetches **image bytes** on demand (cached). It is not catalog scrape-at-runtime. A full CDN mirror remains the most robust long-term option if Bandai blocks datacenter IPs.
 
 When a new set releases: pull punk-records, run both ingest scripts, commit `data/`, then ship. Do not guess starter counts as “1 of each id.”
 
@@ -332,7 +332,9 @@ Key libraries:
 | `lib/users.ts` | Signup doc, `ensureUserDoc`, display name, owned-count for routing |
 | `lib/collection.ts` | Qty set/adjust, label merge, batch starter add |
 | `lib/wanted.ts` | Bounty qty, catch transaction, raise gaps from a variation |
-| `lib/cardImageUrl.ts` | Pure image URL helpers: preferred/candidates, optional mirror rewrite, mirror-then-Bandai expand |
+| `lib/cardArtPath.ts` | Safe Bandai filename parse + `/card-art/{file}` paths |
+| `lib/cardArtFetch.ts` | Upstream Bandai fetch with timeout, size cap, ETag, in-flight coalesce |
+| `lib/cardImageUrl.ts` | Preferred/candidates, optional mirror rewrite, browser proxy URLs |
 | `lib/cardPrefs.ts` | Preferred art Firestore read/write; re-exports image URL helpers |
 | `lib/variations.ts` | Favorite resolve + tab order (resolved favorite first, then recency) |
 | `lib/variationStats.ts` | Average cost/power, category and keyword counts for a list |

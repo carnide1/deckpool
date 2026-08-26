@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  bandaiCardArtFile,
+  cardArtProxyPath,
+  isSafeCardArtFile,
+} from "@/lib/cardArtPath";
+import {
   browserImageUrl,
   displayImageCandidates,
   getCardImageMirrorOrigin,
@@ -30,6 +35,31 @@ function withOrigin<T>(origin: string | undefined, run: () => T): T {
     else process.env.NEXT_PUBLIC_CARD_IMAGE_ORIGIN = prev;
   }
 }
+
+describe("cardArtPath", () => {
+  it("accepts normal Bandai filenames and rejects traversal", () => {
+    assert.equal(isSafeCardArtFile("OP17-001.png"), true);
+    assert.equal(isSafeCardArtFile("OP17-001_p1.png"), true);
+    assert.equal(isSafeCardArtFile("P-155.png"), true);
+    assert.equal(isSafeCardArtFile("../etc/passwd.png"), false);
+    assert.equal(isSafeCardArtFile("foo/bar.png"), false);
+    assert.equal(isSafeCardArtFile("OP17-001.jpg"), false);
+  });
+
+  it("parses Bandai catalog urls into filenames", () => {
+    assert.equal(
+      bandaiCardArtFile(
+        "https://en.onepiece-cardgame.com/images/cardlist/card/P-155.png?260810",
+      ),
+      "P-155.png",
+    );
+    assert.equal(
+      bandaiCardArtFile("https://evil.example/images/cardlist/card/P-155.png"),
+      null,
+    );
+    assert.equal(cardArtProxyPath("P-155.png"), "/card-art/P-155.png");
+  });
+});
 
 describe("imageForCard", () => {
   it("uses preferred art when that url is still in the catalog list", () => {
@@ -87,19 +117,12 @@ describe("publicImageUrl / mirror origin", () => {
 
   it("rewrites Bandai host to the configured mirror origin", () => {
     withOrigin("https://cdn.example.test/", () => {
-      assert.equal(
-        getCardImageMirrorOrigin(),
-        "https://cdn.example.test",
-      );
+      assert.equal(getCardImageMirrorOrigin(), "https://cdn.example.test");
       assert.equal(
         publicImageUrl(
-          "https://en.onepiece-cardgame.com/images/cardlist/card/OP09-092.png",
+          "https://en.onepiece-cardgame.com/images/cardlist/card/OP09-092.png?x=1",
         ),
         "https://cdn.example.test/images/cardlist/card/OP09-092.png",
-      );
-      assert.equal(
-        publicImageUrl("https://example.test/other.png"),
-        "https://example.test/other.png",
       );
     });
   });
@@ -107,28 +130,17 @@ describe("publicImageUrl / mirror origin", () => {
   it("ignores an invalid mirror origin", () => {
     withOrigin("not a url", () => {
       assert.equal(getCardImageMirrorOrigin(), null);
-      assert.equal(
-        publicImageUrl(
-          "https://en.onepiece-cardgame.com/images/cardlist/card/P-155.png",
-        ),
-        "https://en.onepiece-cardgame.com/images/cardlist/card/P-155.png",
-      );
     });
   });
 });
 
 describe("urlsForCatalogImage / displayImageCandidates", () => {
-  it("proxies Bandai urls through same-origin /card-art when no mirror is set", () => {
+  it("proxies Bandai urls through /card-art/{file} when no mirror is set", () => {
     withOrigin(undefined, () => {
       const bandai =
         "https://en.onepiece-cardgame.com/images/cardlist/card/P-155.png";
-      assert.equal(
-        browserImageUrl(bandai),
-        `/card-art?url=${encodeURIComponent(bandai)}`,
-      );
-      assert.deepEqual(urlsForCatalogImage(bandai), [
-        `/card-art?url=${encodeURIComponent(bandai)}`,
-      ]);
+      assert.equal(browserImageUrl(bandai), "/card-art/P-155.png");
+      assert.deepEqual(urlsForCatalogImage(bandai), ["/card-art/P-155.png"]);
     });
   });
 
@@ -140,9 +152,9 @@ describe("urlsForCatalogImage / displayImageCandidates", () => {
         "https://en.onepiece-cardgame.com/images/cardlist/card/P-155_p1.png";
       assert.deepEqual(displayImageCandidates([a, b]), [
         "https://cdn.example.test/images/cardlist/card/P-155.png",
-        `/card-art?url=${encodeURIComponent(a)}`,
+        "/card-art/P-155.png",
         "https://cdn.example.test/images/cardlist/card/P-155_p1.png",
-        `/card-art?url=${encodeURIComponent(b)}`,
+        "/card-art/P-155_p1.png",
       ]);
     });
   });

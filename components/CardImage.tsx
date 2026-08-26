@@ -25,10 +25,10 @@ function withRetryBust(url: string, retry: number): string {
 /**
  * Card art for the browser.
  *
- * Bandai URLs are rewritten to same-origin `/card-art` (see app/card-art/route.ts)
- * so Chrome CORP cannot block them and we do not use Vercel `/_next/image`
- * (Hobby 402 once optimize quota is exhausted). Optional CDN mirror is tried
- * first when NEXT_PUBLIC_CARD_IMAGE_ORIGIN is set.
+ * Bandai URLs are rewritten to same-origin `/card-art/{file}.png`
+ * (see app/card-art/[file]/route.ts) so Chrome CORP cannot block them and we
+ * do not use Vercel `/_next/image` (Hobby 402 once optimize quota is exhausted).
+ * Optional CDN mirror is tried first when NEXT_PUBLIC_CARD_IMAGE_ORIGIN is set.
  */
 export function CardImage({
   src,
