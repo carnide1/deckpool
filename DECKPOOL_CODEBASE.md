@@ -72,7 +72,7 @@ V1 cost rules still in force in code: no paid search service, no language-model 
 | Auth | Firebase Auth, **email/password only**. Client `AuthGate`. No `middleware.ts`. |
 | Data | Cloud Firestore, nested under `users/{uid}/…`. Client SDK writes. |
 | Catalog | Static JSON in `data/`, loaded in the browser. ~**2785** English cards. Don cards stripped at ingest. |
-| Images | Hotlink `en.onepiece-cardgame.com` via plain `<img>` in `CardImage` (not `next/image`). `referrerPolicy="no-referrer"`, one retry per URL, then next catalog print; mirror-then-Bandai when `NEXT_PUBLIC_CARD_IMAGE_ORIGIN` is set; **Retry** after exhaustion. |
+| Images | `next/image` → same-origin `/_next/image` (avoids Bandai **CORP** blocks on direct hotlinks). Optional mirror via `NEXT_PUBLIC_CARD_IMAGE_ORIGIN` (tried first, then Bandai). Retries + **Retry** UI on failure. |
 | Hosting (intended) | Vercel Hobby. No `vercel.json` in the repo. `.vercel/` is gitignored. |
 | Package manager | **npm** (`package-lock.json`) |
 | Tests | `npm test` → `tsx --test lib/**/*.test.ts` |
@@ -120,7 +120,7 @@ Ingest is a **local** maintainer task. Vercel must not scrape Bandai or One Piec
 - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
 - `NEXT_PUBLIC_FIREBASE_APP_ID`
 - `NEXT_PUBLIC_APP_URL` (local: `http://localhost:3000`)
-- `NEXT_PUBLIC_CARD_IMAGE_ORIGIN` (optional) — HTTPS origin with **no** trailing slash that mirrors Bandai’s `/images/cardlist/card/...` paths. Invalid values are ignored. When set, the browser tries the mirror URL first, then the original Bandai URL. Catalog and Firestore still store Bandai URLs.
+- `NEXT_PUBLIC_CARD_IMAGE_ORIGIN` (optional) — HTTPS origin with **no** trailing slash that mirrors Bandai’s `/images/cardlist/card/...` paths. Invalid values are ignored. When set, the browser/`/_next/image` tries the mirror URL first, then Bandai. **Must also be present at build time** so `next.config.ts` can allowlist that host in `images.remotePatterns`. Catalog and Firestore still store Bandai URLs.
 
 Never commit `.env.local`. Never put a language-model key in the browser.
 
@@ -298,7 +298,7 @@ Do **not** call a language model to decide legality.
 | `scripts/ingest-catalog.ts` | From punk-records English JSON |
 | `scripts/ingest-products.ts` | From One Piece Player HTML, with `scripts/product-urls.json` and `scripts/product-overrides/` |
 
-Card shape: `types/catalog.ts` (`DeckPoolCard`). `cost` on a Leader is Life. `images[]` is every known scan for that number; user picks one per account in `cardPrefs`. Grids, deck rows, builder portraits, and Leader pickers all use `imageCandidates` → `CardImage`. Load order is built in `lib/cardImageUrl.ts` (`displayImageCandidates`: preferred/other scans, each expanded to mirror then Bandai). `CardImage` uses a plain `<img>` with `referrerPolicy="no-referrer"`, retries the same URL once, advances on further errors (ignoring stale/cancelled errors), then shows “No art” + **Retry**. If the preferred URL is gone after ingest, `imageForCard` falls back to the first scan.
+Card shape: `types/catalog.ts` (`DeckPoolCard`). `cost` on a Leader is Life. `images[]` is every known scan for that number; user picks one per account in `cardPrefs`. Grids, deck rows, builder portraits, and Leader pickers all use `imageCandidates` → `CardImage`. Load order is built in `lib/cardImageUrl.ts` (`displayImageCandidates`: preferred/other scans, each expanded to mirror then Bandai). `CardImage` uses `next/image` so the browser requests **same-origin** `/_next/image` (Bandai/mirror are fetched server-side — this avoids Chrome `(blocked:CORP …)` on direct hotlinks). One retry per URL, then the next candidate; then “No art” + **Retry**. If the preferred URL is gone after ingest, `imageForCard` falls back to the first scan.
 
 When a new set releases: pull punk-records, run both ingest scripts, commit `data/`, then ship. Do not guess starter counts as “1 of each id.”
 
