@@ -1,5 +1,12 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
+import {
+  getAuth,
+  initializeAuth,
+  indexedDBLocalPersistence,
+  browserLocalPersistence,
+  inMemoryPersistence,
+  type Auth,
+} from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -33,9 +40,25 @@ export function getFirebaseApp(): FirebaseApp {
   return app;
 }
 
+/**
+ * Prefer IndexedDB, then localStorage, then memory. Mobile Safari can hang or
+ * fail on IndexedDB; falling through keeps Auth from blocking the whole app.
+ */
 export function getFirebaseAuth(): Auth {
   if (auth) return auth;
-  auth = getAuth(getFirebaseApp());
+  const firebaseApp = getFirebaseApp();
+  try {
+    auth = initializeAuth(firebaseApp, {
+      persistence: [
+        indexedDBLocalPersistence,
+        browserLocalPersistence,
+        inMemoryPersistence,
+      ],
+    });
+  } catch {
+    // Already initialized in this JS realm (HMR / duplicate import).
+    auth = getAuth(firebaseApp);
+  }
   return auth;
 }
 

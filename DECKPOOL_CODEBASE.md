@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-08-26  
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `072b025` — “Add SMS-friendly public share links for deck variations.”)  
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `eebc7fa` — “Fix mobile hang on AuthGate Loading screen.”)  
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -69,7 +69,7 @@ V1 cost rules still in force in code: no paid search service, no language-model 
 | CSS | Tailwind **4**, tokens in `app/globals.css` |
 | Fonts (as built) | **Nunito** (body) + **Cinzel** (display). Blueprint mentioned Fredoka; the app uses Cinzel. |
 | Theme | Bright only. Parchment cream, pirate red, ocean blue. No dark mode. |
-| Auth | Firebase Auth, **email/password only**. Client `AuthGate`. No `middleware.ts`. |
+| Auth | Firebase Auth, **email/password only**. Client `AuthGate`. No `middleware.ts`. Public routes render while Auth is still resolving (avoids mobile “Loading…” freeze). Auth init falls back IndexedDB → localStorage → memory, with an 8s ready timeout + Retry. |
 | Data | Cloud Firestore, nested under `users/{uid}/…`. Client SDK writes. |
 | Catalog | Static JSON in `data/`, loaded in the browser. ~**2785** English cards. Don cards stripped at ingest. |
 | Images | Same-origin `/card-art/{file}.png` proxy for Bandai (avoids Chrome **CORP** and Vercel `/_next/image` **402**). Strict filename allowlist, upstream timeout, ETag/304, in-flight coalesce, long cache. Optional CDN mirror first via `NEXT_PUBLIC_CARD_IMAGE_ORIGIN`. Retries + **Retry** UI. |

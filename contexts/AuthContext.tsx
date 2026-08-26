@@ -21,9 +21,14 @@ import {
 import { getFirebaseAuth } from "@/lib/firebase";
 import { createUserDocOnSignup } from "@/lib/users";
 
+/** If IndexedDB/Auth never resolves (seen on some mobile Safari builds), unblock the UI. */
+const AUTH_READY_TIMEOUT_MS = 8_000;
+
 type AuthContextValue = {
   user: User | null;
   loading: boolean;
+  /** True when we gave up waiting for Firebase Auth. */
+  authTimedOut: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (
     email: string,
@@ -33,6 +38,7 @@ type AuthContextValue = {
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateDisplayName: (displayName: string) => Promise<void>;
+  retryAuth: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -66,26 +72,69 @@ function mapAuthError(error: unknown): string {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authTimedOut, setAuthTimedOut] = useState(false);
+  const [authEpoch, setAuthEpoch] = useState(0);
 
   useEffect(() => {
     let unsub: (() => void) | undefined;
-    let failTimer: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false;
+    let sawAuthEvent = false;
+
+    const timeoutId = setTimeout(() => {
+      if (cancelled || sawAuthEvent) return;
+      console.warn(
+        "[DeckPool] Firebase Auth did not become ready in time; continuing without a session.",
+      );
+      setAuthTimedOut(true);
+      setLoading(false);
+    }, AUTH_READY_TIMEOUT_MS);
 
     try {
       const auth = getFirebaseAuth();
-      unsub = onAuthStateChanged(auth, (next) => {
-        setUser(next);
-        setLoading(false);
-      });
+      unsub = onAuthStateChanged(
+        auth,
+        (next) => {
+          if (cancelled) return;
+          sawAuthEvent = true;
+          clearTimeout(timeoutId);
+          setUser(next);
+          setAuthTimedOut(false);
+          setLoading(false);
+        },
+        (error) => {
+          console.error(error);
+          if (cancelled) return;
+          sawAuthEvent = true;
+          clearTimeout(timeoutId);
+          setUser(null);
+          setAuthTimedOut(false);
+          setLoading(false);
+        },
+      );
     } catch (error) {
       console.error(error);
-      failTimer = setTimeout(() => setLoading(false), 0);
+      clearTimeout(timeoutId);
+      queueMicrotask(() => {
+        if (cancelled) return;
+        sawAuthEvent = true;
+        setUser(null);
+        setAuthTimedOut(false);
+        setLoading(false);
+      });
     }
 
     return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
       unsub?.();
-      if (failTimer) clearTimeout(failTimer);
     };
+  }, [authEpoch]);
+
+  const retryAuth = useCallback(() => {
+    setLoading(true);
+    setAuthTimedOut(false);
+    setUser(null);
+    setAuthEpoch((n) => n + 1);
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -153,20 +202,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       loading,
+      authTimedOut,
       login,
       signup,
       logout,
       resetPassword,
       updateDisplayName,
+      retryAuth,
     }),
     [
       user,
       loading,
+      authTimedOut,
       login,
       signup,
       logout,
       resetPassword,
       updateDisplayName,
+      retryAuth,
     ],
   );
 
