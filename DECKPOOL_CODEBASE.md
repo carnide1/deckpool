@@ -72,7 +72,7 @@ V1 cost rules still in force in code: no paid search service, no language-model 
 | Auth | Firebase Auth, **email/password only**. Client `AuthGate`. No `middleware.ts`. |
 | Data | Cloud Firestore, nested under `users/{uid}/…`. Client SDK writes. |
 | Catalog | Static JSON in `data/`, loaded in the browser. ~**2785** English cards. Don cards stripped at ingest. |
-| Images | `next/image` → same-origin `/_next/image` (avoids Bandai **CORP** blocks on direct hotlinks). Optional mirror via `NEXT_PUBLIC_CARD_IMAGE_ORIGIN` (tried first, then Bandai). Retries + **Retry** UI on failure. |
+| Images | Same-origin `/card-art?url=…` proxy for Bandai (avoids Chrome **CORP** and Vercel `/_next/image` **402** quota). Optional CDN mirror first via `NEXT_PUBLIC_CARD_IMAGE_ORIGIN`. Retries + **Retry** UI. |
 | Hosting (intended) | Vercel Hobby. No `vercel.json` in the repo. `.vercel/` is gitignored. |
 | Package manager | **npm** (`package-lock.json`) |
 | Tests | `npm test` → `tsx --test lib/**/*.test.ts` |
@@ -120,7 +120,7 @@ Ingest is a **local** maintainer task. Vercel must not scrape Bandai or One Piec
 - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
 - `NEXT_PUBLIC_FIREBASE_APP_ID`
 - `NEXT_PUBLIC_APP_URL` (local: `http://localhost:3000`)
-- `NEXT_PUBLIC_CARD_IMAGE_ORIGIN` (optional) — HTTPS origin with **no** trailing slash that mirrors Bandai’s `/images/cardlist/card/...` paths. Invalid values are ignored. When set, the browser/`/_next/image` tries the mirror URL first, then Bandai. **Must also be present at build time** so `next.config.ts` can allowlist that host in `images.remotePatterns`. Catalog and Firestore still store Bandai URLs.
+- `NEXT_PUBLIC_CARD_IMAGE_ORIGIN` (optional) — HTTPS origin with **no** trailing slash that mirrors Bandai’s `/images/cardlist/card/...` paths. Invalid values are ignored. When set, tiles try the mirror URL first, then same-origin `/card-art` for Bandai. Catalog and Firestore still store Bandai URLs.
 
 Never commit `.env.local`. Never put a language-model key in the browser.
 
@@ -140,8 +140,9 @@ Logged-in users on those routes are sent to `/decks`, or `/collection` if they o
 | `/decks` | List decks, grouped by Leader. Create / rename / delete. |
 | `/decks/[id]` | **View** by default (`DeckView`). **Edit** at `?mode=edit` (`BuilderView`). |
 | `/profile` | Display name (Auth + Firestore), email, stats, logout. |
+| `/card-art` | **Image proxy** (not a page). `GET ?url=` https Bandai `/images/**` only. |
 
-There is **no** `/api/*` folder.
+There is **no** `/api/*` folder. Card art uses App Router route `GET /card-art?url=` (Bandai host allowlisted only).
 
 ---
 
@@ -298,7 +299,9 @@ Do **not** call a language model to decide legality.
 | `scripts/ingest-catalog.ts` | From punk-records English JSON |
 | `scripts/ingest-products.ts` | From One Piece Player HTML, with `scripts/product-urls.json` and `scripts/product-overrides/` |
 
-Card shape: `types/catalog.ts` (`DeckPoolCard`). `cost` on a Leader is Life. `images[]` is every known scan for that number; user picks one per account in `cardPrefs`. Grids, deck rows, builder portraits, and Leader pickers all use `imageCandidates` → `CardImage`. Load order is built in `lib/cardImageUrl.ts` (`displayImageCandidates`: preferred/other scans, each expanded to mirror then Bandai). `CardImage` uses `next/image` so the browser requests **same-origin** `/_next/image` (Bandai/mirror are fetched server-side — this avoids Chrome `(blocked:CORP …)` on direct hotlinks). One retry per URL, then the next candidate; then “No art” + **Retry**. If the preferred URL is gone after ingest, `imageForCard` falls back to the first scan.
+Card shape: `types/catalog.ts` (`DeckPoolCard`). `cost` on a Leader is Life. `images[]` is every known scan for that number; user picks one per account in `cardPrefs`. Grids, deck rows, builder portraits, and Leader pickers all use `imageCandidates` → `CardImage`. Load order is built in `lib/cardImageUrl.ts` (`displayImageCandidates`: preferred/other scans → optional mirror, then `/card-art?url=` for Bandai). `CardImage` uses a plain `<img>` (not `/_next/image`) so Hobby Image Optimization **402**s do not blank the grid; `/card-art` keeps the browser same-origin so Bandai **CORP** does not apply. One retry per URL, then the next candidate; then “No art” + **Retry**. If the preferred URL is gone after ingest, `imageForCard` falls back to the first scan.
+
+**Note:** Catalog JSON is still committed offline. `/card-art` only fetches **image bytes** on demand (cached). It is not catalog scrape-at-runtime.
 
 When a new set releases: pull punk-records, run both ingest scripts, commit `data/`, then ship. Do not guess starter counts as “1 of each id.”
 

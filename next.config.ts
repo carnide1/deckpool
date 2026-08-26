@@ -8,8 +8,8 @@ type ImageRemotePattern = {
 };
 
 /**
- * Optional art mirror (same env as the client). Allows /_next/image to fetch
- * from that host when NEXT_PUBLIC_CARD_IMAGE_ORIGIN is set at build time.
+ * Optional art mirror allowlist (only needed if something still uses next/image
+ * against the mirror host). Card grids use /card-art or plain mirror <img>.
  */
 function mirrorRemotePattern(): ImageRemotePattern | null {
   const raw = process.env.NEXT_PUBLIC_CARD_IMAGE_ORIGIN?.trim();
@@ -33,10 +33,6 @@ const mirror = mirrorRemotePattern();
 
 const nextConfig: NextConfig = {
   images: {
-    // Browser loads /_next/image on our origin (avoids Bandai CORP blocking
-    // cross-site <img>). Optimizer fetches Bandai/mirror server-side.
-    // When a mirror CDN is configured, prefer it via CardImage candidates to
-    // cut Bandai traffic and Hobby image-transform usage.
     remotePatterns: [
       {
         protocol: "https",

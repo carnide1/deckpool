@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  browserImageUrl,
   displayImageCandidates,
   getCardImageMirrorOrigin,
   imageCandidates,
@@ -117,31 +118,40 @@ describe("publicImageUrl / mirror origin", () => {
 });
 
 describe("urlsForCatalogImage / displayImageCandidates", () => {
-  it("returns only the catalog url when no mirror is set", () => {
+  it("proxies Bandai urls through same-origin /card-art when no mirror is set", () => {
     withOrigin(undefined, () => {
-      assert.deepEqual(
-        urlsForCatalogImage(
-          "https://en.onepiece-cardgame.com/images/cardlist/card/P-155.png",
-        ),
-        ["https://en.onepiece-cardgame.com/images/cardlist/card/P-155.png"],
+      const bandai =
+        "https://en.onepiece-cardgame.com/images/cardlist/card/P-155.png";
+      assert.equal(
+        browserImageUrl(bandai),
+        `/card-art?url=${encodeURIComponent(bandai)}`,
       );
+      assert.deepEqual(urlsForCatalogImage(bandai), [
+        `/card-art?url=${encodeURIComponent(bandai)}`,
+      ]);
     });
   });
 
-  it("tries mirror then Bandai for each Bandai catalog url", () => {
+  it("tries mirror then proxied Bandai for each Bandai catalog url", () => {
     withOrigin("https://cdn.example.test", () => {
-      assert.deepEqual(
-        displayImageCandidates([
-          "https://en.onepiece-cardgame.com/images/cardlist/card/P-155.png",
-          "https://en.onepiece-cardgame.com/images/cardlist/card/P-155_p1.png",
-        ]),
-        [
-          "https://cdn.example.test/images/cardlist/card/P-155.png",
-          "https://en.onepiece-cardgame.com/images/cardlist/card/P-155.png",
-          "https://cdn.example.test/images/cardlist/card/P-155_p1.png",
-          "https://en.onepiece-cardgame.com/images/cardlist/card/P-155_p1.png",
-        ],
-      );
+      const a =
+        "https://en.onepiece-cardgame.com/images/cardlist/card/P-155.png";
+      const b =
+        "https://en.onepiece-cardgame.com/images/cardlist/card/P-155_p1.png";
+      assert.deepEqual(displayImageCandidates([a, b]), [
+        "https://cdn.example.test/images/cardlist/card/P-155.png",
+        `/card-art?url=${encodeURIComponent(a)}`,
+        "https://cdn.example.test/images/cardlist/card/P-155_p1.png",
+        `/card-art?url=${encodeURIComponent(b)}`,
+      ]);
+    });
+  });
+
+  it("leaves non-Bandai urls unchanged", () => {
+    withOrigin(undefined, () => {
+      assert.deepEqual(urlsForCatalogImage("https://example.test/x.png"), [
+        "https://example.test/x.png",
+      ]);
     });
   });
 });

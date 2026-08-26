@@ -45,19 +45,44 @@ export function publicImageUrl(url: string): string {
 }
 
 /**
- * Browser load order for one catalog URL: mirror (if any) then original Bandai.
- * So a missing mirror object can still fall through to Bandai.
+ * Browser-safe URL for a catalog image.
+ * Bandai hosts are loaded via same-origin `/card-art` (avoids CORP + Vercel
+ * Image Optimization 402). Non-Bandai URLs pass through unchanged.
+ */
+export function browserImageUrl(catalogUrl: string): string {
+  try {
+    const parsed = new URL(catalogUrl);
+    if (
+      parsed.protocol === "https:" &&
+      parsed.hostname === BANDAI_IMAGE_HOST &&
+      parsed.pathname.startsWith("/images/")
+    ) {
+      const normalized = `https://${BANDAI_IMAGE_HOST}${parsed.pathname}${parsed.search}`;
+      return `/card-art?url=${encodeURIComponent(normalized)}`;
+    }
+  } catch {
+    // fall through
+  }
+  return catalogUrl;
+}
+
+/**
+ * Browser load order for one catalog URL: optional mirror, then Bandai via
+ * same-origin proxy.
  */
 export function urlsForCatalogImage(catalogUrl: string): string[] {
   if (!catalogUrl) return [];
   const mirrored = publicImageUrl(catalogUrl);
-  if (mirrored === catalogUrl) return [catalogUrl];
-  return [mirrored, catalogUrl];
+  const proxied = browserImageUrl(catalogUrl);
+  if (mirrored !== catalogUrl && mirrored !== proxied) {
+    return [mirrored, proxied];
+  }
+  return [proxied];
 }
 
 /**
  * Expand preferred + alternate catalog scans into the ordered list the <img>
- * should try (mirror then Bandai per scan, deduped).
+ * should try (mirror then proxied Bandai per scan, deduped).
  */
 export function displayImageCandidates(catalogUrls: string[]): string[] {
   const out: string[] = [];

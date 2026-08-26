@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from "react";
 import { displayImageCandidates } from "@/lib/cardImageUrl";
 
@@ -17,13 +16,19 @@ type CardImageProps = {
 
 const SAME_URL_RETRIES = 1;
 
+function withRetryBust(url: string, retry: number): string {
+  if (retry <= 0) return url;
+  const join = url.includes("?") ? "&" : "?";
+  return `${url}${join}_dp_retry=${retry}`;
+}
+
 /**
- * Card art via next/image → `/_next/image` (same-origin), which sidesteps
- * Bandai Cross-Origin-Resource-Policy blocks on direct hotlinks.
+ * Card art for the browser.
  *
- * Load order still comes from displayImageCandidates: optional mirror first,
- * then Bandai (and other catalog scans). One retry per URL, then next
- * candidate; Retry control after exhaustion.
+ * Bandai URLs are rewritten to same-origin `/card-art` (see app/card-art/route.ts)
+ * so Chrome CORP cannot block them and we do not use Vercel `/_next/image`
+ * (Hobby 402 once optimize quota is exhausted). Optional CDN mirror is tried
+ * first when NEXT_PUBLIC_CARD_IMAGE_ORIGIN is set.
  */
 export function CardImage({
   src,
@@ -139,15 +144,16 @@ export function CardImage({
   };
 
   return (
-    <Image
-      key={`${current}::${sameUrlRetry}`}
-      src={current}
+    // eslint-disable-next-line @next/next/no-img-element -- same-origin /card-art or mirror; avoid /_next/image 402
+    <img
+      src={withRetryBust(current, sameUrlRetry)}
       alt={alt}
       width={width}
       height={height}
       data-candidate={String(index)}
-      priority={priority}
       loading={priority ? "eager" : "lazy"}
+      decoding="async"
+      fetchPriority={priority ? "high" : "auto"}
       onError={handleError}
       className={["h-auto object-cover", shellClass].join(" ")}
     />

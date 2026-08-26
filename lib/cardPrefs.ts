@@ -2,6 +2,7 @@ import { collection, doc, setDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 
 export {
+  browserImageUrl,
   displayImageCandidates,
   getCardImageMirrorOrigin,
   imageCandidates,
