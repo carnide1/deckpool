@@ -157,8 +157,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email,
           password,
         );
-        await updateProfile(cred.user, { displayName: trimmed });
-        await createUserDocOnSignup(cred.user, trimmed);
+        // Auth user already exists past this point — keep signup successful even
+        // if profile/Firestore writes fail; ensureUserDoc heals the doc later.
+        try {
+          await updateProfile(cred.user, { displayName: trimmed });
+        } catch (error) {
+          console.error(error);
+        }
+        try {
+          await createUserDocOnSignup(cred.user, trimmed);
+        } catch (error) {
+          console.error(error);
+        }
         setUser(getFirebaseAuth().currentUser);
       } catch (error) {
         throw new Error(mapAuthError(error));
@@ -179,6 +189,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await sendPasswordResetEmail(getFirebaseAuth(), email);
     } catch (error) {
+      // Never reveal whether an email is registered.
+      if (typeof error === "object" && error && "code" in error) {
+        const code = String((error as { code: string }).code);
+        if (code === "auth/user-not-found") return;
+      }
       throw new Error(mapAuthError(error));
     }
   }, []);
@@ -192,7 +207,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await updateProfile(auth.currentUser, {
         displayName: displayName.trim(),
       });
-      setUser({ ...auth.currentUser });
+      await auth.currentUser.reload();
+      setUser(auth.currentUser);
     } catch (error) {
       throw new Error(mapAuthError(error));
     }

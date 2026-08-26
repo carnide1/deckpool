@@ -132,6 +132,12 @@ describe("publicImageUrl / mirror origin", () => {
       assert.equal(getCardImageMirrorOrigin(), null);
     });
   });
+
+  it("ignores http mirror origins (mixed content risk)", () => {
+    withOrigin("http://cdn.example.test", () => {
+      assert.equal(getCardImageMirrorOrigin(), null);
+    });
+  });
 });
 
 describe("urlsForCatalogImage / displayImageCandidates", () => {

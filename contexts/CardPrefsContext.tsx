@@ -21,22 +21,26 @@ const CardPrefsContext = createContext<CardPrefsContextValue | null>(null);
 
 export function CardPrefsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const uid = user?.uid ?? null;
   const [preferredByCardId, setPreferredByCardId] = useState<
     Record<string, string>
   >({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      setPreferredByCardId({});
-      setLoading(false);
-      return;
-    }
+    if (!uid) return;
 
-    setLoading(true);
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setPreferredByCardId({});
+      setLoading(true);
+    });
+
     const unsub = onSnapshot(
-      userCardPrefsRef(user.uid),
+      userCardPrefsRef(uid),
       (snap) => {
+        if (cancelled) return;
         const next: Record<string, string> = {};
         for (const docSnap of snap.docs) {
           const url = docSnap.data().preferredImageUrl;
@@ -47,17 +51,24 @@ export function CardPrefsProvider({ children }: { children: ReactNode }) {
       },
       (err) => {
         console.error(err);
+        if (cancelled) return;
         setPreferredByCardId({});
         setLoading(false);
       },
     );
 
-    return () => unsub();
-  }, [user]);
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, [uid]);
 
   const value = useMemo(
-    () => ({ preferredByCardId, loading }),
-    [preferredByCardId, loading],
+    () => ({
+      preferredByCardId: uid ? preferredByCardId : {},
+      loading: Boolean(uid) && loading,
+    }),
+    [uid, preferredByCardId, loading],
   );
 
   return (

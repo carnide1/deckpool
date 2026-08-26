@@ -2,6 +2,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  increment,
   runTransaction,
   serverTimestamp,
   setDoc,
@@ -103,13 +104,15 @@ export async function incrementCollectionFromProduct(
   for (const [cardId, addQty] of Object.entries(contents)) {
     if (addQty <= 0) continue;
     const existing = ownedMap[cardId];
-    const quantity = (existing?.quantity ?? 0) + addQty;
-    const labels = mergeLabels(existing?.labels ?? [], extraLabels);
-    batch.set(
-      collectionDocRef(uid, cardId),
-      { quantity, labels, updatedAt: now },
-      { merge: true },
-    );
+    // Atomic qty bump — do not trust ownedMap for the written quantity.
+    const payload: Record<string, unknown> = {
+      quantity: increment(addQty),
+      updatedAt: now,
+    };
+    if (extraLabels.length > 0 || (existing?.labels.length ?? 0) > 0) {
+      payload.labels = mergeLabels(existing?.labels ?? [], extraLabels);
+    }
+    batch.set(collectionDocRef(uid, cardId), payload, { merge: true });
   }
 
   await batch.commit();

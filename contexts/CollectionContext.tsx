@@ -25,24 +25,26 @@ const CollectionContext = createContext<CollectionContextValue | null>(null);
 
 export function CollectionProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const uid = user?.uid ?? null;
   const [ownedMap, setOwnedMap] = useState<Record<string, CollectionItem>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
+    if (!uid) return;
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
       setOwnedMap({});
       setError(null);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
+      setLoading(true);
+    });
 
     const unsub = onSnapshot(
-      userCollectionRef(user.uid),
+      userCollectionRef(uid),
       (snap) => {
+        if (cancelled) return;
         const next: Record<string, CollectionItem> = {};
         for (const docSnap of snap.docs) {
           next[docSnap.id] = parseCollectionItem(
@@ -56,14 +58,18 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
       },
       (err) => {
         console.error(err);
+        if (cancelled) return;
         setError("Could not load your collection.");
         setOwnedMap({});
         setLoading(false);
       },
     );
 
-    return () => unsub();
-  }, [user]);
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, [uid]);
 
   const allLabels = useMemo(() => {
     const labels = new Set<string>();
@@ -83,8 +89,14 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ ownedMap, allLabels, ownedCardCount, loading, error }),
-    [ownedMap, allLabels, ownedCardCount, loading, error],
+    () => ({
+      ownedMap: uid ? ownedMap : {},
+      allLabels: uid ? allLabels : [],
+      ownedCardCount: uid ? ownedCardCount : 0,
+      loading: Boolean(uid) && loading,
+      error: uid ? error : null,
+    }),
+    [uid, ownedMap, allLabels, ownedCardCount, loading, error],
   );
 
   return (

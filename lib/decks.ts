@@ -51,7 +51,9 @@ export function parseVariation(
     for (const [id, qty] of Object.entries(
       data.cards as Record<string, unknown>,
     )) {
-      if (typeof qty === "number" && qty > 0) cards[id] = qty;
+      if (typeof qty === "number" && Number.isFinite(qty) && qty > 0) {
+        cards[id] = Math.floor(qty);
+      }
     }
   }
   return {
@@ -157,7 +159,9 @@ export function variationDocRef(
 export function cleanCardsMap(cards: Record<string, number>): Record<string, number> {
   const next: Record<string, number> = {};
   for (const [cardId, qty] of Object.entries(cards)) {
-    if (qty > 0) next[cardId] = qty;
+    if (typeof qty === "number" && Number.isFinite(qty) && qty > 0) {
+      next[cardId] = Math.floor(qty);
+    }
   }
   return next;
 }
@@ -168,13 +172,16 @@ export async function setVariationCards(
   variationId: string,
   cards: Record<string, number>,
 ): Promise<void> {
-  await updateDoc(variationDocRef(uid, deckId, variationId), {
+  const db = getFirebaseDb();
+  const batch = writeBatch(db);
+  batch.update(variationDocRef(uid, deckId, variationId), {
     cards: cleanCardsMap(cards),
     updatedAt: serverTimestamp(),
   });
-  await updateDoc(deckDocRef(uid, deckId), {
+  batch.update(deckDocRef(uid, deckId), {
     updatedAt: serverTimestamp(),
   });
+  await batch.commit();
 }
 
 export async function cloneVariation(

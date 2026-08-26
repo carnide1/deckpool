@@ -1,9 +1,13 @@
 import {
+  collection,
   doc,
   getDoc,
+  getDocs,
+  query,
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { getFirebaseDb } from "@/lib/firebase";
@@ -71,9 +75,6 @@ export async function updateUserDisplayName(
 
 /** Count owned cards (qty > 0) for post-login routing. */
 export async function getOwnedCardCount(uid: string): Promise<number> {
-  const { collection, getDocs, query, where } = await import(
-    "firebase/firestore"
-  );
   const q = query(
     collection(getFirebaseDb(), "users", uid, "collection"),
     where("quantity", ">", 0),

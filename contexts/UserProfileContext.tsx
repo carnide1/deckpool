@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { User } from "firebase/auth";
 import { useAuth } from "@/contexts/AuthContext";
 import { ensureUserDoc, updateUserDisplayName } from "@/lib/users";
 import type { UserProfile } from "@/types/user";
@@ -25,18 +26,23 @@ const UserProfileContext = createContext<UserProfileContextValue | null>(null);
 
 export function UserProfileProvider({ children }: { children: ReactNode }) {
   const { user, updateDisplayName } = useAuth();
+  const uid = user?.uid ?? null;
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
 
-  const loadProfile = useCallback(async (uidUser: NonNullable<typeof user>) => {
+  const loadProfile = useCallback(async (authUser: User) => {
+    const expectedUid = authUser.uid;
     setProfileLoading(true);
     setProfileError(null);
     try {
-      const next = await ensureUserDoc(uidUser);
+      const next = await ensureUserDoc(authUser);
+      // Ignore stale responses after logout / account switch.
+      if (expectedUid !== authUser.uid) return;
       setProfile(next);
     } catch (error) {
       console.error(error);
+      if (expectedUid !== authUser.uid) return;
       setProfileError(
         error instanceof Error
           ? error.message
@@ -44,7 +50,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
       );
       setProfile(null);
     } finally {
-      setProfileLoading(false);
+      if (expectedUid === authUser.uid) setProfileLoading(false);
     }
   }, []);
 
@@ -63,20 +69,43 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
 
     const timer = setTimeout(() => {
       if (cancelled) return;
-      if (!user) {
+      if (!user || !uid) {
         setProfile(null);
         setProfileError(null);
         setProfileLoading(false);
         return;
       }
-      void loadProfile(user);
+
+      const expectedUid = uid;
+      void (async () => {
+        setProfileLoading(true);
+        setProfileError(null);
+        try {
+          const next = await ensureUserDoc(user);
+          if (cancelled || expectedUid !== user.uid) return;
+          setProfile(next);
+        } catch (error) {
+          console.error(error);
+          if (cancelled || expectedUid !== user.uid) return;
+          setProfileError(
+            error instanceof Error
+              ? error.message
+              : "Could not load your profile. Check Firestore rules.",
+          );
+          setProfile(null);
+        } finally {
+          if (!cancelled && expectedUid === user.uid) {
+            setProfileLoading(false);
+          }
+        }
+      })();
     }, 0);
 
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [user, loadProfile]);
+  }, [user, uid]);
 
   const saveDisplayName = useCallback(
     async (displayName: string) => {

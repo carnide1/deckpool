@@ -188,7 +188,9 @@ export function ShareDeckView({ share }: { share: DeckShare }) {
               </div>
             ) : null}
             <p className="mt-3 text-sm tabular-nums text-[var(--ink-muted)]">
-              {deckCount}/50 cards
+              {unknownIds.length > 0
+                ? `${deckCount - unknownIds.reduce((sum, id) => sum + (share.cards[id] ?? 0), 0)} shown · ${deckCount} in snapshot`
+                : `${deckCount}/50 cards`}
             </p>
             {leaderUnknown ? (
               <p className="mt-2 text-xs text-[var(--ink-muted)]">

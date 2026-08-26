@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-08-26  
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `afb951e` — “Refresh the codebase snapshot for AuthGate and share behavior.”)  
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `47e5c94` — “Point the snapshot Git line at the summary refresh commit.”)  
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -120,7 +120,7 @@ Ingest is a **local** maintainer task. Vercel must not scrape Bandai or One Piec
 - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
 - `NEXT_PUBLIC_FIREBASE_APP_ID`
 - `NEXT_PUBLIC_APP_URL` (local: `http://localhost:3000`)
-- `NEXT_PUBLIC_CARD_IMAGE_ORIGIN` (optional) — HTTPS origin with **no** trailing slash that mirrors Bandai’s `/images/cardlist/card/...` paths. Invalid values are ignored. When set, tiles try the mirror URL first, then same-origin `/card-art` for Bandai. Catalog and Firestore still store Bandai URLs.
+- `NEXT_PUBLIC_CARD_IMAGE_ORIGIN` (optional) — **HTTPS** origin with **no** trailing slash that mirrors Bandai’s `/images/cardlist/card/...` paths. Invalid values (including `http:`) are ignored. When set, tiles try the mirror URL first, then same-origin `/card-art` for Bandai. Catalog and Firestore still store Bandai URLs.
 
 Never commit `.env.local`. Never put a language-model key in the browser.
 
@@ -189,7 +189,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 
 - Collection document **id** is the card number. Qty 0 **deletes** the doc.
 - Wanted document **id** is the same card number. Qty is extra copies to buy, not a total target. Qty 0 **deletes** the doc.
-- **Shares** are immutable snapshots (create + single-doc public **get**; **list denied** so there is no gallery). `cards` map must be non-empty on create. Owner decks stay private. Create requires signed-in `ownerUid`. After changing `firestore.rules`, run `firebase deploy --only firestore:rules`. Until that is published, Wanted and Share reads/writes fail.
+- **Shares** are immutable snapshots (create + single-doc public **get**; **list denied** so there is no gallery). Create requires signed-in `ownerUid`, `keys().hasOnly(...)` (no extra fields), non-empty `cards` map of size ≤ 60, and short string fields. Owner decks stay private. Preferred art URLs stored on shares are Bandai HTTPS only. After changing `firestore.rules`, run `firebase deploy --only firestore:rules`. Until that is published, Wanted and Share reads/writes fail.
 - Labels live only on owned collection rows. Unowned Wanted cards have no labels.
 - **Caught** writes binder and Wanted in one Firestore transaction. Collection `+` while a poster exists uses that same catch helper.
 - Decrementing owned qty does **not** put the bounty back.
@@ -241,7 +241,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 
 - Search defaults to **owned only** (toggle off to add unowned copies).
 - Hard filters always: Leader colors (card colors must be a subset of Leader colors), Leader forbid rules, no Leaders/Don in the 50.
-- Click a result to add a copy. Cap is construction copy limit (usually 4), **not** owned qty. Minus on the list to remove.
+- Click a result to add a copy. Cap is construction copy limit (usually 4), **not** owned qty. Hard stop at **50** cards in the list. Minus on the list to remove.
 - Result tiles are a dense 3-column grid on mobile, images capped at 120px wide (`h-auto w-full`) so they do not blow up versus View. Leader portrait and result tiles use preferred art.
 - WANTED stamp on results does **not** add to the 50. **Post all unowned** raises Wanted to `in this variation − owned` for the active variation (does not stack on top of an existing bounty).
 - Manifest lines show id, category, cost, and power, plus in-deck / owned. Status panel: Legal/Illegal, Owned/Unowned, reason bullets for the **active tab**.
@@ -293,9 +293,10 @@ Pure functions: `lib/legality.ts`, `lib/construction.ts`, `lib/builder.ts`.
 
 1. Valid Leader on the deck  
 2. Main deck size exactly 50  
-3. Every card’s colors ⊆ Leader colors  
-4. Copies ≤ 4, unless a `copyLimit` rule says otherwise (`null` = unlimited)  
-5. No card matching the Leader’s `forbid` rules  
+3. Every card is Character / Event / Stage (no Leaders or Don in the list)  
+4. Every card’s colors ⊆ Leader colors  
+5. Copies ≤ 4, unless a `copyLimit` rule says otherwise (`null` = unlimited)  
+6. No card matching the Leader’s `forbid` rules  
 
 **Owned:** Leader qty ≥ 1, and for every main-deck id, in-deck ≤ binder qty.
 

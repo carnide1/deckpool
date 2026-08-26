@@ -38,7 +38,6 @@ import { useWantedWrite } from "@/hooks/useWantedWrite";
 import { useDecks } from "@/contexts/DecksContext";
 import {
   canAddToDeck,
-  filterBuilderCatalog,
   filterBuilderUniverse,
   mainDeckCount,
 } from "@/lib/builder";
@@ -47,6 +46,7 @@ import { setFavoriteVariation, setVariationCards } from "@/lib/decks";
 import { imageCandidates } from "@/lib/cardPrefs";
 import { validateVariation } from "@/lib/legality";
 import {
+  applySearchFilters,
   EMPTY_FILTERS,
   type SearchFilters,
 } from "@/lib/search/filters";
@@ -173,21 +173,19 @@ export function BuilderView({ deck }: { deck: Deck }) {
 
   const searchResults = useMemo(() => {
     if (!leader) return [];
-    const filtered = filterBuilderCatalog(cards, leader, deferredFilters, {
+    const filtered = applySearchFilters(legalPool, deferredFilters, {
       ownedOnly,
       ownedIds,
       labelsByCardId,
-      rules: constructionRules,
     });
     return sortCards(filtered, sort).slice(0, MAX_RESULTS);
   }, [
-    cards,
+    legalPool,
     leader,
     deferredFilters,
     ownedOnly,
     ownedIds,
     labelsByCardId,
-    constructionRules,
     sort,
   ]);
 
@@ -244,14 +242,14 @@ export function BuilderView({ deck }: { deck: Deck }) {
   const persistCards = (nextCards: Record<string, number>) => {
     if (!user || !activeVariation) return;
     const variationId = activeVariation.id;
-    cardsRef.current = nextCards;
-    setLocalCards(nextCards);
+    // Capture the payload now — cardsRef may point at another tab before the write runs.
+    const payload = nextCards;
+    cardsRef.current = payload;
+    setLocalCards(payload);
     pendingWrites.current += 1;
     setSaving(true);
     writeChain.current = writeChain.current
-      .then(() =>
-        setVariationCards(user.uid, deck.id, variationId, cardsRef.current),
-      )
+      .then(() => setVariationCards(user.uid, deck.id, variationId, payload))
       .catch((error) => {
         toast.error(
           error instanceof Error ? error.message : "Could not save deck list",
@@ -273,6 +271,7 @@ export function BuilderView({ deck }: { deck: Deck }) {
         ownedQtyById[card.id] ?? 0,
         ownedOnly,
         constructionRules,
+        mainDeckCount(cardsRef.current),
       )
     ) {
       return;
@@ -436,6 +435,7 @@ export function BuilderView({ deck }: { deck: Deck }) {
                 ownedQtyById[cardId] ?? 0,
                 ownedOnly,
                 constructionRules,
+                deckCount,
               )
             }
             onAdd={handleAdd}

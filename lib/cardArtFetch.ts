@@ -44,11 +44,28 @@ async function fetchBandaiArt(file: string): Promise<CardArtPayload> {
     });
   }
 
-  const contentType = upstream.headers.get("content-type") ?? "image/png";
-  if (!contentType.startsWith("image/")) {
-    throw Object.assign(new Error("Upstream was not an image"), {
+  const rawType = (
+    upstream.headers.get("content-type") ?? "image/png"
+  ).toLowerCase();
+  const contentType = rawType.split(";")[0]?.trim() || "image/png";
+  if (
+    contentType !== "image/png" &&
+    contentType !== "image/jpeg" &&
+    contentType !== "image/webp"
+  ) {
+    throw Object.assign(new Error("Upstream was not a supported image"), {
       status: 502,
     });
+  }
+
+  const declared = upstream.headers.get("content-length");
+  if (declared) {
+    const size = Number(declared);
+    if (Number.isFinite(size) && (size <= 0 || size > MAX_BYTES)) {
+      throw Object.assign(new Error("Upstream image size rejected"), {
+        status: 502,
+      });
+    }
   }
 
   const body = Buffer.from(await upstream.arrayBuffer());

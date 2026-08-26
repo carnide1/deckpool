@@ -65,7 +65,9 @@ export function canAddToDeck(
   ownedQty: number,
   ownedOnly: boolean,
   rules: ConstructionRule[] = getConstructionRules(),
+  mainDeckSize = 0,
 ): boolean {
+  if (mainDeckSize >= 50) return false;
   if (!canIncrementCopy(cardId, currentInDeck, rules)) return false;
   if (ownedOnly && currentInDeck >= ownedQty) return false;
   return true;

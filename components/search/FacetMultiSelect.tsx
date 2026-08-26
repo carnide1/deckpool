@@ -34,8 +34,15 @@ export function FacetMultiSelect({
         setOpen(false);
       }
     };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
     window.addEventListener("mousedown", onPointer);
-    return () => window.removeEventListener("mousedown", onPointer);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", onPointer);
+      window.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   const filtered = options.filter((option) => {
@@ -62,6 +69,8 @@ export function FacetMultiSelect({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
         className={[
           "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
           fullWidth ? "w-full justify-between" : "",

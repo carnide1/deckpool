@@ -10,6 +10,7 @@ import { getFirebaseDb } from "@/lib/firebase";
 import type { DeckShare } from "@/types/share";
 
 const MAX_UNIQUE_CARDS = 60;
+const BANDAI_IMAGE_HOST = "en.onepiece-cardgame.com";
 
 export function sharesCollectionRef() {
   return collection(getFirebaseDb(), "shares");
@@ -37,6 +38,17 @@ export function shareAbsoluteUrl(shareId: string, origin?: string): string {
   return path;
 }
 
+function isShareablePreferredUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.protocol === "https:" && parsed.hostname === BANDAI_IMAGE_HOST
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function pickPreferredImagesForShare(
   cardIds: string[],
   preferredByCardId: Record<string, string>,
@@ -44,7 +56,7 @@ export function pickPreferredImagesForShare(
   const out: Record<string, string> = {};
   for (const id of cardIds) {
     const url = preferredByCardId[id];
-    if (typeof url === "string" && url.startsWith("https://")) {
+    if (typeof url === "string" && isShareablePreferredUrl(url)) {
       out[id] = url;
     }
   }
@@ -118,7 +130,7 @@ export function parseShare(
     for (const [id, url] of Object.entries(
       data.preferredImages as Record<string, unknown>,
     )) {
-      if (typeof url === "string" && url.startsWith("https://")) {
+      if (typeof url === "string" && isShareablePreferredUrl(url)) {
         preferredImages[id] = url;
       }
     }

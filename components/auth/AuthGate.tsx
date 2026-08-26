@@ -42,9 +42,17 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (user && authLanding) {
-      void getPostLoginPath(user.uid).then((path) => router.replace(path));
-    }
+    if (!user || !authLanding) return;
+
+    let cancelled = false;
+    void getPostLoginPath(user.uid).then((path) => {
+      if (cancelled) return;
+      router.replace(path);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [user, loading, publicRoute, authLanding, pathname, router]);
 
   // Public pages (landing, login, share links) must not wait on Firebase Auth.

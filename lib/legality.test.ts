@@ -173,6 +173,18 @@ describe("legality", () => {
     assert.match(status.reasons.join(" "), /need 4, own 2/);
   });
 
+  it("rejects Leaders sitting in the main-deck map", () => {
+    const status = validateVariation(
+      "OP12-001",
+      { "OP12-001": 1, "ST01-002": 49 },
+      cardsById,
+      { "OP12-001": 1, "ST01-002": 49 },
+      rules,
+    );
+    assert.equal(status.legal, false);
+    assert.match(status.reasons.join(" "), /not a main-deck card/);
+  });
+
   it("rejects dual-color cards under single-color Leaders", () => {
     const dual = mainCard("DUAL-001", { colors: ["Red", "Green"] });
     const redLeader = leader("RED-001", ["Red"]);

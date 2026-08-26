@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -30,6 +31,7 @@ const DecksContext = createContext<DecksContextValue | null>(null);
 
 export function DecksProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const uid = user?.uid ?? null;
   const [decks, setDecks] = useState<Deck[]>([]);
   const [variationsByDeckId, setVariationsByDeckId] = useState<
     Record<string, Variation[]>
@@ -37,21 +39,37 @@ export function DecksProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const favoritesRef = useRef<Record<string, string | undefined>>({});
   useEffect(() => {
-    if (!user) {
+    favoritesRef.current = Object.fromEntries(
+      decks.map((deck) => [deck.id, deck.favoriteVariationId]),
+    );
+  }, [decks]);
+
+  const deckIdsKey = useMemo(
+    () =>
+      [...decks.map((deck) => deck.id)]
+        .sort((a, b) => a.localeCompare(b))
+        .join("\0"),
+    [decks],
+  );
+
+  useEffect(() => {
+    if (!uid) return;
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
       setDecks([]);
       setVariationsByDeckId({});
       setError(null);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
+      setLoading(true);
+    });
 
     const unsub = onSnapshot(
-      userDecksRef(user.uid),
+      userDecksRef(uid),
       (snap) => {
+        if (cancelled) return;
         const next = snap.docs.map((docSnap) =>
           parseDeck(docSnap.id, docSnap.data() as Record<string, unknown>),
         );
@@ -62,6 +80,7 @@ export function DecksProvider({ children }: { children: ReactNode }) {
       },
       (err) => {
         console.error(err);
+        if (cancelled) return;
         setError("Could not load your decks.");
         setDecks([]);
         setVariationsByDeckId({});
@@ -69,30 +88,40 @@ export function DecksProvider({ children }: { children: ReactNode }) {
       },
     );
 
-    return () => unsub();
-  }, [user]);
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, [uid]);
 
   useEffect(() => {
-    if (!user || decks.length === 0) {
-      setVariationsByDeckId({});
+    if (!uid || !deckIdsKey) {
+      queueMicrotask(() => setVariationsByDeckId({}));
       return;
     }
 
-    setVariationsByDeckId((prev) => {
-      const next: Record<string, Variation[]> = {};
-      for (const deck of decks) {
-        next[deck.id] = orderVariations(
-          prev[deck.id] ?? [],
-          deck.favoriteVariationId,
-        );
-      }
-      return next;
+    const deckIds = deckIdsKey.split("\0");
+    let cancelled = false;
+
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setVariationsByDeckId((prev) => {
+        const next: Record<string, Variation[]> = {};
+        for (const deckId of deckIds) {
+          next[deckId] = orderVariations(
+            prev[deckId] ?? [],
+            favoritesRef.current[deckId],
+          );
+        }
+        return next;
+      });
     });
 
-    const unsubs = decks.map((deck) =>
+    const unsubs = deckIds.map((deckId) =>
       onSnapshot(
-        deckVariationsRef(user.uid, deck.id),
+        deckVariationsRef(uid, deckId),
         (snap) => {
+          if (cancelled) return;
           const variations = snap.docs.map((docSnap) =>
             parseVariation(
               docSnap.id,
@@ -101,21 +130,58 @@ export function DecksProvider({ children }: { children: ReactNode }) {
           );
           setVariationsByDeckId((prev) => ({
             ...prev,
-            [deck.id]: orderVariations(variations, deck.favoriteVariationId),
+            [deckId]: orderVariations(
+              variations,
+              favoritesRef.current[deckId],
+            ),
           }));
         },
-        (err) => console.error(err),
+        (err) => {
+          console.error(err);
+          if (cancelled) return;
+          setError("Could not load deck variations.");
+        },
       ),
     );
 
     return () => {
+      cancelled = true;
       for (const unsub of unsubs) unsub();
     };
-  }, [user, decks]);
+  }, [uid, deckIdsKey]);
+
+  // Re-order tabs when the favorite pin changes without tearing down listeners.
+  useEffect(() => {
+    if (!uid || decks.length === 0) return;
+    queueMicrotask(() => {
+      setVariationsByDeckId((prev) => {
+        let changed = false;
+        const next: Record<string, Variation[]> = { ...prev };
+        for (const deck of decks) {
+          const rows = prev[deck.id];
+          if (!rows) continue;
+          const ordered = orderVariations(rows, deck.favoriteVariationId);
+          const same =
+            ordered.length === rows.length &&
+            ordered.every((row, index) => row.id === rows[index]?.id);
+          if (!same) {
+            next[deck.id] = ordered;
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    });
+  }, [uid, decks]);
 
   const value = useMemo(
-    () => ({ decks, variationsByDeckId, loading, error }),
-    [decks, variationsByDeckId, loading, error],
+    () => ({
+      decks: uid ? decks : [],
+      variationsByDeckId: uid ? variationsByDeckId : {},
+      loading: Boolean(uid) && loading,
+      error: uid ? error : null,
+    }),
+    [uid, decks, variationsByDeckId, loading, error],
   );
 
   return (

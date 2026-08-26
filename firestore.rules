@@ -4,6 +4,13 @@ service cloud.firestore {
     function isOwner(uid) {
       return request.auth != null && request.auth.uid == uid;
     }
+
+    function shareString(field, maxLen) {
+      return request.resource.data[field] is string
+        && request.resource.data[field].size() > 0
+        && request.resource.data[field].size() <= maxLen;
+    }
+
     match /users/{uid} {
       allow read, write: if isOwner(uid);
       match /collection/{cardId} {
@@ -31,7 +38,7 @@ service cloud.firestore {
       allow list: if false;
       allow create: if request.auth != null
         && request.resource.data.ownerUid == request.auth.uid
-        && request.resource.data.keys().hasAll([
+        && request.resource.data.keys().hasOnly([
           'ownerUid',
           'deckId',
           'variationId',
@@ -43,15 +50,20 @@ service cloud.firestore {
           'createdAt',
           'updatedAt'
         ])
-        && request.resource.data.deckName is string
-        && request.resource.data.leaderId is string
-        && request.resource.data.leaderId.size() > 0
-        && request.resource.data.variationName is string
+        && shareString('deckName', 120)
+        && shareString('leaderId', 32)
+        && shareString('variationName', 80)
+        && request.resource.data.deckId is string
+        && request.resource.data.deckId.size() > 0
+        && request.resource.data.deckId.size() <= 64
+        && request.resource.data.variationId is string
+        && request.resource.data.variationId.size() > 0
+        && request.resource.data.variationId.size() <= 64
         && request.resource.data.cards is map
         && request.resource.data.cards.size() > 0
+        && request.resource.data.cards.size() <= 60
         && request.resource.data.preferredImages is map
-        && request.resource.data.deckId is string
-        && request.resource.data.variationId is string;
+        && request.resource.data.preferredImages.size() <= 61;
       allow update: if false;
       allow delete: if request.auth != null
         && resource.data.ownerUid == request.auth.uid;

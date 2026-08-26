@@ -21,4 +21,9 @@ describe("canAddToDeck", () => {
   it("ignores owned qty when owned-only is off", () => {
     assert.equal(canAddToDeck("OP01-016", 2, 2, false, rules), true);
   });
+
+  it("blocks adds once the main deck is full", () => {
+    assert.equal(canAddToDeck("OP01-016", 0, 10, false, rules, 50), false);
+    assert.equal(canAddToDeck("OP01-016", 0, 10, false, rules, 49), true);
+  });
 });

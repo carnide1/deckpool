@@ -1,4 +1,8 @@
-import { mainDeckCount, isColorLegalForLeader } from "@/lib/builder";
+import {
+  isColorLegalForLeader,
+  isMainDeckCategory,
+  mainDeckCount,
+} from "@/lib/builder";
 import { copyLimitForCard, isForbiddenByLeader } from "@/lib/construction";
 import { resolveFavoriteVariationId } from "@/lib/variations";
 import type { DeckPoolCard } from "@/types/catalog";
@@ -49,6 +53,11 @@ export function validateVariation(
         reasons.push(`Unknown card ${cardId}.`);
         legal = false;
         continue;
+      }
+
+      if (!isMainDeckCategory(card.category)) {
+        reasons.push(`${card.name} is not a main-deck card.`);
+        legal = false;
       }
 
       if (!isColorLegalForLeader(card, leader)) {

@@ -17,7 +17,8 @@ export function getCardImageMirrorOrigin(): string | null {
   if (!raw) return null;
   try {
     const parsed = new URL(raw);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    // HTTPS only — http mirrors are mixed content on production deploys.
+    if (parsed.protocol !== "https:") {
       warnInvalidOrigin(raw);
       return null;
     }

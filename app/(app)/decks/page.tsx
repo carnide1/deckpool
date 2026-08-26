@@ -52,6 +52,27 @@ export default function DecksPage() {
     });
   }, [decks]);
 
+  const summariesByDeckId = useMemo(() => {
+    const map: Record<string, ReturnType<typeof summarizeDeck>> = {};
+    for (const deck of decks) {
+      map[deck.id] = summarizeDeck(
+        deck.leaderId,
+        variationsByDeckId[deck.id] ?? [],
+        cardsById,
+        ownedQtyById,
+        constructionRules,
+        deck.favoriteVariationId,
+      );
+    }
+    return map;
+  }, [
+    decks,
+    variationsByDeckId,
+    cardsById,
+    ownedQtyById,
+    constructionRules,
+  ]);
+
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -88,15 +109,11 @@ export default function DecksPage() {
         <div className="flex flex-col gap-3">
           {sortedDecks.map((deck) => {
             const leader = cardsById.get(deck.leaderId) ?? null;
-            const variations = variationsByDeckId[deck.id] ?? [];
-            const summary = summarizeDeck(
-              deck.leaderId,
-              variations,
-              cardsById,
-              ownedQtyById,
-              constructionRules,
-              deck.favoriteVariationId,
-            );
+            const summary = summariesByDeckId[deck.id] ?? {
+              variationCount: 0,
+              legal: false,
+              owned: false,
+            };
 
             return (
               <DeckRow

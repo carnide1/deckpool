@@ -197,12 +197,17 @@ export function CardDetailModal({
               Art picker
             </p>
             <div className="flex flex-wrap gap-2">
-              {card.images.map((url) => (
+              {card.images.map((url, index) => (
                 <button
                   key={url}
                   type="button"
                   onClick={() => void selectArt(url)}
                   disabled={loading}
+                  aria-label={
+                    preferred === url
+                      ? `Preferred art ${index + 1}`
+                      : `Use art ${index + 1}`
+                  }
                   className={[
                     "rounded-md border-2 p-1 transition-colors",
                     preferred === url

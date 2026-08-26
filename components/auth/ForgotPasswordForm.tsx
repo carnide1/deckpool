@@ -26,7 +26,9 @@ export function ForgotPasswordForm() {
   const onSubmit = handleSubmit(async (values) => {
     try {
       await resetPassword(values.email.trim());
-      toast.success("Password reset email sent — check your inbox");
+      toast.success(
+        "If an account exists for that email, a reset link is on the way.",
+      );
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Could not send reset email",
