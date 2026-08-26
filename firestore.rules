@@ -48,6 +48,7 @@ service cloud.firestore {
         && request.resource.data.leaderId.size() > 0
         && request.resource.data.variationName is string
         && request.resource.data.cards is map
+        && request.resource.data.cards.size() > 0
         && request.resource.data.preferredImages is map
         && request.resource.data.deckId is string
         && request.resource.data.variationId is string;

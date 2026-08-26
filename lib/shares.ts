@@ -62,6 +62,9 @@ export function buildSharePayload(input: {
   preferredImages?: Record<string, string>;
 }): Omit<DeckShare, "id" | "createdAt"> {
   const cards = cleanCardsMap(input.cards);
+  if (Object.keys(cards).length === 0) {
+    throw new Error("Add cards before sharing this list.");
+  }
   if (Object.keys(cards).length > MAX_UNIQUE_CARDS) {
     throw new Error("This list has too many unique cards to share.");
   }

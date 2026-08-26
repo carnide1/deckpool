@@ -82,6 +82,22 @@ describe("buildSharePayload", () => {
       /Leader/,
     );
   });
+
+  it("rejects an empty card map", () => {
+    assert.throws(
+      () =>
+        buildSharePayload({
+          ownerUid: "u1",
+          deckId: "d1",
+          variationId: "v1",
+          deckName: "x",
+          leaderId: "OP05-060",
+          variationName: "Main",
+          cards: { "OP01-016": 0 },
+        }),
+      /Add cards/,
+    );
+  });
 });
 
 describe("parseShare", () => {

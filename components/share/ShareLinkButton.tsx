@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Link2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
+import { cleanCardsMap } from "@/lib/decks";
 import {
   copyTextToClipboard,
   createDeckShare,
@@ -30,7 +31,7 @@ export function ShareLinkButton({
       toast.error("Pick a variation to share.");
       return;
     }
-    if (Object.keys(variation.cards).length === 0) {
+    if (Object.keys(cleanCardsMap(variation.cards)).length === 0) {
       toast.error("Add cards before sharing this list.");
       return;
     }

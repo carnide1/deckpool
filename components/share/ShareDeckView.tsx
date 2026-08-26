@@ -103,9 +103,12 @@ export function ShareDeckView({ share }: { share: DeckShare }) {
   const [selectedCard, setSelectedCard] = useState<DeckPoolCard | null>(null);
 
   const leader = cardsById.get(share.leaderId) ?? null;
+  const leaderPreferredUrl = share.preferredImages[share.leaderId] ?? null;
   const [leaderImage, ...leaderFallbacks] = leader
     ? imageCandidates(leader, share.preferredImages)
-    : [];
+    : leaderPreferredUrl
+      ? [leaderPreferredUrl]
+      : [];
 
   const grouped = useMemo(() => {
     return VIEW_GROUPS.map((category) => {
@@ -131,9 +134,11 @@ export function ShareDeckView({ share }: { share: DeckShare }) {
   }, [share.cards, cardsById]);
 
   const deckCount = mainDeckCount(share.cards);
-  const unknownIds = Object.keys(share.cards).filter(
-    (id) => !cardsById.has(id),
+  const cardIds = Object.keys(share.cards).filter(
+    (id) => (share.cards[id] ?? 0) > 0,
   );
+  const unknownIds = cardIds.filter((id) => !cardsById.has(id));
+  const leaderUnknown = !leader;
 
   if (loading) {
     return (
@@ -145,13 +150,12 @@ export function ShareDeckView({ share }: { share: DeckShare }) {
     return <p className="text-sm text-[var(--badge-illegal)]">{error}</p>;
   }
 
-  if (!leader) {
-    return (
-      <p className="text-sm text-[var(--ink-muted)]">
-        Leader card not found in catalog.
-      </p>
-    );
-  }
+  const emptyMessage =
+    deckCount === 0
+      ? "This shared list has no cards."
+      : unknownIds.length === cardIds.length
+        ? "None of these cards are in this catalog version yet."
+        : "No matching cards to show from this catalog version.";
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6">
@@ -161,7 +165,7 @@ export function ShareDeckView({ share }: { share: DeckShare }) {
             <CardImage
               src={leaderImage}
               fallbackSrcs={leaderFallbacks}
-              alt={leader.name}
+              alt={leader?.name ?? share.leaderId}
               width={96}
               height={134}
             />
@@ -174,23 +178,30 @@ export function ShareDeckView({ share }: { share: DeckShare }) {
               {share.deckName}
             </h1>
             <p className="mt-1 text-sm text-[var(--ink-muted)]">
-              {leader.name}
+              {leader?.name ?? share.leaderId}
               <span className="mx-1.5 text-[var(--bg-inset)]">·</span>
               {share.variationName}
             </p>
-            <div className="mt-2">
-              <ColorPills colors={leader.colors} />
-            </div>
+            {leader ? (
+              <div className="mt-2">
+                <ColorPills colors={leader.colors} />
+              </div>
+            ) : null}
             <p className="mt-3 text-sm tabular-nums text-[var(--ink-muted)]">
               {deckCount}/50 cards
             </p>
+            {leaderUnknown ? (
+              <p className="mt-2 text-xs text-[var(--ink-muted)]">
+                Leader {share.leaderId} is not in this catalog version.
+              </p>
+            ) : null}
           </div>
         </div>
       </div>
 
       {grouped.length === 0 ? (
         <div className="poster-panel p-8 text-center text-sm text-[var(--ink-muted)]">
-          This shared list has no cards.
+          {emptyMessage}
         </div>
       ) : (
         grouped.map((group) => (
