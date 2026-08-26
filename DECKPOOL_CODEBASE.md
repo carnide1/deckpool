@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-08-26  
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `eebc7fa` — “Fix mobile hang on AuthGate Loading screen.”)  
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `fb52e0b` — “Fix mobile hang on AuthGate Loading screen.”)  
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -92,7 +92,7 @@ From `C:\DeckPool`:
 | `npm run lint` | ESLint |
 | `npm run ingest-catalog -- --input <punk-records english folder>` | Rebuild `data/cards.json`, packs, construction rules, has-flags |
 | `npm run ingest-products` | Rebuild `data/products/` (ST01–ST36) from One Piece Player pages |
-| `firebase deploy --only firestore:rules` | Publish `firestore.rules` to project `deckpool-64459`. **Required after adding `wanted`.** |
+| `firebase deploy --only firestore:rules` | Publish `firestore.rules` to project `deckpool-64459`. **Required after changing rules** (e.g. `wanted`, `shares`). |
 
 Ingest is a **local** maintainer task. Vercel must not scrape Bandai or One Piece Player at runtime. Commit the generated JSON.
 
@@ -161,6 +161,14 @@ Authenticated shell (`app/(app)/layout.tsx`): `CatalogProvider` → `CollectionP
 | Card prefs | Firestore snapshot `users/{uid}/cardPrefs` |
 | Decks | Firestore snapshot `users/{uid}/decks` plus each deck’s `variations` |
 
+### AuthGate (as built)
+
+- Wraps the whole app. **No** `middleware.ts`.
+- **Public** (render even while Auth is still loading): `/`, `/login`, `/signup`, `/forgot-password`, `/s/…`. This avoids a mobile Safari hang where IndexedDB never resolves and the UI stuck on “Loading…”.
+- **Protected** app routes wait for Auth. If Auth does not become ready within **8 seconds**, loading ends with `authTimedOut`; the gate shows Retry / Go to log in instead of spinning forever.
+- Auth init (`lib/firebase.ts`): `initializeAuth` with persistence **IndexedDB → localStorage → memory**. Duplicate init (HMR) falls back to `getAuth`.
+- Auth landings redirect signed-in users via `getPostLoginPath`. Share routes are public but **not** auth landings (signed-in users stay on `/s/…`).
+
 ---
 
 ## Firestore
@@ -181,7 +189,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 
 - Collection document **id** is the card number. Qty 0 **deletes** the doc.
 - Wanted document **id** is the same card number. Qty is extra copies to buy, not a total target. Qty 0 **deletes** the doc.
-- **Shares** are immutable snapshots (create + single-doc public get; **list denied** so there is no gallery). Owner decks stay private. Create requires signed-in `ownerUid`. After changing `firestore.rules`, run `firebase deploy --only firestore:rules`. Until that is published, Wanted and Share reads/writes fail.
+- **Shares** are immutable snapshots (create + single-doc public **get**; **list denied** so there is no gallery). `cards` map must be non-empty on create. Owner decks stay private. Create requires signed-in `ownerUid`. After changing `firestore.rules`, run `firebase deploy --only firestore:rules`. Until that is published, Wanted and Share reads/writes fail.
 - Labels live only on owned collection rows. Unowned Wanted cards have no labels.
 - **Caught** writes binder and Wanted in one Firestore transaction. Collection `+` while a poster exists uses that same catch helper.
 - Decrementing owned qty does **not** put the bounty back.
@@ -247,13 +255,13 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 - Read-only look at the active variation. Opens on the favorite. Switch to Edit to brew.
 - Same tab order, star-to-pin, and list summary as Edit. Legal/Owned follow the tab you are looking at.
 - Leader portrait uses preferred art. WANTED stamp and bounty stepper still work from this page.
-- **Copy share link** creates a public `shares/{id}` snapshot of the **active** variation (deck name, Leader, variation name, card counts, preferred art URLs), copies `{origin}/s/{id}` to the clipboard for texting. Empty lists cannot be shared. The link is a frozen snapshot — later edits do not change old links.
+- **Copy share link** creates a public `shares/{id}` snapshot of the **active** variation (deck name, Leader, variation name, card counts, preferred art URLs), copies `{origin}/s/{id}` to the clipboard for texting. Empty lists cannot be shared (client + rules). The link is a frozen snapshot — later edits do not change old links. If clipboard fails, the toast shows the URL for manual copy.
 
 ### Shared deck (`/s/[shareId]`)
 
-- Public, no login. CatalogProvider only (no binder / Wanted / AppShell).
-- Shows Leader art, deck name, variation name, Character / Event / Stage grids with counts. Tap a card for effect text.
-- Does not expose ownership, Wanted, or other variations. Unknown catalog ids are noted if the snapshot is newer than the shipped JSON.
+- Public, no login. CatalogProvider only (no binder / Wanted / AppShell). Does **not** wait on AuthGate Auth loading.
+- Shows Leader art (preferred URL if Leader is missing from catalog), deck name, variation name, Character / Event / Stage grids with counts. Tap a card for effect text.
+- Does not expose ownership, Wanted, or other variations. Unknown catalog ids are listed; if every id is unknown, copy says the catalog is behind the snapshot (not “empty list”).
 
 ### Profile
 
@@ -340,7 +348,7 @@ Key libraries:
 
 | Module | Role |
 |---|---|
-| `lib/firebase.ts` | Init from env |
+| `lib/firebase.ts` | Init from env; Auth persistence IndexedDB → localStorage → memory |
 | `lib/users.ts` | Signup doc, `ensureUserDoc`, display name, owned-count for routing |
 | `lib/collection.ts` | Qty set/adjust, label merge, batch starter add |
 | `lib/wanted.ts` | Bounty qty, catch transaction, raise gaps from a variation |
@@ -390,9 +398,9 @@ Do not silently revert Collection to a full-catalog logger, or rip out the filte
 - One favorite variation per deck (`favoriteVariationId`). `/decks` Legal/Owned uses that list. View/Edit badges follow the open tab.
 - Do not auto-add Wanted cards to decks. Caught only touches the binder.
 - Do not add Google/Apple login, dark mode, Don cards, or a browseable public deck gallery in V1. Per-variation **share links** (`/s/{id}`) are allowed.
-- New public routes must be allowlisted in `AuthGate` without treating them as auth landings (logged-in users must not be bounced off `/s/…`).
+- New public routes must be allowlisted in `AuthGate` without treating them as auth landings (logged-in users must not be bounced off `/s/…`). Public routes must render while Auth is still loading.
 - Prefer npm. Do not add Yarn.
-- Mobile-first; Builder is allowed to feel denser.
+- Mobile-first; Builder is allowed to feel denser. Do not block the whole app on Auth IndexedDB — keep the public-route bypass and Auth ready timeout.
 
 ---
 
