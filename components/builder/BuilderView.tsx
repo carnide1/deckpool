@@ -44,7 +44,7 @@ import {
 } from "@/lib/builder";
 import { getConstructionRules } from "@/lib/construction";
 import { setFavoriteVariation, setVariationCards } from "@/lib/decks";
-import { imageForCard } from "@/lib/cardPrefs";
+import { imageCandidates } from "@/lib/cardPrefs";
 import { validateVariation } from "@/lib/legality";
 import {
   EMPTY_FILTERS,
@@ -75,7 +75,9 @@ export function BuilderView({ deck }: { deck: Deck }) {
     variations,
   );
   const leader = cardsById.get(deck.leaderId) ?? null;
-  const leaderImage = leader ? imageForCard(leader, preferredByCardId) : null;
+  const [leaderImage, ...leaderFallbacks] = leader
+    ? imageCandidates(leader, preferredByCardId)
+    : [];
   const constructionRules = useMemo(() => getConstructionRules(), []);
 
   const [activeVariationId, setActiveVariationId] = useState("");
@@ -349,6 +351,7 @@ export function BuilderView({ deck }: { deck: Deck }) {
                 {leaderImage ? (
                   <CardImage
                     src={leaderImage}
+                    fallbackSrcs={leaderFallbacks}
                     alt={leader.name}
                     width={72}
                     height={100}

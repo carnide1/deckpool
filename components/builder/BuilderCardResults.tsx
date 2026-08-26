@@ -3,7 +3,7 @@
 import { CardImage } from "@/components/CardImage";
 import { WantedStamp } from "@/components/wanted/WantedStamp";
 import { useCardPrefs } from "@/contexts/CardPrefsContext";
-import { imageForCard } from "@/lib/cardPrefs";
+import { imageCandidates } from "@/lib/cardPrefs";
 import type { DeckPoolCard } from "@/types/catalog";
 
 const COLOR_CLASS: Record<string, string> = {
@@ -58,7 +58,7 @@ export function BuilderCardResults({
         const inDeck = inDeckById[card.id] ?? 0;
         const wantedQty = wantedQtyById[card.id] ?? 0;
         const addable = canAdd(card.id);
-        const image = imageForCard(card, preferredByCardId);
+        const [image, ...fallbacks] = imageCandidates(card, preferredByCardId);
 
         return (
           <article
@@ -83,6 +83,7 @@ export function BuilderCardResults({
                 {image ? (
                   <CardImage
                     src={image}
+                    fallbackSrcs={fallbacks}
                     alt={card.name}
                     width={120}
                     height={168}

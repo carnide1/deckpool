@@ -8,7 +8,7 @@ import { Modal, ModalActions } from "@/components/ui/Modal";
 import { TextInput } from "@/components/ui/TextInput";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCardPrefs } from "@/contexts/CardPrefsContext";
-import { imageForCard } from "@/lib/cardPrefs";
+import { imageCandidates } from "@/lib/cardPrefs";
 import { changeDeckLeader } from "@/lib/decks";
 import { searchCatalog } from "@/lib/search/simpleCatalogSearch";
 import type { DeckPoolCard } from "@/types/catalog";
@@ -102,7 +102,10 @@ export function ChangeLeaderModal({
             <div className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
               {filteredLeaders.map((leader) => {
                 const selected = leader.id === selectedLeaderId;
-                const image = imageForCard(leader, preferredByCardId);
+                const [image, ...fallbacks] = imageCandidates(
+                  leader,
+                  preferredByCardId,
+                );
                 return (
                   <button
                     key={leader.id}
@@ -118,6 +121,7 @@ export function ChangeLeaderModal({
                     {image ? (
                       <CardImage
                         src={image}
+                        fallbackSrcs={fallbacks}
                         alt={leader.name}
                         width={88}
                         height={122}

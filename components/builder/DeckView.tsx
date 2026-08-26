@@ -26,7 +26,7 @@ import { validateVariation } from "@/lib/legality";
 import { sortCards } from "@/lib/search/sortCards";
 import { computeVariationStats } from "@/lib/variationStats";
 import { resolveFavoriteVariationId } from "@/lib/variations";
-import { imageForCard } from "@/lib/cardPrefs";
+import { imageCandidates, imageForCard } from "@/lib/cardPrefs";
 import type { CardCategory, DeckPoolCard } from "@/types/catalog";
 import type { Deck } from "@/types/deck";
 
@@ -48,7 +48,9 @@ export function DeckView({ deck }: { deck: Deck }) {
     variations,
   );
   const leader = cardsById.get(deck.leaderId) ?? null;
-  const leaderImage = leader ? imageForCard(leader, preferredByCardId) : null;
+  const [leaderImage, ...leaderFallbacks] = leader
+    ? imageCandidates(leader, preferredByCardId)
+    : [];
   const constructionRules = useMemo(() => getConstructionRules(), []);
 
   const [activeVariationId, setActiveVariationId] = useState("");
@@ -175,6 +177,7 @@ export function DeckView({ deck }: { deck: Deck }) {
           {leaderImage ? (
             <CardImage
               src={leaderImage}
+              fallbackSrcs={leaderFallbacks}
               alt={leader.name}
               width={96}
               height={134}

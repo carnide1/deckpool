@@ -6,7 +6,7 @@ import { CardImage } from "@/components/CardImage";
 import { ColorPills } from "@/components/decks/ColorPills";
 import { DeckStatusBadges } from "@/components/decks/DeckStatusBadges";
 import { useCardPrefs } from "@/contexts/CardPrefsContext";
-import { imageForCard } from "@/lib/cardPrefs";
+import { imageCandidates } from "@/lib/cardPrefs";
 import type { DeckPoolCard } from "@/types/catalog";
 import type { Deck } from "@/types/deck";
 
@@ -33,7 +33,9 @@ export function DeckRow({
   onDelete: () => void;
 }) {
   const { preferredByCardId } = useCardPrefs();
-  const leaderImage = leader ? imageForCard(leader, preferredByCardId) : null;
+  const [leaderImage, ...leaderFallbacks] = leader
+    ? imageCandidates(leader, preferredByCardId)
+    : [];
   const borderClass =
     leader?.colors[0] && COLOR_BORDER[leader.colors[0]]
       ? COLOR_BORDER[leader.colors[0]]
@@ -53,6 +55,7 @@ export function DeckRow({
           {leaderImage ? (
             <CardImage
               src={leaderImage}
+              fallbackSrcs={leaderFallbacks}
               alt={leader?.name ?? deck.name}
               width={72}
               height={100}

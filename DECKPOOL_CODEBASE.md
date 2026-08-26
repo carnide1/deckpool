@@ -1,8 +1,8 @@
 # DeckPool — Codebase snapshot
 
 **Status:** Living summary of the **as-built** app  
-**Last updated:** 2026-08-18  
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `b4865da` — “Show saved card art on deck lists and the builder, not only in search grids.”)  
+**Last updated:** 2026-08-25  
+**Git:** `main` at `https://github.com/carnide1/deckpool.git`  
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -72,7 +72,7 @@ V1 cost rules still in force in code: no paid search service, no language-model 
 | Auth | Firebase Auth, **email/password only**. Client `AuthGate`. No `middleware.ts`. |
 | Data | Cloud Firestore, nested under `users/{uid}/…`. Client SDK writes. |
 | Catalog | Static JSON in `data/`, loaded in the browser. ~**2665** English cards. Don cards stripped at ingest. |
-| Images | Hotlink `en.onepiece-cardgame.com` via `next/image` remotePatterns |
+| Images | Hotlink `en.onepiece-cardgame.com` via plain `<img>` in `CardImage` (not `next/image` / not `/_next/image`). Optional mirror via `NEXT_PUBLIC_CARD_IMAGE_ORIGIN`. |
 | Hosting (intended) | Vercel Hobby. No `vercel.json` in the repo. `.vercel/` is gitignored. |
 | Package manager | **npm** (`package-lock.json`) |
 | Tests | `npm test` → `tsx --test lib/**/*.test.ts` |
@@ -120,6 +120,7 @@ Ingest is a **local** maintainer task. Vercel must not scrape Bandai or One Piec
 - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
 - `NEXT_PUBLIC_FIREBASE_APP_ID`
 - `NEXT_PUBLIC_APP_URL` (local: `http://localhost:3000`)
+- `NEXT_PUBLIC_CARD_IMAGE_ORIGIN` (optional) — HTTPS origin with **no** trailing slash that mirrors Bandai’s `/images/cardlist/card/...` paths. Catalog and Firestore still store Bandai URLs; only the browser `src` is rewritten.
 
 Never commit `.env.local`. Never put a language-model key in the browser.
 
@@ -210,7 +211,7 @@ users/{uid}                          displayName, email, createdAt
 - Full English catalog (no Don).
 - Filters sync to the URL (`lib/search/filters.ts`). Owned toggle: `owned=1`. Wanted toggle: `wanted=1`. Both can be on.
 - Sort: newest / oldest / serial / name / category / cost. Newest = latest set family.
-- Page size 120, load-more style.
+- Page size 48, load-more style.
 - Modal: qty (can create), bounty, labels, art picker, decks that use the card.
 - WANTED stamp on every tile. Owned `+` while a poster exists catches against that bounty.
 - **Add starter deck** modal: increment ST01–ST36 contents; optional labels merged; optional “also create a deck.”
@@ -297,7 +298,7 @@ Do **not** call a language model to decide legality.
 | `scripts/ingest-catalog.ts` | From punk-records English JSON |
 | `scripts/ingest-products.ts` | From One Piece Player HTML, with `scripts/product-urls.json` and `scripts/product-overrides/` |
 
-Card shape: `types/catalog.ts` (`DeckPoolCard`). `cost` on a Leader is Life. `images[]` is every known scan for that number; user picks one per account in `cardPrefs`. Grids, deck rows, builder portraits, and Leader pickers all use `imageForCard` so a saved print wins over the first scan (often a SAMPLE stamp). If that URL is gone after ingest, the first scan is used.
+Card shape: `types/catalog.ts` (`DeckPoolCard`). `cost` on a Leader is Life. `images[]` is every known scan for that number; user picks one per account in `cardPrefs`. Grids, deck rows, builder portraits, and Leader pickers all use `imageCandidates` → `CardImage` so a saved print wins over the first scan (often a SAMPLE stamp). `CardImage` loads Bandai (or an optional mirror) with a plain `<img>`, tries every remaining catalog URL on error, then shows “No art”. If the preferred URL is gone after ingest, `imageForCard` falls back to the first scan.
 
 When a new set releases: pull punk-records, run both ingest scripts, commit `data/`, then ship. Do not guess starter counts as “1 of each id.”
 
@@ -328,7 +329,7 @@ Key libraries:
 | `lib/users.ts` | Signup doc, `ensureUserDoc`, display name, owned-count for routing |
 | `lib/collection.ts` | Qty set/adjust, label merge, batch starter add |
 | `lib/wanted.ts` | Bounty qty, catch transaction, raise gaps from a variation |
-| `lib/cardPrefs.ts` | Preferred art read/write; `imageForCard` picks saved art or the first catalog scan |
+| `lib/cardPrefs.ts` | Preferred art read/write; `imageForCard` / `imageCandidates` pick saved art then other scans; `publicImageUrl` optional mirror rewrite |
 | `lib/variations.ts` | Favorite resolve + tab order (resolved favorite first, then recency) |
 | `lib/variationStats.ts` | Average cost/power, category and keyword counts for a list |
 | `lib/decks.ts` | Deck/variation CRUD, favorite pin, starter→deck, change Leader, delete cascade |

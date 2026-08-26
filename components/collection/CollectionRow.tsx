@@ -6,6 +6,8 @@ import { Minus, Plus } from "lucide-react";
 import { CardImage } from "@/components/CardImage";
 import { LabelEditor } from "@/components/collection/LabelEditor";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCardPrefs } from "@/contexts/CardPrefsContext";
+import { imageCandidates } from "@/lib/cardPrefs";
 import { setCollectionQuantity } from "@/lib/collection";
 import type { DeckPoolCard } from "@/types/catalog";
 import type { CollectionItem } from "@/types/collection";
@@ -29,10 +31,11 @@ export function CollectionRow({
   labelSuggestions: string[];
 }) {
   const { user } = useAuth();
+  const { preferredByCardId } = useCardPrefs();
   const [saving, setSaving] = useState(false);
   const quantity = owned?.quantity ?? 0;
   const labels = owned?.labels ?? [];
-  const image = card.images[0];
+  const [image, ...fallbacks] = imageCandidates(card, preferredByCardId);
 
   const persist = async (nextQty: number, nextLabels: string[]) => {
     if (!user) return;
@@ -65,6 +68,7 @@ export function CollectionRow({
       {image ? (
         <CardImage
           src={image}
+          fallbackSrcs={fallbacks}
           alt={card.name}
           width={72}
           height={100}

@@ -80,6 +80,7 @@ export function CardDetailModal({
         {preferred ? (
           <CardImage
             src={preferred}
+            fallbackSrcs={card.images.filter((url) => url !== preferred)}
             alt={card.name}
             width={240}
             height={336}
@@ -209,7 +210,13 @@ export function CardDetailModal({
                       : "border-transparent hover:border-[var(--accent-ocean)]",
                   ].join(" ")}
                 >
-                  <CardImage src={url} alt="" width={72} height={100} />
+                  <CardImage
+                    src={url}
+                    fallbackSrcs={card.images.filter((other) => other !== url)}
+                    alt=""
+                    width={72}
+                    height={100}
+                  />
                 </button>
               ))}
             </div>

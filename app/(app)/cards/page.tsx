@@ -41,7 +41,7 @@ const CARDS_SORTS: SortKey[] = [
   "category",
   "cost",
 ];
-const PAGE_SIZE = 120;
+const PAGE_SIZE = 48;
 
 function parseSort(raw: string | null): SortKey {
   if (raw && CARDS_SORTS.includes(raw as SortKey)) return raw as SortKey;
