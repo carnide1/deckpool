@@ -1,5 +1,6 @@
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { compileHas } from "../lib/compileHas";
 import type { CardCategory, DeckPoolCard, OptcgColor, PackMeta } from "../types/catalog";
 import type { CardMatch, ConstructionRule } from "../types/construction";
 
@@ -21,13 +22,6 @@ const VALID_COLORS = new Set<OptcgColor>([
   "Black",
   "Yellow",
 ]);
-
-const KEYWORD_FLAGS: { re: RegExp; flag: string }[] = [
-  { re: /\[Blocker\]/i, flag: "blocker" },
-  { re: /\[Rush\]/i, flag: "rush" },
-  { re: /\[Banish\]/i, flag: "banish" },
-  { re: /\[Double Attack\]/i, flag: "double-attack" },
-];
 
 const ANY_NUMBER_RE =
   /you may have any number of this card in your deck/i;
@@ -172,18 +166,6 @@ function titleCaseColor(color: string): OptcgColor | null {
   const normalized = color.trim().toLowerCase();
   const mapped = (normalized.charAt(0).toUpperCase() + normalized.slice(1)) as OptcgColor;
   return VALID_COLORS.has(mapped) ? mapped : null;
-}
-
-function compileHas(effect: string | null, trigger: string | null, counter: number | null): string[] {
-  const flags = new Set<string>();
-  const text = `${effect ?? ""} ${trigger ?? ""}`;
-  for (const { re, flag } of KEYWORD_FLAGS) {
-    if (re.test(text)) flags.add(flag);
-  }
-  if (trigger) flags.add("trigger");
-  if (counter != null) flags.add("counter");
-  if (effect) flags.add("effect");
-  return [...flags];
 }
 
 function parseForbidMatch(clause: string): CardMatch | null {

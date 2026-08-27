@@ -6,6 +6,8 @@ export const VARIATION_STAT_FLAGS = [
   "banish",
   "double-attack",
   "trigger",
+  "unblockable",
+  "searcher",
 ] as const;
 
 export type VariationStatFlag = (typeof VARIATION_STAT_FLAGS)[number];
@@ -23,9 +25,16 @@ export type VariationColorCount = {
 export type VariationStats = {
   copies: number;
   avgCost: number | null;
+  lowestCost: number | null;
+  highestCost: number | null;
   avgPower: number | null;
+  lowestPower: number | null;
   highestPower: number | null;
   byCategory: Record<CardCategory, number>;
+  /** Copies keyed by printed cost (only costs that appear). */
+  byCost: { cost: number; copies: number }[];
+  /** Copies keyed by printed power (only powers that appear). */
+  byPower: { power: number; copies: number }[];
   flags: Record<VariationStatFlag, number>;
   counter1000: number;
   counter2000: number;
@@ -51,13 +60,9 @@ const EMPTY_CATEGORY: Record<CardCategory, number> = {
 };
 
 function emptyFlags(): Record<VariationStatFlag, number> {
-  return {
-    blocker: 0,
-    rush: 0,
-    banish: 0,
-    "double-attack": 0,
-    trigger: 0,
-  };
+  return Object.fromEntries(
+    VARIATION_STAT_FLAGS.map((flag) => [flag, 0]),
+  ) as Record<VariationStatFlag, number>;
 }
 
 function compareSetCodes(a: string, b: string): number {
@@ -79,6 +84,8 @@ export function computeVariationStats(
   const byCategory: Record<CardCategory, number> = { ...EMPTY_CATEGORY };
   const flags = emptyFlags();
   const setCounts = new Map<string, number>();
+  const costCounts = new Map<number, number>();
+  const powerCounts = new Map<number, number>();
   const leaderColors = options.leaderColors ?? [];
   const trackColors = leaderColors.length > 1;
   const colorCounts = trackColors
@@ -93,6 +100,9 @@ export function computeVariationStats(
   let costCopies = 0;
   let powerSum = 0;
   let powerCopies = 0;
+  let lowestCost: number | null = null;
+  let highestCost: number | null = null;
+  let lowestPower: number | null = null;
   let highestPower: number | null = null;
   let counter1000 = 0;
   let counter2000 = 0;
@@ -112,10 +122,17 @@ export function computeVariationStats(
     if (card.cost != null) {
       costSum += card.cost * qty;
       costCopies += qty;
+      costCounts.set(card.cost, (costCounts.get(card.cost) ?? 0) + qty);
+      if (lowestCost == null || card.cost < lowestCost) lowestCost = card.cost;
+      if (highestCost == null || card.cost > highestCost) highestCost = card.cost;
     }
     if (card.power != null) {
       powerSum += card.power * qty;
       powerCopies += qty;
+      powerCounts.set(card.power, (powerCounts.get(card.power) ?? 0) + qty);
+      if (lowestPower == null || card.power < lowestPower) {
+        lowestPower = card.power;
+      }
       if (highestPower == null || card.power > highestPower) {
         highestPower = card.power;
       }
@@ -151,12 +168,25 @@ export function computeVariationStats(
     .map(([setCode, setCopies]) => ({ setCode, copies: setCopies }))
     .sort((a, b) => compareSetCodes(a.setCode, b.setCode));
 
+  const byCost = [...costCounts.entries()]
+    .map(([cost, costCopiesAt]) => ({ cost, copies: costCopiesAt }))
+    .sort((a, b) => a.cost - b.cost);
+
+  const byPower = [...powerCounts.entries()]
+    .map(([power, powerCopiesAt]) => ({ power, copies: powerCopiesAt }))
+    .sort((a, b) => a.power - b.power);
+
   return {
     copies,
     avgCost: costCopies > 0 ? costSum / costCopies : null,
+    lowestCost,
+    highestCost,
     avgPower: powerCopies > 0 ? powerSum / powerCopies : null,
+    lowestPower,
     highestPower,
     byCategory,
+    byCost,
+    byPower,
     flags,
     counter1000,
     counter2000,

@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-08-27  
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `67d33bc` — “Expand deck list summary with power, colors, counters, and sets.”)  
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: pending list-summary + has-flag expand)  
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -245,7 +245,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 - Result tiles are a dense 3-column grid on mobile, images capped at 120px wide (`h-auto w-full`) so they do not blow up versus View. Leader portrait and result tiles use preferred art.
 - WANTED stamp on results does **not** add to the 50. **Post all unowned** raises Wanted to `in this variation − owned` for the active variation (does not stack on top of an existing bounty).
 - Manifest lines show id, category, cost, and power, plus in-deck / owned. Status panel: Legal/Illegal, Owned/Unowned, reason bullets for the **active tab**.
-- List summary (active tab): average cost, average power, highest power, Character/Event/Stage counts, per-color counts when the Leader is multi-color (dual-color cards count in each), blocker/rush/banish/double-attack/trigger counts, counter 0 / 1000 / 2000, and copy counts per set that appears in the list (Leader excluded).
+- List summary (active tab): compact collapsed row (avg cost, avg power, Character/Event/Stage, keyword pills including Unblockable and Searcher) with a smooth expand; expanded shows cost/power avg·low·high with horizontal distributions, composition bar, keywords, counters, multi-color Leader color counts, and set counts (Leader excluded). `searcher` is a derived ingest flag (look at top of deck + add to hand), not a Bandai bracket keyword.
 - Variations: tabs ordered **favorite first**, then most recently edited. Opening the page selects the favorite. Star a tab (or **Set as main**) to pin it. Clone, rename, delete (cannot delete the last). Compare modal shows count diffs only.
 - Change Leader: warning, then strip illegal cards from **every** variation of that deck.
 - Writes go to Firestore through a queued `setVariationCards` so rapid clicks do not race.
@@ -313,7 +313,7 @@ Do **not** call a language model to decide legality.
 | `data/cards.json` | All searchable cards (~2785). No Don. |
 | `data/packs.json` | Set/pack metadata |
 | `data/construction-rules.json` | copyLimit + forbid |
-| `data/has-flags.json` | Flags such as blocker, rush, banish, double-attack, counter, effect, trigger |
+| `data/has-flags.json` | Flags such as blocker, rush, banish, double-attack, unblockable, searcher (derived), counter, effect, trigger |
 | `data/products/index.json` | ST01–ST36 picker |
 | `data/products/STxx.json` | Real box counts (`cardId` → qty) |
 | `scripts/ingest-catalog.ts` | From punk-records English JSON |
@@ -357,6 +357,7 @@ Key libraries:
 | `lib/cardArtFetch.ts` | Upstream Bandai fetch with timeout, size cap, ETag, in-flight coalesce |
 | `lib/cardImageUrl.ts` | Preferred/candidates, optional mirror rewrite, browser proxy URLs |
 | `lib/cardPrefs.ts` | Preferred art Firestore read/write; re-exports image URL helpers |
+| `lib/compileHas.ts` | Ingest `has` flags from effect/trigger text (official tags + derived `searcher`) |
 | `lib/variations.ts` | Favorite resolve + tab order (resolved favorite first, then recency) |
 | `lib/variationStats.ts` | Average cost/power, category and keyword counts for a list |
 | `lib/decks.ts` | Deck/variation CRUD, favorite pin, starter→deck, change Leader, delete cascade |

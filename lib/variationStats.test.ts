@@ -78,12 +78,27 @@ describe("computeVariationStats", () => {
     assert.equal(stats.byCategory.Stage, 1);
     assert.equal(stats.flags.blocker, 4);
     assert.equal(stats.flags.rush, 2);
+    assert.equal(stats.flags.unblockable, 0);
+    assert.equal(stats.flags.searcher, 0);
     assert.equal(stats.counter0, 5);
     assert.equal(stats.counter1000, 2);
     assert.equal(stats.counter2000, 3);
     assert.equal(stats.highestPower, 5000);
+    assert.equal(stats.lowestPower, 4000);
+    assert.equal(stats.lowestCost, 1);
+    assert.equal(stats.highestCost, 4);
     assert.equal(stats.avgCost, (4 * 4 + 3 * 2 + 2 * 3 + 1 * 1) / 10);
     assert.equal(stats.avgPower, (5000 * 4 + 4000 * 2) / 6);
+    assert.deepEqual(stats.byCost, [
+      { cost: 1, copies: 1 },
+      { cost: 2, copies: 3 },
+      { cost: 3, copies: 2 },
+      { cost: 4, copies: 4 },
+    ]);
+    assert.deepEqual(stats.byPower, [
+      { power: 4000, copies: 2 },
+      { power: 5000, copies: 4 },
+    ]);
     assert.deepEqual(stats.byColor, []);
     assert.deepEqual(stats.bySet, [
       { setCode: "OP01", copies: 6 },
@@ -98,6 +113,11 @@ describe("computeVariationStats", () => {
     assert.equal(stats.avgCost, null);
     assert.equal(stats.avgPower, null);
     assert.equal(stats.highestPower, null);
+    assert.equal(stats.lowestPower, null);
+    assert.equal(stats.lowestCost, null);
+    assert.equal(stats.highestCost, null);
+    assert.deepEqual(stats.byCost, []);
+    assert.deepEqual(stats.byPower, []);
     assert.equal(stats.flags.blocker, 0);
     assert.equal(stats.counter0, 0);
     assert.equal(stats.counter1000, 0);
@@ -117,6 +137,7 @@ describe("computeVariationStats", () => {
     assert.equal(stats.avgCost, null);
     assert.equal(stats.avgPower, 6000);
     assert.equal(stats.highestPower, 6000);
+    assert.equal(stats.lowestPower, 6000);
     assert.equal(stats.counter0, 2);
   });
 

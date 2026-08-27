@@ -1,4 +1,7 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useState, type ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
 import type { OptcgColor } from "@/types/catalog";
 import {
   VARIATION_STAT_FLAGS,
@@ -12,15 +15,8 @@ const FLAG_LABEL: Record<VariationStatFlag, string> = {
   banish: "Banish",
   "double-attack": "Double attack",
   trigger: "Trigger",
-};
-
-const COLOR_BG: Record<OptcgColor, string> = {
-  Red: "bg-[var(--color-red)]",
-  Green: "bg-[var(--color-green)]",
-  Blue: "bg-[var(--color-blue)]",
-  Purple: "bg-[var(--color-purple)]",
-  Black: "bg-[var(--color-black)]",
-  Yellow: "bg-[var(--color-yellow)]",
+  unblockable: "Unblockable",
+  searcher: "Searcher",
 };
 
 const COLOR_BAR: Record<OptcgColor, string> = {
@@ -37,9 +33,22 @@ function formatAvg(value: number | null, decimals: number): string {
   return String(Number(value.toFixed(decimals)));
 }
 
-function formatPower(value: number | null): string {
+function formatInt(value: number | null): string {
   if (value == null) return "—";
   return value.toLocaleString("en-US");
+}
+
+function StatChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-[var(--bg-inset)] px-2 py-1.5">
+      <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+        {label}
+      </p>
+      <p className="mt-0.5 text-sm font-bold tabular-nums text-[var(--ink-primary)]">
+        {value}
+      </p>
+    </div>
+  );
 }
 
 function SectionLabel({ children }: { children: ReactNode }) {
@@ -47,6 +56,23 @@ function SectionLabel({ children }: { children: ReactNode }) {
     <p className="text-[0.625rem] font-bold uppercase tracking-[0.14em] text-[var(--accent-ocean)]">
       {children}
     </p>
+  );
+}
+
+function SectionCard({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-2">
+      <SectionLabel>{label}</SectionLabel>
+      <div className="rounded-xl border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-3">
+        {children}
+      </div>
+    </section>
   );
 }
 
@@ -77,7 +103,7 @@ function MeterRow({
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-inset)]">
         <div
-          className={["h-full rounded-full transition-[width] duration-300", barClassName].join(
+          className={["h-full rounded-full transition-[width]", barClassName].join(
             " ",
           )}
           style={{ width: `${pct}%` }}
@@ -87,40 +113,35 @@ function MeterRow({
   );
 }
 
-function HeroStat({
-  label,
-  value,
-  accent = false,
+function DistBars({
+  rows,
+  emptyLabel,
 }: {
-  label: string;
-  value: string;
-  accent?: boolean;
+  rows: { label: string; copies: number }[];
+  emptyLabel: string;
 }) {
+  if (rows.length === 0) {
+    return <p className="text-xs text-[var(--ink-muted)]">{emptyLabel}</p>;
+  }
+  const max = Math.max(...rows.map((row) => row.copies));
   return (
-    <div
-      className={[
-        "relative overflow-hidden rounded-xl border px-3 py-3",
-        accent
-          ? "border-[var(--accent-pirate-red)]/25 bg-[linear-gradient(145deg,rgb(215_0_15_/_0.08),var(--bg-inset))]"
-          : "border-[var(--bg-inset)] bg-[var(--bg-inset)]",
-      ].join(" ")}
-    >
-      <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-        {label}
-      </p>
-      <p
-        className={[
-          "mt-1 font-display text-xl font-bold tabular-nums tracking-wide",
-          accent ? "text-[var(--accent-pirate-red)]" : "text-[var(--ink-primary)]",
-        ].join(" ")}
-      >
-        {value}
-      </p>
+    <div className="mt-2.5 flex flex-col gap-2">
+      {rows.map((row) => (
+        <MeterRow
+          key={row.label}
+          label={row.label}
+          value={row.copies}
+          max={max}
+          barClassName="bg-[var(--accent-ocean)]"
+        />
+      ))}
     </div>
   );
 }
 
 export function VariationStatsPanel({ stats }: { stats: VariationStats }) {
+  const [open, setOpen] = useState(false);
+
   const categoryTotal =
     stats.byCategory.Character +
     stats.byCategory.Event +
@@ -132,201 +153,323 @@ export function VariationStatsPanel({ stats }: { stats: VariationStats }) {
     stats.counterOther;
   const colorMax = Math.max(1, ...stats.byColor.map((row) => row.copies));
   const setMax = Math.max(1, ...stats.bySet.map((row) => row.copies));
-  const flagMax = Math.max(1, ...VARIATION_STAT_FLAGS.map((flag) => stats.flags[flag]));
+  const flagMax = Math.max(
+    1,
+    ...VARIATION_STAT_FLAGS.map((flag) => stats.flags[flag]),
+  );
 
   return (
-    <div className="poster-panel flex flex-col gap-4 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="poster-stamp">Summary</p>
-          <h3 className="font-display mt-2 text-base font-bold text-[var(--ink-primary)]">
-            List profile
-          </h3>
-        </div>
-        <div className="rounded-lg border border-[var(--bg-inset)] bg-[var(--bg-panel)] px-2.5 py-1.5 text-right">
-          <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-            Copies
-          </p>
-          <p className="font-display text-lg font-bold tabular-nums text-[var(--accent-ocean)]">
-            {stats.copies}
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2">
-        <HeroStat label="Avg cost" value={formatAvg(stats.avgCost, 1)} />
-        <HeroStat label="Avg power" value={formatAvg(stats.avgPower, 0)} />
-        <HeroStat
-          label="Top power"
-          value={formatPower(stats.highestPower)}
-          accent
-        />
-      </div>
-
-      <section className="flex flex-col gap-2">
-        <SectionLabel>Composition</SectionLabel>
-        <div className="rounded-xl border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-3">
-          {categoryTotal > 0 ? (
-            <div className="mb-3 flex h-2.5 overflow-hidden rounded-full bg-[var(--bg-inset)]">
-              <div
-                className="h-full bg-[var(--accent-ocean)]"
-                style={{
-                  width: `${(stats.byCategory.Character / categoryTotal) * 100}%`,
-                }}
-                title={`Characters ${stats.byCategory.Character}`}
-              />
-              <div
-                className="h-full bg-[var(--accent-pirate-red)]"
-                style={{
-                  width: `${(stats.byCategory.Event / categoryTotal) * 100}%`,
-                }}
-                title={`Events ${stats.byCategory.Event}`}
-              />
-              <div
-                className="h-full bg-[var(--accent-gold)]"
-                style={{
-                  width: `${(stats.byCategory.Stage / categoryTotal) * 100}%`,
-                }}
-                title={`Stages ${stats.byCategory.Stage}`}
-              />
-            </div>
-          ) : null}
-          <div className="grid grid-cols-3 gap-2 text-center">
-            {(
-              [
-                ["Characters", stats.byCategory.Character, "bg-[var(--accent-ocean)]"],
-                ["Events", stats.byCategory.Event, "bg-[var(--accent-pirate-red)]"],
-                ["Stages", stats.byCategory.Stage, "bg-[var(--accent-gold)]"],
-              ] as const
-            ).map(([label, value, swatch]) => (
-              <div key={label} className="flex flex-col items-center gap-1">
-                <span className={["h-1.5 w-1.5 rounded-full", swatch].join(" ")} />
-                <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-                  {label}
-                </p>
-                <p className="text-base font-bold tabular-nums text-[var(--ink-primary)]">
-                  {value}
-                </p>
-              </div>
-            ))}
+    <div className="poster-panel p-3">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-expanded={open}
+        className="flex w-full items-start gap-2 text-left"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-display text-sm font-bold text-[var(--ink-primary)]">
+              List summary
+            </h3>
+            <ChevronDown
+              className={[
+                "h-4 w-4 shrink-0 text-[var(--ink-muted)] transition-transform duration-300 ease-out",
+                open ? "rotate-180" : "",
+              ].join(" ")}
+              aria-hidden
+            />
           </div>
-        </div>
-      </section>
-
-      {stats.byColor.length > 0 ? (
-        <section className="flex flex-col gap-2">
-          <SectionLabel>Colors</SectionLabel>
-          <div className="flex flex-col gap-2.5 rounded-xl border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-3">
-            {stats.byColor.map((row) => (
-              <MeterRow
-                key={row.color}
-                label={row.color}
-                value={row.copies}
-                max={colorMax}
-                barClassName={COLOR_BAR[row.color]}
-                leading={
+          <div className="mt-2 grid grid-cols-3 gap-1.5 sm:grid-cols-5">
+            <StatChip label="Avg cost" value={formatAvg(stats.avgCost, 1)} />
+            <StatChip label="Avg power" value={formatAvg(stats.avgPower, 0)} />
+            <StatChip
+              label="Chars"
+              value={String(stats.byCategory.Character)}
+            />
+            <StatChip label="Events" value={String(stats.byCategory.Event)} />
+            <StatChip label="Stages" value={String(stats.byCategory.Stage)} />
+          </div>
+          <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+            {VARIATION_STAT_FLAGS.map((flag) => {
+              const value = stats.flags[flag];
+              return (
+                <span
+                  key={flag}
+                  className={[
+                    "inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs tabular-nums",
+                    value > 0
+                      ? "bg-[rgb(46_99_164_/_0.1)] text-[var(--ink-muted)]"
+                      : "bg-[var(--bg-inset)] text-[var(--ink-muted)]",
+                  ].join(" ")}
+                >
+                  {FLAG_LABEL[flag]}
                   <span
                     className={[
-                      "inline-block h-2.5 w-2.5 shrink-0 rounded-full",
-                      COLOR_BG[row.color],
-                    ].join(" ")}
-                    aria-hidden
-                  />
-                }
-              />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      <section className="flex flex-col gap-2">
-        <SectionLabel>Keywords</SectionLabel>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {VARIATION_STAT_FLAGS.map((flag) => {
-            const value = stats.flags[flag];
-            const hot = value > 0;
-            return (
-              <div
-                key={flag}
-                className={[
-                  "rounded-xl border px-2.5 py-2",
-                  hot
-                    ? "border-[var(--accent-ocean)]/30 bg-[rgb(46_99_164_/_0.08)]"
-                    : "border-[var(--bg-inset)] bg-[var(--bg-inset)]/60",
-                ].join(" ")}
-              >
-                <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-                  {FLAG_LABEL[flag]}
-                </p>
-                <div className="mt-1 flex items-end justify-between gap-2">
-                  <p
-                    className={[
-                      "text-lg font-bold tabular-nums",
-                      hot
+                      "font-bold",
+                      value > 0
                         ? "text-[var(--accent-ocean)]"
-                        : "text-[var(--ink-muted)]",
+                        : "text-[var(--ink-primary)]",
                     ].join(" ")}
                   >
                     {value}
+                  </span>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      </button>
+
+      <div
+        className={[
+          "grid transition-[grid-template-rows] duration-300 ease-out",
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+        ].join(" ")}
+      >
+        <div className="overflow-hidden">
+          <div
+            className={[
+              "flex flex-col gap-3 border-t border-[var(--bg-inset)] pt-3 transition-[opacity,transform] duration-300 ease-out",
+              open
+                ? "mt-3 translate-y-0 opacity-100"
+                : "mt-0 -translate-y-1 opacity-0",
+            ].join(" ")}
+            aria-hidden={!open}
+            inert={!open ? true : undefined}
+          >
+          <SectionCard label="Cost">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              {(
+                [
+                  ["Avg", formatAvg(stats.avgCost, 1)],
+                  ["Low", formatInt(stats.lowestCost)],
+                  ["High", formatInt(stats.highestCost)],
+                ] as const
+              ).map(([label, value]) => (
+                <div key={label}>
+                  <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+                    {label}
                   </p>
-                  <div className="mb-1 h-1 w-10 overflow-hidden rounded-full bg-[var(--bg-panel)]">
-                    <div
-                      className="h-full rounded-full bg-[var(--accent-ocean)]"
-                      style={{ width: `${(value / flagMax) * 100}%` }}
-                    />
-                  </div>
+                  <p className="mt-0.5 text-base font-bold tabular-nums text-[var(--ink-primary)]">
+                    {value}
+                  </p>
                 </div>
+              ))}
+            </div>
+            <DistBars
+              emptyLabel="No cost data"
+              rows={stats.byCost.map((row) => ({
+                label: String(row.cost),
+                copies: row.copies,
+              }))}
+            />
+          </SectionCard>
+
+          <SectionCard label="Power">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              {(
+                [
+                  ["Avg", formatAvg(stats.avgPower, 0)],
+                  ["Low", formatInt(stats.lowestPower)],
+                  ["High", formatInt(stats.highestPower)],
+                ] as const
+              ).map(([label, value]) => (
+                <div key={label}>
+                  <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+                    {label}
+                  </p>
+                  <p className="mt-0.5 text-base font-bold tabular-nums text-[var(--ink-primary)]">
+                    {value}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <DistBars
+              emptyLabel="No power data"
+              rows={stats.byPower.map((row) => ({
+                label: row.power.toLocaleString("en-US"),
+                copies: row.copies,
+              }))}
+            />
+          </SectionCard>
+
+          <SectionCard label="Composition">
+            {categoryTotal > 0 ? (
+              <div className="mb-3 flex h-2.5 overflow-hidden rounded-full bg-[var(--bg-inset)]">
+                <div
+                  className="h-full bg-[var(--accent-ocean)]"
+                  style={{
+                    width: `${(stats.byCategory.Character / categoryTotal) * 100}%`,
+                  }}
+                  title={`Characters ${stats.byCategory.Character}`}
+                />
+                <div
+                  className="h-full bg-[var(--accent-pirate-red)]"
+                  style={{
+                    width: `${(stats.byCategory.Event / categoryTotal) * 100}%`,
+                  }}
+                  title={`Events ${stats.byCategory.Event}`}
+                />
+                <div
+                  className="h-full bg-[var(--accent-gold)]"
+                  style={{
+                    width: `${(stats.byCategory.Stage / categoryTotal) * 100}%`,
+                  }}
+                  title={`Stages ${stats.byCategory.Stage}`}
+                />
               </div>
-            );
-          })}
-        </div>
-      </section>
+            ) : null}
+            <div className="grid grid-cols-3 gap-2 text-center">
+              {(
+                [
+                  [
+                    "Characters",
+                    stats.byCategory.Character,
+                    "bg-[var(--accent-ocean)]",
+                  ],
+                  [
+                    "Events",
+                    stats.byCategory.Event,
+                    "bg-[var(--accent-pirate-red)]",
+                  ],
+                  [
+                    "Stages",
+                    stats.byCategory.Stage,
+                    "bg-[var(--accent-gold)]",
+                  ],
+                ] as const
+              ).map(([label, value, swatch]) => (
+                <div key={label} className="flex flex-col items-center gap-1">
+                  <span
+                    className={["h-1.5 w-1.5 rounded-full", swatch].join(" ")}
+                  />
+                  <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+                    {label}
+                  </p>
+                  <p className="text-base font-bold tabular-nums text-[var(--ink-primary)]">
+                    {value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
 
-      <section className="flex flex-col gap-2">
-        <SectionLabel>Counters</SectionLabel>
-        <div className="flex flex-col gap-2.5 rounded-xl border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-3">
-          {(
-            [
-              ["Counter 0", stats.counter0, "bg-[var(--ink-muted)]"],
-              ["Counter 1000", stats.counter1000, "bg-[var(--accent-ocean)]"],
-              ["Counter 2000", stats.counter2000, "bg-[var(--accent-pirate-red)]"],
-            ] as const
-          ).map(([label, value, bar]) => (
-            <MeterRow
-              key={label}
-              label={label}
-              value={value}
-              max={Math.max(1, counterTotal)}
-              barClassName={bar}
-            />
-          ))}
-          {stats.counterOther > 0 ? (
-            <MeterRow
-              label="Other"
-              value={stats.counterOther}
-              max={Math.max(1, counterTotal)}
-              barClassName="bg-[var(--accent-gold)]"
-            />
+          {stats.byColor.length > 0 ? (
+            <SectionCard label="Colors">
+              <div className="flex flex-col gap-2.5">
+                {stats.byColor.map((row) => (
+                  <MeterRow
+                    key={row.color}
+                    label={row.color}
+                    value={row.copies}
+                    max={colorMax}
+                    barClassName={COLOR_BAR[row.color]}
+                    leading={
+                      <span
+                        className={[
+                          "inline-block h-2.5 w-2.5 shrink-0 rounded-full",
+                          COLOR_BAR[row.color],
+                        ].join(" ")}
+                        aria-hidden
+                      />
+                    }
+                  />
+                ))}
+              </div>
+            </SectionCard>
           ) : null}
-        </div>
-      </section>
 
-      {stats.bySet.length > 0 ? (
-        <section className="flex flex-col gap-2">
-          <SectionLabel>Sets in list</SectionLabel>
-          <div className="flex flex-col gap-2.5 rounded-xl border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-3">
-            {stats.bySet.map((row) => (
+          <SectionCard label="Keywords">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {VARIATION_STAT_FLAGS.map((flag) => {
+                const value = stats.flags[flag];
+                const hot = value > 0;
+                return (
+                  <div
+                    key={flag}
+                    className={[
+                      "rounded-xl border px-2.5 py-2",
+                      hot
+                        ? "border-[var(--accent-ocean)]/30 bg-[rgb(46_99_164_/_0.08)]"
+                        : "border-[var(--bg-inset)] bg-[var(--bg-inset)]/60",
+                    ].join(" ")}
+                  >
+                    <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+                      {FLAG_LABEL[flag]}
+                    </p>
+                    <div className="mt-1 flex items-end justify-between gap-2">
+                      <p
+                        className={[
+                          "text-lg font-bold tabular-nums",
+                          hot
+                            ? "text-[var(--accent-ocean)]"
+                            : "text-[var(--ink-muted)]",
+                        ].join(" ")}
+                      >
+                        {value}
+                      </p>
+                      <div className="mb-1 h-1 w-10 overflow-hidden rounded-full bg-[var(--bg-panel)]">
+                        <div
+                          className="h-full rounded-full bg-[var(--accent-ocean)]"
+                          style={{ width: `${(value / flagMax) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </SectionCard>
+
+          <SectionCard label="Counters">
+            <div className="flex flex-col gap-2.5">
               <MeterRow
-                key={row.setCode}
-                label={row.setCode}
-                value={row.copies}
-                max={setMax}
+                label="Counter 0"
+                value={stats.counter0}
+                max={Math.max(1, counterTotal)}
+                barClassName="bg-[var(--ink-muted)]"
+              />
+              <MeterRow
+                label="Counter 1000"
+                value={stats.counter1000}
+                max={Math.max(1, counterTotal)}
                 barClassName="bg-[var(--accent-ocean)]"
               />
-            ))}
+              <MeterRow
+                label="Counter 2000"
+                value={stats.counter2000}
+                max={Math.max(1, counterTotal)}
+                barClassName="bg-[var(--accent-pirate-red)]"
+              />
+              {stats.counterOther > 0 ? (
+                <MeterRow
+                  label="Other"
+                  value={stats.counterOther}
+                  max={Math.max(1, counterTotal)}
+                  barClassName="bg-[var(--accent-gold)]"
+                />
+              ) : null}
+            </div>
+          </SectionCard>
+
+          {stats.bySet.length > 0 ? (
+            <SectionCard label="Sets in list">
+              <div className="flex flex-col gap-2.5">
+                {stats.bySet.map((row) => (
+                  <MeterRow
+                    key={row.setCode}
+                    label={row.setCode}
+                    value={row.copies}
+                    max={setMax}
+                    barClassName="bg-[var(--accent-ocean)]"
+                  />
+                ))}
+              </div>
+            </SectionCard>
+          ) : null}
           </div>
-        </section>
-      ) : null}
+        </div>
+      </div>
     </div>
   );
 }
