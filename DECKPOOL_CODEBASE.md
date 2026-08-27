@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-08-27  
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: pending list-summary + has-flag expand)  
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `874cf46` — “Expand list summary and add searcher/unblockable has flags.”)  
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
