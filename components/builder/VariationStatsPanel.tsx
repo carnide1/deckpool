@@ -18,6 +18,11 @@ function formatAvg(value: number | null, decimals: number): string {
   return String(rounded);
 }
 
+function formatPower(value: number | null): string {
+  if (value == null) return "—";
+  return value.toLocaleString("en-US");
+}
+
 function StatChip({
   label,
   value,
@@ -47,12 +52,28 @@ export function VariationStatsPanel({ stats }: { stats: VariationStats }) {
         <StatChip label="Avg cost" value={formatAvg(stats.avgCost, 1)} />
         <StatChip label="Avg power" value={formatAvg(stats.avgPower, 0)} />
         <StatChip
+          label="Highest power"
+          value={formatPower(stats.highestPower)}
+        />
+        <StatChip
           label="Characters"
           value={String(stats.byCategory.Character)}
         />
         <StatChip label="Events" value={String(stats.byCategory.Event)} />
         <StatChip label="Stages" value={String(stats.byCategory.Stage)} />
       </div>
+      {stats.byColor.length > 0 ? (
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums text-[var(--ink-muted)]">
+          {stats.byColor.map((row) => (
+            <span key={row.color}>
+              {row.color}{" "}
+              <span className="font-semibold text-[var(--ink-primary)]">
+                {row.copies}
+              </span>
+            </span>
+          ))}
+        </div>
+      ) : null}
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums text-[var(--ink-muted)]">
         {VARIATION_STAT_FLAGS.map((flag) => (
           <span key={flag}>
@@ -64,6 +85,12 @@ export function VariationStatsPanel({ stats }: { stats: VariationStats }) {
         ))}
       </div>
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums text-[var(--ink-muted)]">
+        <span>
+          Counter 0{" "}
+          <span className="font-semibold text-[var(--ink-primary)]">
+            {stats.counter0}
+          </span>
+        </span>
         <span>
           Counter 1000{" "}
           <span className="font-semibold text-[var(--ink-primary)]">
@@ -85,6 +112,18 @@ export function VariationStatsPanel({ stats }: { stats: VariationStats }) {
           </span>
         ) : null}
       </div>
+      {stats.bySet.length > 0 ? (
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums text-[var(--ink-muted)]">
+          {stats.bySet.map((row) => (
+            <span key={row.setCode}>
+              {row.setCode}{" "}
+              <span className="font-semibold text-[var(--ink-primary)]">
+                {row.copies}
+              </span>
+            </span>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

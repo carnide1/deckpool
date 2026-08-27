@@ -137,8 +137,11 @@ export function DeckView({ deck }: { deck: Deck }) {
   const deckCount = activeVariation ? mainDeckCount(activeVariation.cards) : 0;
 
   const variationStats = useMemo(
-    () => computeVariationStats(activeVariation?.cards ?? {}, cardsById),
-    [activeVariation, cardsById],
+    () =>
+      computeVariationStats(activeVariation?.cards ?? {}, cardsById, {
+        leaderColors: leader?.colors,
+      }),
+    [activeVariation, cardsById, leader?.colors],
   );
 
   const handleSetFavorite = (variationId: string) => {

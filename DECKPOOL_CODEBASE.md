@@ -1,8 +1,8 @@
 # DeckPool — Codebase snapshot
 
 **Status:** Living summary of the **as-built** app  
-**Last updated:** 2026-08-26  
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `2eebf5e` — “Fix builder save races and harden auth, shares, and deck legality.”)  
+**Last updated:** 2026-08-27  
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `0975a5d` — “Point the snapshot Git line at the review hardening commit.”)  
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -245,7 +245,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 - Result tiles are a dense 3-column grid on mobile, images capped at 120px wide (`h-auto w-full`) so they do not blow up versus View. Leader portrait and result tiles use preferred art.
 - WANTED stamp on results does **not** add to the 50. **Post all unowned** raises Wanted to `in this variation − owned` for the active variation (does not stack on top of an existing bounty).
 - Manifest lines show id, category, cost, and power, plus in-deck / owned. Status panel: Legal/Illegal, Owned/Unowned, reason bullets for the **active tab**.
-- List summary (active tab): average cost, average power, Character/Event/Stage counts, blocker/rush/banish/double-attack/trigger counts, counter 1000 vs 2000.
+- List summary (active tab): average cost, average power, highest power, Character/Event/Stage counts, per-color counts when the Leader is multi-color (dual-color cards count in each), blocker/rush/banish/double-attack/trigger counts, counter 0 / 1000 / 2000, and copy counts per set that appears in the list (Leader excluded).
 - Variations: tabs ordered **favorite first**, then most recently edited. Opening the page selects the favorite. Star a tab (or **Set as main**) to pin it. Clone, rename, delete (cannot delete the last). Compare modal shows count diffs only.
 - Change Leader: warning, then strip illegal cards from **every** variation of that deck.
 - Writes go to Firestore through a queued `setVariationCards` so rapid clicks do not race.

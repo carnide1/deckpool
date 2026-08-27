@@ -192,8 +192,11 @@ export function BuilderView({ deck }: { deck: Deck }) {
   const deckCount = mainDeckCount(variationCards);
 
   const variationStats = useMemo(
-    () => computeVariationStats(variationCards, cardsById),
-    [variationCards, cardsById],
+    () =>
+      computeVariationStats(variationCards, cardsById, {
+        leaderColors: leader?.colors,
+      }),
+    [variationCards, cardsById, leader?.colors],
   );
 
   const status = useMemo(() => {
