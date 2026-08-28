@@ -30,6 +30,7 @@ import { useWantedWrite } from "@/hooks/useWantedWrite";
 import { computeCollectionBreakdown } from "@/lib/collectionBreakdown";
 import { imageForCard } from "@/lib/cardPrefs";
 import {
+  deckLabelsByCardIdFromIndex,
   deckIdsByCardIdFromIndex,
   indexDeckMembership,
 } from "@/lib/deckMembership";
@@ -132,6 +133,22 @@ function CollectionPageContent() {
     () => deckIdsByCardIdFromIndex(membership),
     [membership],
   );
+
+  const deckLabelsByCardId = useMemo(
+    () => deckLabelsByCardIdFromIndex(membership),
+    [membership],
+  );
+
+  const cardLabelsById = useMemo(() => {
+    const next: Record<string, string[]> = {};
+    for (const card of ownedCards) {
+      next[card.id] = [
+        ...(labelsByCardId[card.id] ?? []),
+        ...(deckLabelsByCardId[card.id] ?? []),
+      ];
+    }
+    return next;
+  }, [ownedCards, labelsByCardId, deckLabelsByCardId]);
 
   const deckOptions = useMemo(
     () =>
@@ -319,6 +336,7 @@ function CollectionPageContent() {
                   wantedQtyById={wantedQtyById}
                   onToggleWanted={(card) => void togglePosted(card.id)}
                   wantedSaving={wantedSaving}
+                  labelsByCardId={cardLabelsById}
                 />
                 <Pagination
                   page={currentPage}

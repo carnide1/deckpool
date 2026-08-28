@@ -183,7 +183,7 @@ export function VariationStatsPanel({ stats }: { stats: VariationStats }) {
             <StatChip label="Avg cost" value={formatAvg(stats.avgCost, 1)} />
             <StatChip label="Avg power" value={formatAvg(stats.avgPower, 0)} />
             <StatChip
-              label="Chars"
+              label="Characters"
               value={String(stats.byCategory.Character)}
             />
             <StatChip label="Events" value={String(stats.byCategory.Event)} />

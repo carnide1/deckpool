@@ -50,3 +50,14 @@ export function deckIdsByCardIdFromIndex(
   }
   return next;
 }
+
+/** Build display/filter labels from current deck membership without persisting them. */
+export function deckLabelsByCardIdFromIndex(
+  index: DeckMembershipIndex,
+): Record<string, string[]> {
+  const next: Record<string, string[]> = {};
+  for (const [cardId, decks] of Object.entries(index.decksByCardId)) {
+    next[cardId] = decks.map((deck) => `Deck: ${deck.name}`);
+  }
+  return next;
+}

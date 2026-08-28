@@ -36,6 +36,7 @@ export function CardGrid({
   onToggleWanted,
   showWantedCount = false,
   wantedSaving = false,
+  labelsByCardId,
   tileFooter,
 }: {
   cards: DeckPoolCard[];
@@ -49,6 +50,7 @@ export function CardGrid({
   onToggleWanted?: (card: DeckPoolCard) => void;
   showWantedCount?: boolean;
   wantedSaving?: boolean;
+  labelsByCardId?: Record<string, string[]>;
   tileFooter?: (card: DeckPoolCard) => ReactNode;
 }) {
   if (cards.length === 0) {
@@ -121,6 +123,23 @@ export function CardGrid({
                 {card.id}
               </p>
             </button>
+            {labelsByCardId?.[card.id]?.length ? (
+              <div
+                className="mt-1 flex max-w-full snap-x snap-mandatory flex-nowrap gap-1.5 overflow-x-auto overscroll-x-contain touch-pan-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                role="list"
+                aria-label="Card labels"
+              >
+                {labelsByCardId[card.id].map((label) => (
+                  <span
+                    key={label}
+                    role="listitem"
+                    className="max-w-[9rem] shrink-0 snap-start truncate rounded-full bg-[var(--bg-inset)] px-1.5 py-0.5 text-[0.625rem] font-medium text-[var(--ink-muted)]"
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
+            ) : null}
             <div className="mt-1 flex items-center justify-between gap-2">
               <span className="text-[10px] uppercase tracking-wide text-[var(--ink-muted)]">
                 {card.rarity}

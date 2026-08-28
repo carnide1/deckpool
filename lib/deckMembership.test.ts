@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { indexDeckMembership } from "@/lib/deckMembership";
+import {
+  deckLabelsByCardIdFromIndex,
+  indexDeckMembership,
+} from "@/lib/deckMembership";
 import type { Deck, Variation } from "@/types/deck";
 
 describe("indexDeckMembership", () => {
@@ -33,6 +36,14 @@ describe("indexDeckMembership", () => {
     assert.deepEqual(
       index.decksByCardId["OP03-114"].map((row) => row.id).sort(),
       ["d1", "d2"],
+    );
+  });
+
+  it("creates derived deck labels without changing membership data", () => {
+    const index = indexDeckMembership(decks, variationsByDeckId);
+    assert.deepEqual(
+      deckLabelsByCardIdFromIndex(index)["OP03-114"],
+      ["Deck: Linlin", "Deck: Perona brew"],
     );
   });
 });

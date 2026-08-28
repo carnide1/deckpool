@@ -19,10 +19,12 @@ import { Button } from "@/components/ui/Button";
 import { useCardPrefs } from "@/contexts/CardPrefsContext";
 import { useCatalog } from "@/contexts/CatalogContext";
 import { useCollection } from "@/contexts/CollectionContext";
+import { useDecks } from "@/contexts/DecksContext";
 import { useWanted } from "@/contexts/WantedContext";
 import { useCollectionWrite } from "@/hooks/useCollectionWrite";
 import { useWantedWrite } from "@/hooks/useWantedWrite";
 import { imageForCard } from "@/lib/cardPrefs";
+import { deckLabelsByCardIdFromIndex, indexDeckMembership } from "@/lib/deckMembership";
 import {
   applySearchFilters,
   cardsSearchString,
@@ -53,6 +55,7 @@ function CardsPageContent() {
   const searchParams = useSearchParams();
   const { cards, loading: catalogLoading, error: catalogError } = useCatalog();
   const { ownedMap, allLabels } = useCollection();
+  const { decks, variationsByDeckId } = useDecks();
   const { wantedMap } = useWanted();
   const { preferredByCardId } = useCardPrefs();
   const { saving, adjustQuantity, setLabels } = useCollectionWrite(true);
@@ -128,6 +131,28 @@ function CardsPageContent() {
     return map;
   }, [ownedMap]);
 
+  const membership = useMemo(
+    () => indexDeckMembership(decks, variationsByDeckId),
+    [decks, variationsByDeckId],
+  );
+
+  const deckLabelsByCardId = useMemo(
+    () => deckLabelsByCardIdFromIndex(membership),
+    [membership],
+  );
+
+  const cardLabelsById = useMemo(() => {
+    const next: Record<string, string[]> = {};
+    for (const card of cards) {
+      const userLabels = labelsByCardId[card.id] ?? [];
+      const deckLabels = deckLabelsByCardId[card.id] ?? [];
+      if (userLabels.length > 0 || deckLabels.length > 0) {
+        next[card.id] = [...userLabels, ...deckLabels];
+      }
+    }
+    return next;
+  }, [cards, labelsByCardId, deckLabelsByCardId]);
+
   const filtered = useMemo(() => {
     const next = applySearchFilters(cards, deferredFilters, {
       ownedOnly,
@@ -160,6 +185,9 @@ function CardsPageContent() {
   }, [filters, ownedOnly, wantedOnly, sort, urlKey, router]);
 
   const selectedOwned = selectedCard ? ownedMap[selectedCard.id] : undefined;
+  const selectedDecks = selectedCard
+    ? membership.decksByCardId[selectedCard.id] ?? []
+    : [];
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
@@ -255,6 +283,7 @@ function CardsPageContent() {
         wantedQtyById={wantedQtyById}
         onToggleWanted={(card) => void togglePosted(card.id)}
         wantedSaving={wantedSaving}
+        labelsByCardId={cardLabelsById}
       />
 
       {visibleCount < filtered.length ? (
@@ -275,6 +304,7 @@ function CardsPageContent() {
         ownedQty={selectedOwned?.quantity ?? 0}
         labels={selectedOwned?.labels ?? []}
         labelSuggestions={allLabels}
+        inDecks={selectedDecks}
         preferredImageUrl={
           selectedCard ? imageForCard(selectedCard, preferredByCardId) : null
         }

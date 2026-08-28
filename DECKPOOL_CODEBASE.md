@@ -190,7 +190,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 - Collection document **id** is the card number. Qty 0 **deletes** the doc.
 - Wanted document **id** is the same card number. Qty is extra copies to buy, not a total target. Qty 0 **deletes** the doc.
 - **Shares** are immutable snapshots (create + single-doc public **get**; **list denied** so there is no gallery). Create requires signed-in `ownerUid`, `keys().hasOnly(...)` (no extra fields), non-empty `cards` map of size ≤ 60, and short string fields. Owner decks stay private. Preferred art URLs stored on shares are Bandai HTTPS only. After changing `firestore.rules`, run `firebase deploy --only firestore:rules`. Until that is published, Wanted and Share reads/writes fail.
-- Labels live only on owned collection rows. Unowned Wanted cards have no labels.
+- User labels live only on owned collection rows. Card tiles also show derived `Deck: <name>` labels for current deck membership; these are not stored as user labels and update automatically when decks change.
 - **Caught** writes binder and Wanted in one Firestore transaction. Collection `+` while a poster exists uses that same catch helper.
 - Decrementing owned qty does **not** put the bounty back.
 - Variation `cards` is a full count map of the 50 (or draft). Leader is **not** in that map.
@@ -225,7 +225,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 - Filters sync to the URL (`lib/search/filters.ts`). Owned toggle: `owned=1`. Wanted toggle: `wanted=1`. Both can be on.
 - Sort: newest / oldest / serial / name / category / cost. Newest = latest set family.
 - Page size 48, load-more style.
-- Modal: qty (can create), bounty, labels, art picker, decks that use the card.
+- Modal: qty (can create), bounty, user labels, art picker, and decks that use the card. Card tiles show current user labels plus derived deck labels.
 - WANTED stamp on every tile. Owned `+` while a poster exists catches against that bounty.
 - **Add starter deck** modal: increment ST01–ST36 contents; optional labels merged; optional “also create a deck.”
 

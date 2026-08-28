@@ -24,6 +24,7 @@ import { useCollectionWrite } from "@/hooks/useCollectionWrite";
 import { useWantedWrite } from "@/hooks/useWantedWrite";
 import { imageForCard } from "@/lib/cardPrefs";
 import {
+  deckLabelsByCardIdFromIndex,
   deckIdsByCardIdFromIndex,
   indexDeckMembership,
 } from "@/lib/deckMembership";
@@ -123,6 +124,23 @@ export function WantedBoard() {
     () => deckIdsByCardIdFromIndex(membership),
     [membership],
   );
+
+  const deckLabelsByCardId = useMemo(
+    () => deckLabelsByCardIdFromIndex(membership),
+    [membership],
+  );
+
+  const cardLabelsById = useMemo(() => {
+    const next: Record<string, string[]> = {};
+    for (const card of wantedCards) {
+      const userLabels = labelsByCardId[card.id] ?? [];
+      const deckLabels = deckLabelsByCardId[card.id] ?? [];
+      if (userLabels.length > 0 || deckLabels.length > 0) {
+        next[card.id] = [...userLabels, ...deckLabels];
+      }
+    }
+    return next;
+  }, [wantedCards, labelsByCardId, deckLabelsByCardId]);
 
   const deckOptions = useMemo(
     () =>
@@ -240,6 +258,7 @@ export function WantedBoard() {
               onToggleWanted={(card) => void togglePosted(card.id)}
               showWantedCount
               wantedSaving={saving}
+              labelsByCardId={cardLabelsById}
               tileFooter={(card) => (
                 <WantedCatchControls
                   remaining={wantedQtyById[card.id] ?? 0}
