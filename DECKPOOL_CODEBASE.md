@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-08-27  
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `f33ba9e` — “Point the snapshot Git line at the deck-label commit.”)
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `20f162f` — “Complete card inspection UX and harden data writes.”)
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
