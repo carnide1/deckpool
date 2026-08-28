@@ -92,7 +92,7 @@ From `C:\DeckPool`:
 | `npm run lint` | ESLint |
 | `npm run ingest-catalog -- --input <punk-records english folder>` | Rebuild `data/cards.json`, packs, construction rules, has-flags |
 | `npm run ingest-products` | Rebuild `data/products/` (ST01–ST36) from One Piece Player pages |
-| `firebase deploy --only firestore:rules` | Publish `firestore.rules` to project `deckpool-64459`. **Required after changing rules** (e.g. `wanted`, `shares`). |
+| `firebase deploy --only firestore:rules` | Publish `firestore.rules` to project `deckpool-64459`. The tightened rules were deployed after the audit on 2026-08-27. |
 
 Ingest is a **local** maintainer task. Vercel must not scrape Bandai or One Piece Player at runtime. Commit the generated JSON.
 
@@ -189,7 +189,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 
 - Collection document **id** is the card number. Qty 0 **deletes** the doc.
 - Wanted document **id** is the same card number. Qty is extra copies to buy, not a total target. Qty 0 **deletes** the doc.
-- **Shares** are immutable snapshots (create + single-doc public **get**; **list denied** so there is no gallery). Create requires signed-in `ownerUid`, `keys().hasOnly(...)` (no extra fields), non-empty `cards` map of size ≤ 60, and short string fields. Owner decks stay private. Preferred art URLs stored on shares are filtered to Bandai HTTPS by the client. Collection, Wanted, card-preference, deck, and variation writes are shape-checked by `firestore.rules`; after changing that file, run `firebase deploy --only firestore:rules`. Until that is published, Wanted and Share reads/writes fail.
+- **Shares** are immutable snapshots (create + single-doc public **get**; **list denied** so there is no gallery). Create requires signed-in `ownerUid`, `keys().hasOnly(...)` (no extra fields), non-empty `cards` map of size ≤ 60, and short string fields. Owner decks stay private. Preferred art URLs stored on shares are filtered to Bandai HTTPS by the client. Collection, Wanted, card-preference, deck, and variation writes are shape-checked by the deployed `firestore.rules`.
 - User labels live only on owned collection rows. Card tiles also show derived `Deck: <name>` labels for current deck membership; these are not stored as user labels and update automatically when decks change.
 - **Caught** writes binder and Wanted in one Firestore transaction. Collection `+` while a poster exists uses that same catch helper.
 - Deck and variation operations that update multiple documents use batched writes so metadata and list changes commit together.
