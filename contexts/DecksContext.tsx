@@ -38,6 +38,7 @@ export function DecksProvider({ children }: { children: ReactNode }) {
   >({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadedUid, setLoadedUid] = useState<string | null>(null);
 
   const favoritesRef = useRef<Record<string, string | undefined>>({});
   useEffect(() => {
@@ -75,6 +76,7 @@ export function DecksProvider({ children }: { children: ReactNode }) {
         );
         next.sort((a, b) => a.name.localeCompare(b.name));
         setDecks(next);
+        setLoadedUid(uid);
         setLoading(false);
         setError(null);
       },
@@ -84,6 +86,7 @@ export function DecksProvider({ children }: { children: ReactNode }) {
         setError("Could not load your decks.");
         setDecks([]);
         setVariationsByDeckId({});
+        setLoadedUid(uid);
         setLoading(false);
       },
     );
@@ -174,14 +177,22 @@ export function DecksProvider({ children }: { children: ReactNode }) {
     });
   }, [uid, decks]);
 
+  const hasCurrentUserData = Boolean(uid && loadedUid === uid);
   const value = useMemo(
     () => ({
-      decks: uid ? decks : [],
-      variationsByDeckId: uid ? variationsByDeckId : {},
-      loading: Boolean(uid) && loading,
-      error: uid ? error : null,
+      decks: hasCurrentUserData ? decks : [],
+      variationsByDeckId: hasCurrentUserData ? variationsByDeckId : {},
+      loading: Boolean(uid) && !hasCurrentUserData ? true : loading,
+      error: hasCurrentUserData ? error : null,
     }),
-    [uid, decks, variationsByDeckId, loading, error],
+    [
+      uid,
+      hasCurrentUserData,
+      decks,
+      variationsByDeckId,
+      loading,
+      error,
+    ],
   );
 
   return (

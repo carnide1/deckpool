@@ -46,7 +46,7 @@ export function parseWantedItem(
 
 export function nextWantedQuantity(current: number, delta: number): number {
   if (!Number.isFinite(current) || !Number.isFinite(delta)) return 0;
-  return Math.max(0, current + delta);
+  return Math.max(0, Math.floor(current + delta));
 }
 
 export function nextToggleWanted(current: number): number {
@@ -116,6 +116,37 @@ export async function setWantedQuantity(
   );
 }
 
+/** Atomically apply a stepper delta so rapid clicks cannot overwrite each other. */
+export async function adjustWantedQuantity(
+  uid: string,
+  cardId: string,
+  delta: number,
+): Promise<number> {
+  if (!Number.isFinite(delta) || delta === 0) return 0;
+
+  const ref = wantedDocRef(uid, cardId);
+  return runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(ref);
+    const rawQuantity = snap.data()?.quantity;
+    const current =
+      typeof rawQuantity === "number" && Number.isFinite(rawQuantity)
+        ? Math.max(0, Math.floor(rawQuantity))
+        : 0;
+    const next = nextWantedQuantity(current, delta);
+
+    if (next <= 0) {
+      if (snap.exists()) tx.delete(ref);
+    } else {
+      tx.set(
+        ref,
+        { quantity: next, updatedAt: serverTimestamp() },
+        { merge: true },
+      );
+    }
+    return next;
+  });
+}
+
 export async function catchWantedCopies(
   uid: string,
   cardId: string,
@@ -128,13 +159,15 @@ export async function catchWantedCopies(
     const wantedSnap = await tx.get(wantedRef);
     const ownedSnap = await tx.get(ownedRef);
 
+    const rawWant = wantedSnap.data()?.quantity;
     const currentWant =
-      typeof wantedSnap.data()?.quantity === "number"
-        ? wantedSnap.data()!.quantity
+      typeof rawWant === "number" && Number.isFinite(rawWant)
+        ? Math.max(0, Math.floor(rawWant))
         : 0;
+    const rawOwned = ownedSnap.data()?.quantity;
     const currentOwned =
-      typeof ownedSnap.data()?.quantity === "number"
-        ? ownedSnap.data()!.quantity
+      typeof rawOwned === "number" && Number.isFinite(rawOwned)
+        ? Math.max(0, Math.floor(rawOwned))
         : 0;
 
     const result = applyCatch(currentOwned, currentWant, requested);
@@ -176,8 +209,11 @@ export async function raiseWantedGaps(
 
     for (const [cardId, gap] of entries) {
       const snap = await tx.get(wantedDocRef(uid, cardId));
+      const rawQuantity = snap.data()?.quantity;
       const current =
-        typeof snap.data()?.quantity === "number" ? snap.data()!.quantity : 0;
+        typeof rawQuantity === "number" && Number.isFinite(rawQuantity)
+          ? Math.max(0, Math.floor(rawQuantity))
+          : 0;
       reads.push({ cardId, gap, current });
     }
 

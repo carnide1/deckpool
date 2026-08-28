@@ -1,10 +1,16 @@
 # DeckPool V1 — Step-by-Step Implementation Guide
 
 **Companion to:** `DECKPOOL_V1_BLUEPRINT.md` (product/technical source of truth)  
-**Last updated:** 2026-08-17  
+**Last updated:** 2026-08-27
 **Working folder:** `C:\DeckPool`
 
 This guide is written so you can execute V1 with **minimal back-and-forth**. When the blueprint and this guide disagree, **the blueprint wins** — then update this guide.
+
+> **Current-code note:** This is the original build plan, not a live implementation
+> reference. For the behavior currently shipped in the repository, use
+> `DECKPOOL_CODEBASE.md`. In particular, Collection is an owned-only binder,
+> `/cards` uses facet/name filtering rather than the query-language parser, and
+> deck status badges use the favorite variation.
 
 ---
 

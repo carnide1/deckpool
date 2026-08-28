@@ -26,6 +26,7 @@ export function CardPrefsProvider({ children }: { children: ReactNode }) {
     Record<string, string>
   >({});
   const [loading, setLoading] = useState(false);
+  const [loadedUid, setLoadedUid] = useState<string | null>(null);
 
   useEffect(() => {
     if (!uid) return;
@@ -47,12 +48,14 @@ export function CardPrefsProvider({ children }: { children: ReactNode }) {
           if (typeof url === "string" && url) next[docSnap.id] = url;
         }
         setPreferredByCardId(next);
+        setLoadedUid(uid);
         setLoading(false);
       },
       (err) => {
         console.error(err);
         if (cancelled) return;
         setPreferredByCardId({});
+        setLoadedUid(uid);
         setLoading(false);
       },
     );
@@ -63,12 +66,13 @@ export function CardPrefsProvider({ children }: { children: ReactNode }) {
     };
   }, [uid]);
 
+  const hasCurrentUserData = Boolean(uid && loadedUid === uid);
   const value = useMemo(
     () => ({
-      preferredByCardId: uid ? preferredByCardId : {},
-      loading: Boolean(uid) && loading,
+      preferredByCardId: hasCurrentUserData ? preferredByCardId : {},
+      loading: Boolean(uid) && !hasCurrentUserData ? true : loading,
     }),
-    [uid, preferredByCardId, loading],
+    [uid, hasCurrentUserData, preferredByCardId, loading],
   );
 
   return (

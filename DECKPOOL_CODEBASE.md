@@ -189,10 +189,11 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 
 - Collection document **id** is the card number. Qty 0 **deletes** the doc.
 - Wanted document **id** is the same card number. Qty is extra copies to buy, not a total target. Qty 0 **deletes** the doc.
-- **Shares** are immutable snapshots (create + single-doc public **get**; **list denied** so there is no gallery). Create requires signed-in `ownerUid`, `keys().hasOnly(...)` (no extra fields), non-empty `cards` map of size ≤ 60, and short string fields. Owner decks stay private. Preferred art URLs stored on shares are Bandai HTTPS only. After changing `firestore.rules`, run `firebase deploy --only firestore:rules`. Until that is published, Wanted and Share reads/writes fail.
+- **Shares** are immutable snapshots (create + single-doc public **get**; **list denied** so there is no gallery). Create requires signed-in `ownerUid`, `keys().hasOnly(...)` (no extra fields), non-empty `cards` map of size ≤ 60, and short string fields. Owner decks stay private. Preferred art URLs stored on shares are filtered to Bandai HTTPS by the client. Collection, Wanted, card-preference, deck, and variation writes are shape-checked by `firestore.rules`; after changing that file, run `firebase deploy --only firestore:rules`. Until that is published, Wanted and Share reads/writes fail.
 - User labels live only on owned collection rows. Card tiles also show derived `Deck: <name>` labels for current deck membership; these are not stored as user labels and update automatically when decks change.
 - **Caught** writes binder and Wanted in one Firestore transaction. Collection `+` while a poster exists uses that same catch helper.
 - Deck and variation operations that update multiple documents use batched writes so metadata and list changes commit together.
+- Wanted stepper deltas use transactions, and user-scoped providers hide prior-account data until the current account snapshot arrives.
 - Decrementing owned qty does **not** put the bounty back.
 - Variation `cards` is a full count map of the 50 (or draft). Leader is **not** in that map.
 - `favoriteVariationId` is the list the owner usually plays. New decks set it in the same write as `Main`. Older decks without the field fall back to a variation named `Main`, then to the most recently edited list. Tab order and first-opened tab use that same resolve. Deleting the favorite points it at another remaining variation.
@@ -211,7 +212,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 - Pagination: 60 per page.
 - Binder qty stepper only adjusts existing rows. To log a **new** card, use `/cards` or **Caught** on Wanted.
 - Card tiles have a WANTED stamp (bottom-right of the art). Tap posts bounty 1 or drops the poster. Owned `×qty` stays top-right.
-- Card detail opens in a wide, two-column modal with which decks include that number, plus a **Bounty** stepper (extra copies to buy). Previous/Next controls sit outside the modal panel, and the modal includes a full-screen art lightbox.
+- Card detail opens in a wide, two-column modal with which decks include that number, plus a **Bounty** stepper (extra copies to buy). Previous/Next controls sit outside the modal panel, and the modal includes a focus-isolated, scroll-locking full-screen art lightbox.
 
 ### Wanted board (`/collection?view=wanted`)
 

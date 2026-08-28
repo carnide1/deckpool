@@ -31,7 +31,7 @@ export function BuilderManifest({
       <ul className="max-h-[min(50dvh,420px)] overflow-y-auto divide-y divide-[var(--bg-inset)]">
         {lines.length === 0 ? (
           <li className="px-4 py-6 text-center text-sm text-[var(--ink-muted)]">
-            Click cards in search results to build your list.
+            Use Add on a search result to build your list.
           </li>
         ) : (
           lines.map(({ card, inDeck, ownedQty }) => {

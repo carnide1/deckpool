@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { CardImage } from "@/components/CardImage";
@@ -27,25 +27,69 @@ export function CardLightbox({
   canPrevious?: boolean;
   canNext?: boolean;
 }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const handlersRef = useRef({ onClose, onPrevious, onNext });
+
+  useEffect(() => {
+    handlersRef.current = { onClose, onPrevious, onNext };
+  }, [onClose, onNext, onPrevious]);
+
   useEffect(() => {
     if (!open) return;
+
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusFrame = window.requestAnimationFrame(() => {
+      closeButtonRef.current?.focus();
+    });
 
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        event.stopImmediatePropagation();
+        handlersRef.current.onClose();
       } else if (event.key === "ArrowLeft" && canPrevious) {
         event.preventDefault();
-        onPrevious?.();
+        handlersRef.current.onPrevious?.();
       } else if (event.key === "ArrowRight" && canNext) {
         event.preventDefault();
-        onNext?.();
+        handlersRef.current.onNext?.();
+      } else if (event.key === "Tab") {
+        const focusable = Array.from(
+          panelRef.current?.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          ) ?? [],
+        );
+        if (focusable.length === 0) {
+          event.preventDefault();
+          return;
+        }
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
       }
     };
 
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [canNext, canPrevious, onClose, onNext, onPrevious, open]);
+    window.addEventListener("keydown", onKey, true);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener("keydown", onKey, true);
+      document.body.style.overflow = previousOverflow;
+      if (previouslyFocused?.isConnected) previouslyFocused.focus();
+    };
+  }, [canNext, canPrevious, open]);
 
   if (!open || !card || !imageUrl || typeof document === "undefined") {
     return null;
@@ -58,6 +102,7 @@ export function CardLightbox({
       role="presentation"
     >
       <div
+        ref={panelRef}
         className="relative flex max-h-full max-w-full flex-col items-center gap-3"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
@@ -71,6 +116,7 @@ export function CardLightbox({
           <button
             type="button"
             onClick={onClose}
+            ref={closeButtonRef}
             className="shrink-0 rounded-lg p-2 text-white hover:bg-white/15"
             aria-label="Close enlarged card art"
           >

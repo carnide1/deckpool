@@ -5,9 +5,9 @@ import toast from "react-hot-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWanted } from "@/contexts/WantedContext";
 import {
+  adjustWantedQuantity,
   catchWantedCopies,
   nextToggleWanted,
-  nextWantedQuantity,
   raiseWantedGaps,
   setWantedQuantity,
   type CatchRequest,
@@ -38,10 +38,18 @@ export function useWantedWrite() {
   const adjustQuantity = useCallback(
     async (cardId: string, delta: number) => {
       if (!user || delta === 0) return;
-      const current = wantedMap[cardId]?.quantity ?? 0;
-      await setQuantity(cardId, nextWantedQuantity(current, delta));
+      setSaving(true);
+      try {
+        await adjustWantedQuantity(user.uid, cardId, delta);
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Could not update bounty",
+        );
+      } finally {
+        setSaving(false);
+      }
     },
-    [user, wantedMap, setQuantity],
+    [user],
   );
 
   const togglePosted = useCallback(

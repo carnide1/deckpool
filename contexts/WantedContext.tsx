@@ -28,6 +28,7 @@ export function WantedProvider({ children }: { children: ReactNode }) {
   const [wantedMap, setWantedMap] = useState<Record<string, WantedItem>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadedUid, setLoadedUid] = useState<string | null>(null);
 
   useEffect(() => {
     if (!uid) return;
@@ -53,6 +54,7 @@ export function WantedProvider({ children }: { children: ReactNode }) {
           if (item.quantity > 0) next[docSnap.id] = item;
         }
         setWantedMap(next);
+        setLoadedUid(uid);
         setLoading(false);
         setError(null);
       },
@@ -61,6 +63,7 @@ export function WantedProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         setError("Could not load your Wanted board.");
         setWantedMap({});
+        setLoadedUid(uid);
         setLoading(false);
       },
     );
@@ -71,19 +74,30 @@ export function WantedProvider({ children }: { children: ReactNode }) {
     };
   }, [uid]);
 
+  const hasCurrentUserData = Boolean(uid && loadedUid === uid);
   const wantedCardCount = useMemo(
-    () => Object.values(wantedMap).filter((item) => item.quantity > 0).length,
-    [wantedMap],
+    () =>
+      hasCurrentUserData
+        ? Object.values(wantedMap).filter((item) => item.quantity > 0).length
+        : 0,
+    [hasCurrentUserData, wantedMap],
   );
 
   const value = useMemo(
     () => ({
-      wantedMap: uid ? wantedMap : {},
-      wantedCardCount: uid ? wantedCardCount : 0,
-      loading: Boolean(uid) && loading,
-      error: uid ? error : null,
+      wantedMap: hasCurrentUserData ? wantedMap : {},
+      wantedCardCount: hasCurrentUserData ? wantedCardCount : 0,
+      loading: Boolean(uid) && !hasCurrentUserData ? true : loading,
+      error: hasCurrentUserData ? error : null,
     }),
-    [uid, wantedMap, wantedCardCount, loading, error],
+    [
+      uid,
+      hasCurrentUserData,
+      wantedMap,
+      wantedCardCount,
+      loading,
+      error,
+    ],
   );
 
   return (

@@ -29,6 +29,7 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
   const [ownedMap, setOwnedMap] = useState<Record<string, CollectionItem>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadedUid, setLoadedUid] = useState<string | null>(null);
 
   useEffect(() => {
     if (!uid) return;
@@ -53,6 +54,7 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
           );
         }
         setOwnedMap(next);
+        setLoadedUid(uid);
         setLoading(false);
         setError(null);
       },
@@ -61,6 +63,7 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         setError("Could not load your collection.");
         setOwnedMap({});
+        setLoadedUid(uid);
         setLoading(false);
       },
     );
@@ -71,7 +74,9 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
     };
   }, [uid]);
 
+  const hasCurrentUserData = Boolean(uid && loadedUid === uid);
   const allLabels = useMemo(() => {
+    if (!hasCurrentUserData) return [];
     const labels = new Set<string>();
     for (const item of Object.values(ownedMap)) {
       for (const label of item.labels) {
@@ -80,23 +85,33 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
       }
     }
     return [...labels].sort((a, b) => a.localeCompare(b));
-  }, [ownedMap]);
+  }, [hasCurrentUserData, ownedMap]);
 
   const ownedCardCount = useMemo(
     () =>
-      Object.values(ownedMap).filter((item) => item.quantity > 0).length,
-    [ownedMap],
+      hasCurrentUserData
+        ? Object.values(ownedMap).filter((item) => item.quantity > 0).length
+        : 0,
+    [hasCurrentUserData, ownedMap],
   );
 
   const value = useMemo(
     () => ({
-      ownedMap: uid ? ownedMap : {},
-      allLabels: uid ? allLabels : [],
-      ownedCardCount: uid ? ownedCardCount : 0,
-      loading: Boolean(uid) && loading,
-      error: uid ? error : null,
+      ownedMap: hasCurrentUserData ? ownedMap : {},
+      allLabels: hasCurrentUserData ? allLabels : [],
+      ownedCardCount: hasCurrentUserData ? ownedCardCount : 0,
+      loading: Boolean(uid) && !hasCurrentUserData ? true : loading,
+      error: hasCurrentUserData ? error : null,
     }),
-    [uid, ownedMap, allLabels, ownedCardCount, loading, error],
+    [
+      uid,
+      hasCurrentUserData,
+      ownedMap,
+      allLabels,
+      ownedCardCount,
+      loading,
+      error,
+    ],
   );
 
   return (

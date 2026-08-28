@@ -81,8 +81,11 @@ export async function adjustCollectionQuantity(
   const ref = collectionDocRef(uid, cardId);
   return runTransaction(getFirebaseDb(), async (tx) => {
     const snap = await tx.get(ref);
+    const rawQuantity = snap.data()?.quantity;
     const current =
-      typeof snap.data()?.quantity === "number" ? snap.data()!.quantity : 0;
+      typeof rawQuantity === "number" && Number.isFinite(rawQuantity)
+        ? Math.max(0, Math.floor(rawQuantity))
+        : 0;
     const next = nextCollectionQuantity(current, delta, allowCreate);
     if (next === null) return current;
     if (next <= 0) {

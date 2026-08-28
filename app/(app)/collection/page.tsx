@@ -265,6 +265,8 @@ function CollectionPageContent() {
             <button
               type="button"
               onClick={() => setFiltersOpen((open) => !open)}
+              aria-expanded={filtersOpen}
+              aria-controls="collection-filters"
               className="inline-flex items-center gap-2 rounded-lg border border-[var(--bg-inset)] bg-[var(--bg-panel)] px-3 py-2 text-sm font-semibold lg:hidden"
             >
               <SlidersHorizontal className="h-4 w-4" />
@@ -349,6 +351,7 @@ function CollectionPageContent() {
           </div>
 
           <aside
+            id="collection-filters"
             className={[
               "order-1 shrink-0 lg:sticky lg:top-4 lg:order-2 lg:w-64",
               filtersOpen ? "block" : "hidden lg:block",

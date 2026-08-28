@@ -11,21 +11,100 @@ service cloud.firestore {
         && request.resource.data[field].size() <= maxLen;
     }
 
+    function validCollectionItem() {
+      return request.resource.data.keys().hasOnly([
+          'quantity',
+          'labels',
+          'updatedAt'
+        ])
+        && request.resource.data.quantity is int
+        && request.resource.data.quantity > 0
+        && request.resource.data.updatedAt is timestamp
+        && (!request.resource.data.keys().hasAny(['labels'])
+          || (
+            request.resource.data.labels is list
+            && request.resource.data.labels.size() <= 50
+          ));
+    }
+
+    function validWantedItem() {
+      return request.resource.data.keys().hasOnly([
+          'quantity',
+          'updatedAt'
+        ])
+        && request.resource.data.quantity is int
+        && request.resource.data.quantity > 0
+        && request.resource.data.updatedAt is timestamp;
+    }
+
+    function validCardPref() {
+      return request.resource.data.keys().hasOnly(['preferredImageUrl'])
+        && request.resource.data.preferredImageUrl is string
+        && request.resource.data.preferredImageUrl.matches(
+          'https://en\\.onepiece-cardgame\\.com/images/cardlist/card/[A-Za-z0-9][A-Za-z0-9._-]{0,38}\\.png'
+        );
+    }
+
+    function validDeck() {
+      return request.resource.data.keys().hasOnly([
+          'name',
+          'leaderId',
+          'favoriteVariationId',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.leaderId is string
+        && request.resource.data.leaderId.size() > 0
+        && request.resource.data.leaderId.size() <= 32
+        && request.resource.data.updatedAt is timestamp
+        && (!request.resource.data.keys().hasAny(['favoriteVariationId'])
+          || request.resource.data.favoriteVariationId is string)
+        && (!request.resource.data.keys().hasAny(['createdAt'])
+          || request.resource.data.createdAt is timestamp);
+    }
+
+    function validVariation() {
+      return request.resource.data.keys().hasOnly([
+          'name',
+          'cards',
+          'updatedAt'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.cards is map
+        && request.resource.data.cards.size() <= 60
+        && request.resource.data.updatedAt is timestamp;
+    }
+
     match /users/{uid} {
       allow read, write: if isOwner(uid);
       match /collection/{cardId} {
-        allow read, write: if isOwner(uid);
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validCollectionItem();
+        allow delete: if isOwner(uid);
       }
       match /cardPrefs/{cardId} {
-        allow read, write: if isOwner(uid);
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validCardPref();
+        allow delete: if isOwner(uid);
       }
       match /wanted/{cardId} {
-        allow read, write: if isOwner(uid);
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validWantedItem();
+        allow delete: if isOwner(uid);
       }
       match /decks/{deckId} {
-        allow read, write: if isOwner(uid);
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validDeck();
+        allow delete: if isOwner(uid);
         match /variations/{variationId} {
-          allow read, write: if isOwner(uid);
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid) && validVariation();
+          allow delete: if isOwner(uid);
         }
       }
     }
