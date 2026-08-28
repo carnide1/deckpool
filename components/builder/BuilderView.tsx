@@ -11,6 +11,7 @@ import {
 import { ArrowLeft, Pencil, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 import { CardImage } from "@/components/CardImage";
+import { CardDetailModal } from "@/components/cards/CardDetailModal";
 import { BuilderCardResults } from "@/components/builder/BuilderCardResults";
 import { BuilderManifest } from "@/components/builder/BuilderManifest";
 import { BuilderStatusPanel } from "@/components/builder/BuilderStatusPanel";
@@ -43,7 +44,7 @@ import {
 } from "@/lib/builder";
 import { getConstructionRules } from "@/lib/construction";
 import { setFavoriteVariation, setVariationCards } from "@/lib/decks";
-import { imageCandidates } from "@/lib/cardPrefs";
+import { imageCandidates, imageForCard } from "@/lib/cardPrefs";
 import { validateVariation } from "@/lib/legality";
 import {
   applySearchFilters,
@@ -66,10 +67,18 @@ export function BuilderView({ deck }: { deck: Deck }) {
   const { preferredByCardId } = useCardPrefs();
   const { ownedMap, allLabels } = useCollection();
   const { wantedMap } = useWanted();
-  const { togglePosted, postGaps, saving: wantedSaving } = useWantedWrite();
+  const {
+    togglePosted,
+    postGaps,
+    adjustQuantity: adjustWanted,
+    saving: wantedSaving,
+  } = useWantedWrite();
   const { variationsByDeckId } = useDecks();
 
-  const variations = variationsByDeckId[deck.id] ?? [];
+  const variations = useMemo(
+    () => variationsByDeckId[deck.id] ?? [],
+    [deck.id, variationsByDeckId],
+  );
   const favoriteId = resolveFavoriteVariationId(
     deck.favoriteVariationId,
     variations,
@@ -90,6 +99,7 @@ export function BuilderView({ deck }: { deck: Deck }) {
   const [cloneOpen, setCloneOpen] = useState(false);
   const [renameVariationOpen, setRenameVariationOpen] = useState(false);
   const [deleteVariationOpen, setDeleteVariationOpen] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<DeckPoolCard | null>(null);
   const [saving, setSaving] = useState(false);
   const [localCards, setLocalCards] = useState<Record<string, number> | null>(
     null,
@@ -112,7 +122,10 @@ export function BuilderView({ deck }: { deck: Deck }) {
 
   const activeVariation =
     variations.find((row) => row.id === activeVariationId) ?? null;
-  const variationCards = localCards ?? activeVariation?.cards ?? {};
+  const variationCards = useMemo(
+    () => localCards ?? activeVariation?.cards ?? {},
+    [activeVariation, localCards],
+  );
 
   useEffect(() => {
     const variation = variations.find((row) => row.id === activeVariationId);
@@ -442,6 +455,7 @@ export function BuilderView({ deck }: { deck: Deck }) {
               )
             }
             onAdd={handleAdd}
+            onInspect={setSelectedCard}
             onToggleWanted={(card) => void togglePosted(card.id)}
             wantedSaving={wantedSaving}
           />
@@ -531,6 +545,22 @@ export function BuilderView({ deck }: { deck: Deck }) {
         onClose={() => setDeleteVariationOpen(false)}
         onDeleted={handleVariationDeleted}
         nextFavoriteId={nextFavoriteId}
+      />
+
+      <CardDetailModal
+        card={selectedCard}
+        open={selectedCard !== null}
+        onClose={() => setSelectedCard(null)}
+        selectionCards={searchResults}
+        onSelectCard={setSelectedCard}
+        ownedQty={selectedCard ? ownedQtyById[selectedCard.id] ?? 0 : 0}
+        wantedQty={selectedCard ? wantedQtyById[selectedCard.id] ?? 0 : 0}
+        onWantedDelta={(delta) => {
+          if (selectedCard) void adjustWanted(selectedCard.id, delta);
+        }}
+        preferredImageUrl={
+          selectedCard ? imageForCard(selectedCard, preferredByCardId) : null
+        }
       />
     </div>
   );

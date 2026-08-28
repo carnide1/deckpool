@@ -31,15 +31,21 @@ export function parseWantedItem(
   cardId: string,
   data: Record<string, unknown>,
 ): WantedItem {
+  const rawQuantity = data.quantity;
+  const quantity =
+    typeof rawQuantity === "number" && Number.isFinite(rawQuantity)
+      ? Math.max(0, Math.floor(rawQuantity))
+      : 0;
   return {
     cardId,
-    quantity: typeof data.quantity === "number" ? data.quantity : 0,
+    quantity,
     updatedAt: data.updatedAt,
     updatedAtMs: timestampToMillis(data.updatedAt),
   };
 }
 
 export function nextWantedQuantity(current: number, delta: number): number {
+  if (!Number.isFinite(current) || !Number.isFinite(delta)) return 0;
   return Math.max(0, current + delta);
 }
 
@@ -97,14 +103,15 @@ export async function setWantedQuantity(
   quantity: number,
 ): Promise<void> {
   const ref = wantedDocRef(uid, cardId);
-  if (quantity <= 0) {
+  const normalized = Number.isFinite(quantity) ? Math.floor(quantity) : 0;
+  if (normalized <= 0) {
     await deleteDoc(ref);
     return;
   }
 
   await setDoc(
     ref,
-    { quantity, updatedAt: serverTimestamp() },
+    { quantity: normalized, updatedAt: serverTimestamp() },
     { merge: true },
   );
 }

@@ -137,4 +137,18 @@ describe("parseShare", () => {
         "https://en.onepiece-cardgame.com/images/cardlist/card/OP05-060.png",
     });
   });
+
+  it("drops fractional quantities that normalize to zero", () => {
+    const share = parseShare("s2", {
+      ownerUid: "u1",
+      deckId: "d1",
+      variationId: "v1",
+      deckName: "Deck",
+      leaderId: "OP05-060",
+      variationName: "Main",
+      cards: { "OP01-016": 0.5, "OP01-017": 1.9 },
+    });
+
+    assert.deepEqual(share?.cards, { "OP01-017": 1 });
+  });
 });

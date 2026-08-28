@@ -1,7 +1,5 @@
 import {
-  addDoc,
   collection,
-  deleteDoc,
   doc,
   getDocs,
   serverTimestamp,
@@ -52,7 +50,8 @@ export function parseVariation(
       data.cards as Record<string, unknown>,
     )) {
       if (typeof qty === "number" && Number.isFinite(qty) && qty > 0) {
-        cards[id] = Math.floor(qty);
+        const normalized = Math.floor(qty);
+        if (normalized > 0) cards[id] = normalized;
       }
     }
   }
@@ -160,7 +159,8 @@ export function cleanCardsMap(cards: Record<string, number>): Record<string, num
   const next: Record<string, number> = {};
   for (const [cardId, qty] of Object.entries(cards)) {
     if (typeof qty === "number" && Number.isFinite(qty) && qty > 0) {
-      next[cardId] = Math.floor(qty);
+      const normalized = Math.floor(qty);
+      if (normalized > 0) next[cardId] = normalized;
     }
   }
   return next;
@@ -190,15 +190,19 @@ export async function cloneVariation(
   source: Variation,
   name: string,
 ): Promise<string> {
-  const ref = await addDoc(deckVariationsRef(uid, deckId), {
+  const db = getFirebaseDb();
+  const variationRef = doc(deckVariationsRef(uid, deckId));
+  const batch = writeBatch(db);
+  batch.set(variationRef, {
     name: name.trim() || `${source.name} copy`,
     cards: cleanCardsMap(source.cards),
     updatedAt: serverTimestamp(),
   });
-  await updateDoc(deckDocRef(uid, deckId), {
+  batch.update(deckDocRef(uid, deckId), {
     updatedAt: serverTimestamp(),
   });
-  return ref.id;
+  await batch.commit();
+  return variationRef.id;
 }
 
 export async function renameVariation(
@@ -207,10 +211,15 @@ export async function renameVariation(
   variationId: string,
   name: string,
 ): Promise<void> {
-  await updateDoc(variationDocRef(uid, deckId, variationId), {
+  const batch = writeBatch(getFirebaseDb());
+  batch.update(variationDocRef(uid, deckId, variationId), {
     name: name.trim() || "Variation",
     updatedAt: serverTimestamp(),
   });
+  batch.update(deckDocRef(uid, deckId), {
+    updatedAt: serverTimestamp(),
+  });
+  await batch.commit();
 }
 
 export async function setFavoriteVariation(
@@ -230,12 +239,14 @@ export async function deleteVariation(
   variationId: string,
   nextFavoriteId?: string | null,
 ): Promise<void> {
-  await deleteDoc(variationDocRef(uid, deckId, variationId));
+  const batch = writeBatch(getFirebaseDb());
+  batch.delete(variationDocRef(uid, deckId, variationId));
   const patch: Record<string, unknown> = {
     updatedAt: serverTimestamp(),
   };
   if (nextFavoriteId) patch.favoriteVariationId = nextFavoriteId;
-  await updateDoc(deckDocRef(uid, deckId), patch);
+  batch.update(deckDocRef(uid, deckId), patch);
+  await batch.commit();
 }
 
 export async function changeDeckLeader(

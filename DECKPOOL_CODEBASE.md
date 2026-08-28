@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-08-27  
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `e3ceb48` — “Show live deck membership as card labels.”)  
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `f33ba9e` — “Point the snapshot Git line at the deck-label commit.”)
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -192,6 +192,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 - **Shares** are immutable snapshots (create + single-doc public **get**; **list denied** so there is no gallery). Create requires signed-in `ownerUid`, `keys().hasOnly(...)` (no extra fields), non-empty `cards` map of size ≤ 60, and short string fields. Owner decks stay private. Preferred art URLs stored on shares are Bandai HTTPS only. After changing `firestore.rules`, run `firebase deploy --only firestore:rules`. Until that is published, Wanted and Share reads/writes fail.
 - User labels live only on owned collection rows. Card tiles also show derived `Deck: <name>` labels for current deck membership; these are not stored as user labels and update automatically when decks change.
 - **Caught** writes binder and Wanted in one Firestore transaction. Collection `+` while a poster exists uses that same catch helper.
+- Deck and variation operations that update multiple documents use batched writes so metadata and list changes commit together.
 - Decrementing owned qty does **not** put the bounty back.
 - Variation `cards` is a full count map of the 50 (or draft). Leader is **not** in that map.
 - `favoriteVariationId` is the list the owner usually plays. New decks set it in the same write as `Main`. Older decks without the field fall back to a variation named `Main`, then to the most recently edited list. Tab order and first-opened tab use that same resolve. Deleting the favorite points it at another remaining variation.
@@ -210,12 +211,12 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 - Pagination: 60 per page.
 - Binder qty stepper only adjusts existing rows. To log a **new** card, use `/cards` or **Caught** on Wanted.
 - Card tiles have a WANTED stamp (bottom-right of the art). Tap posts bounty 1 or drops the poster. Owned `×qty` stays top-right.
-- Card detail can show which decks include that number, plus a **Bounty** stepper (extra copies to buy).
+- Card detail opens in a wide, two-column modal with which decks include that number, plus a **Bounty** stepper (extra copies to buy). Previous/Next controls sit outside the modal panel, and the modal includes a full-screen art lightbox.
 
 ### Wanted board (`/collection?view=wanted`)
 
 - Flat shopping list of posted bounties. Count on the stamp (`×4`).
-- **Caught** adds the remaining want to the binder and deletes the poster. **Caught 1** does one copy. Both use `catchWantedCopies`.
+- **Caught** adds the remaining want to the binder and deletes the poster. **Caught 1** does one copy. Both use `catchWantedCopies`. Wanted card details also use the shared navigation and full-screen art zoom.
 - Empty copy: “No posters.”
 - Does not add cards to decks. If a card is already in a list, logging binder copies is enough for Owned/Unowned.
 
@@ -225,7 +226,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 - Filters sync to the URL (`lib/search/filters.ts`). Owned toggle: `owned=1`. Wanted toggle: `wanted=1`. Both can be on.
 - Sort: newest / oldest / serial / name / category / cost. Newest = latest set family.
 - Page size 48, load-more style.
-- Modal: qty (can create), bounty, user labels, art picker, and decks that use the card. Card tiles show current user labels plus derived deck labels.
+- Modal: qty (can create), bounty, user labels, art picker, decks that use the card, outside Previous/Next controls through the currently loaded results, and click-to-zoom full-screen art. Card tiles show current user labels plus derived deck labels.
 - WANTED stamp on every tile. Owned `+` while a poster exists catches against that bounty.
 - **Add starter deck** modal: increment ST01–ST36 contents; optional labels merged; optional “also create a deck.”
 
@@ -241,8 +242,8 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 
 - Search defaults to **owned only** (toggle off to add unowned copies).
 - Hard filters always: Leader colors (card colors must be a subset of Leader colors), Leader forbid rules, no Leaders/Don in the 50.
-- Click a result to add a copy. Cap is construction copy limit (usually 4), **not** owned qty. Hard stop at **50** cards in the list. Minus on the list to remove.
-- Result tiles are a dense 3-column grid on mobile, images capped at 120px wide (`h-auto w-full`) so they do not blow up versus View. Leader portrait and result tiles use preferred art.
+- Use the explicit **Add** button on a result to add a copy. Cap is construction copy limit (usually 4), **not** owned qty. Hard stop at **50** cards in the list. Minus on the list to remove.
+- Result tiles are a dense 3-column grid on mobile, images capped at 120px wide (`h-auto w-full`) so they do not blow up versus View. Click an image or name to inspect a card; use the explicit Add button to add a copy. The detail modal supports outside Previous/Next controls through the current results and full-screen art zoom. Leader portrait and result tiles use preferred art.
 - WANTED stamp on results does **not** add to the 50. **Post all unowned** raises Wanted to `in this variation − owned` for the active variation (does not stack on top of an existing bounty).
 - Manifest lines show id, category, cost, and power, plus in-deck / owned. Status panel: Legal/Illegal, Owned/Unowned, reason bullets for the **active tab**.
 - List summary (active tab): compact collapsed row (avg cost, avg power, Character/Event/Stage, keyword pills including Unblockable and Searcher) with a smooth expand; expanded shows cost/power avg·low·high with horizontal distributions, composition bar, keywords, counters, multi-color Leader color counts, and set counts (Leader excluded). `searcher` is a derived ingest flag (look at top of deck + add to hand), not a Bandai bracket keyword.
@@ -252,7 +253,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 
 ### Deck view (`/decks/[id]` without `mode=edit`)
 
-- Read-only look at the active variation. Opens on the favorite. Switch to Edit to brew.
+- Read-only look at the active variation. Opens on the favorite. Switch to Edit to brew. Card details support outside Previous/Next controls through the active variation and full-screen art zoom.
 - Same tab order, star-to-pin, and list summary as Edit. Legal/Owned follow the tab you are looking at.
 - Leader portrait uses preferred art. WANTED stamp and bounty stepper still work from this page.
 - **Copy share link** creates a public `shares/{id}` snapshot of the **active** variation (deck name, Leader, variation name, card counts, preferred art URLs), copies `{origin}/s/{id}` to the clipboard for texting. Empty lists cannot be shared (client + rules). The link is a frozen snapshot — later edits do not change old links. If clipboard fails, the toast shows the URL for manual copy.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useId, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -11,13 +11,19 @@ export function Modal({
   onClose,
   children,
   footer,
+  size = "default",
+  overlayContent,
 }: {
   title: string;
   open: boolean;
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
+  size?: "default" | "wide";
+  overlayContent?: ReactNode;
 }) {
+  const titleId = useId();
+
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
@@ -37,15 +43,18 @@ export function Modal({
       role="presentation"
     >
       <div
-        className="poster-panel flex max-h-[min(90dvh,720px)] w-full max-w-lg flex-col shadow-[var(--shadow-poster)]"
+        className={[
+          "poster-panel flex max-h-[min(90dvh,720px)] w-full flex-col shadow-[var(--shadow-poster)]",
+          size === "wide" ? "max-w-4xl" : "max-w-lg",
+        ].join(" ")}
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="modal-title"
+        aria-labelledby={titleId}
       >
         <div className="flex items-start justify-between gap-3 border-b border-[var(--bg-inset)] px-5 py-4">
           <h2
-            id="modal-title"
+            id={titleId}
             className="font-display text-lg font-bold text-[var(--ink-primary)]"
           >
             {title}
@@ -64,6 +73,7 @@ export function Modal({
           <div className="border-t border-[var(--bg-inset)] px-5 py-4">{footer}</div>
         ) : null}
       </div>
+      {overlayContent}
     </div>,
     document.body,
   );

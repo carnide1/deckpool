@@ -12,6 +12,8 @@ type CardImageProps = {
   height?: number;
   className?: string;
   priority?: boolean;
+  onClick?: () => void;
+  ariaLabel?: string;
 };
 
 const SAME_URL_RETRIES = 1;
@@ -38,6 +40,8 @@ export function CardImage({
   height = 196,
   className = "",
   priority = false,
+  onClick,
+  ariaLabel,
 }: CardImageProps) {
   const fallbackKey = fallbackSrcs.join("\0");
   const candidates = useMemo(
@@ -155,7 +159,25 @@ export function CardImage({
       decoding="async"
       fetchPriority={priority ? "high" : "auto"}
       onError={handleError}
-      className={["h-auto object-cover", shellClass].join(" ")}
+      onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? ariaLabel || alt : undefined}
+      className={[
+        "h-auto object-cover",
+        onClick ? "cursor-zoom-in" : "",
+        shellClass,
+      ].join(" ")}
     />
   );
 }

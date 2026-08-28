@@ -25,9 +25,14 @@ export function parseCollectionItem(
   cardId: string,
   data: Record<string, unknown>,
 ): CollectionItem {
+  const rawQuantity = data.quantity;
+  const quantity =
+    typeof rawQuantity === "number" && Number.isFinite(rawQuantity)
+      ? Math.max(0, Math.floor(rawQuantity))
+      : 0;
   return {
     cardId,
-    quantity: typeof data.quantity === "number" ? data.quantity : 0,
+    quantity,
     labels: Array.isArray(data.labels)
       ? data.labels.filter((l): l is string => typeof l === "string")
       : [],
@@ -41,6 +46,7 @@ export function nextCollectionQuantity(
   delta: number,
   allowCreate: boolean,
 ): number | null {
+  if (!Number.isFinite(current) || !Number.isFinite(delta)) return null;
   if (current <= 0 && delta > 0 && !allowCreate) return null;
   return Math.max(0, current + delta);
 }
@@ -52,13 +58,14 @@ export async function setCollectionQuantity(
   labels?: string[],
 ): Promise<void> {
   const ref = collectionDocRef(uid, cardId);
-  if (quantity <= 0) {
+  const normalized = Number.isFinite(quantity) ? Math.floor(quantity) : 0;
+  if (normalized <= 0) {
     await deleteDoc(ref);
     return;
   }
 
   const payload: Record<string, unknown> = {
-    quantity,
+    quantity: normalized,
     updatedAt: serverTimestamp(),
   };
   if (labels !== undefined) payload.labels = labels;

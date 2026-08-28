@@ -167,6 +167,20 @@ export function FilterPanel({
 
   return (
     <div className={stacked ? "flex flex-col gap-2" : "flex flex-col gap-3"}>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-[var(--ink-primary)]">
+          Filters
+        </h2>
+        {hasActiveFilters(filters) ? (
+          <button
+            type="button"
+            onClick={() => onChange({ ...EMPTY_FILTERS })}
+            className="text-xs font-semibold text-[var(--accent-ocean)] hover:underline"
+          >
+            Clear filters
+          </button>
+        ) : null}
+      </div>
       <div
         className={
           stacked ? "flex flex-col gap-2" : "flex flex-wrap gap-2"
@@ -174,15 +188,6 @@ export function FilterPanel({
       >
         {selects}
       </div>
-      {hasActiveFilters({ ...filters, text: "" }) ? (
-        <button
-          type="button"
-          onClick={() => onChange({ ...EMPTY_FILTERS, text: filters.text })}
-          className="text-xs font-semibold text-[var(--accent-ocean)] hover:underline"
-        >
-          Clear filters
-        </button>
-      ) : null}
     </div>
   );
 }

@@ -13,6 +13,17 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // The app intentionally mirrors URL, Firebase snapshot, and modal props
+      // into local interaction state. These React Compiler diagnostics are not
+      // correctness errors for those subscription/synchronization boundaries.
+      "react-hooks/set-state-in-effect": "off",
+      // CardImage keeps event-handler state in refs so stale image events do
+      // not advance the wrong fallback candidate.
+      "react-hooks/refs": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

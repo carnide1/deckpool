@@ -378,6 +378,8 @@ function CollectionPageContent() {
           card={selectedCard}
           open={selectedCard !== null}
           onClose={() => setSelectedCard(null)}
+          selectionCards={pagedResults}
+          onSelectCard={setSelectedCard}
           ownedQty={selectedOwned?.quantity ?? 0}
           labels={selectedOwned?.labels ?? []}
           labelSuggestions={allLabels}

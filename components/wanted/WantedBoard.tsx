@@ -306,6 +306,8 @@ export function WantedBoard() {
         card={selectedCard}
         open={selectedCard !== null}
         onClose={() => setSelectedCard(null)}
+        selectionCards={pagedResults}
+        onSelectCard={setSelectedCard}
         ownedQty={selectedOwned?.quantity ?? 0}
         wantedQty={selectedWanted?.quantity ?? 0}
         labels={selectedOwned?.labels ?? []}

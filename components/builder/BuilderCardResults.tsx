@@ -5,6 +5,7 @@ import { WantedStamp } from "@/components/wanted/WantedStamp";
 import { useCardPrefs } from "@/contexts/CardPrefsContext";
 import { imageCandidates } from "@/lib/cardPrefs";
 import type { DeckPoolCard } from "@/types/catalog";
+import { Plus } from "lucide-react";
 
 const COLOR_CLASS: Record<string, string> = {
   Red: "border-[var(--color-red)]",
@@ -30,6 +31,7 @@ export function BuilderCardResults({
   wantedQtyById,
   canAdd,
   onAdd,
+  onInspect,
   onToggleWanted,
   wantedSaving = false,
 }: {
@@ -39,6 +41,7 @@ export function BuilderCardResults({
   wantedQtyById: Record<string, number>;
   canAdd: (cardId: string) => boolean;
   onAdd: (card: DeckPoolCard) => void;
+  onInspect: (card: DeckPoolCard) => void;
   onToggleWanted: (card: DeckPoolCard) => void;
   wantedSaving?: boolean;
 }) {
@@ -71,14 +74,9 @@ export function BuilderCardResults({
             <div className="relative mx-auto w-full max-w-[120px]">
               <button
                 type="button"
-                onClick={() => onAdd(card)}
-                disabled={!addable}
-                className={[
-                  "block w-full text-left",
-                  addable
-                    ? "cursor-pointer transition-transform hover:-translate-y-0.5"
-                    : "cursor-not-allowed opacity-40 grayscale",
-                ].join(" ")}
+                onClick={() => onInspect(card)}
+                className="block w-full cursor-zoom-in text-left transition-transform hover:-translate-y-0.5"
+                aria-label={`Inspect ${card.name}`}
               >
                 {image ? (
                   <CardImage
@@ -101,9 +99,13 @@ export function BuilderCardResults({
               </div>
             </div>
             <div className={addable ? "" : "opacity-40 grayscale"}>
-              <p className="mt-2 truncate text-xs font-semibold text-[var(--ink-primary)]">
+              <button
+                type="button"
+                onClick={() => onInspect(card)}
+                className="mt-2 block w-full truncate text-left text-xs font-semibold text-[var(--ink-primary)]"
+              >
                 {card.name}
-              </p>
+              </button>
               <p className="truncate text-[0.625rem] text-[var(--ink-muted)]">
                 {card.id}
               </p>
@@ -121,6 +123,18 @@ export function BuilderCardResults({
                   Owned: {ownedQty}
                 </span>
               </div>
+              <button
+                type="button"
+                onClick={() => onAdd(card)}
+                disabled={!addable}
+                className="mt-2 inline-flex h-8 w-full items-center justify-center gap-1 rounded-lg bg-[var(--accent-pirate-red)] px-2 text-xs font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label={
+                  addable ? `Add ${card.name} to deck` : `${card.name} cannot be added`
+                }
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add
+              </button>
             </div>
           </article>
         );

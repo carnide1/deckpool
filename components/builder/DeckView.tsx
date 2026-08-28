@@ -43,7 +43,10 @@ export function DeckView({ deck }: { deck: Deck }) {
   const { saving: wantedSaving, togglePosted, adjustQuantity: adjustWanted } =
     useWantedWrite();
 
-  const variations = variationsByDeckId[deck.id] ?? [];
+  const variations = useMemo(
+    () => variationsByDeckId[deck.id] ?? [],
+    [deck.id, variationsByDeckId],
+  );
   const favoriteId = resolveFavoriteVariationId(
     deck.favoriteVariationId,
     variations,
@@ -133,6 +136,11 @@ export function DeckView({ deck }: { deck: Deck }) {
       };
     }).filter((group) => group.cards.length > 0);
   }, [activeVariation, cardsById]);
+
+  const selectionCards = useMemo(
+    () => grouped.flatMap((group) => group.cards),
+    [grouped],
+  );
 
   const deckCount = activeVariation ? mainDeckCount(activeVariation.cards) : 0;
 
@@ -256,6 +264,8 @@ export function DeckView({ deck }: { deck: Deck }) {
         card={selectedCard}
         open={selectedCard !== null}
         onClose={() => setSelectedCard(null)}
+        selectionCards={selectionCards}
+        onSelectCard={setSelectedCard}
         ownedQty={selectedCard ? ownedQtyById[selectedCard.id] ?? 0 : 0}
         wantedQty={selectedCard ? wantedQtyById[selectedCard.id] ?? 0 : 0}
         onWantedDelta={(delta) => {

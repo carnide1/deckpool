@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type KeyboardEvent } from "react";
+import { useId, useState, type KeyboardEvent } from "react";
 import { X } from "lucide-react";
 
 export function LabelEditor({
@@ -15,10 +15,7 @@ export function LabelEditor({
   disabled?: boolean;
 }) {
   const [draft, setDraft] = useState("");
-  const listId = useMemo(
-    () => `label-suggestions-${Math.random().toString(36).slice(2)}`,
-    [],
-  );
+  const listId = useId();
 
   const addLabel = (raw: string) => {
     const trimmed = raw.trim();

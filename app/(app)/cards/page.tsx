@@ -301,6 +301,8 @@ function CardsPageContent() {
         card={selectedCard}
         open={selectedCard !== null}
         onClose={() => setSelectedCard(null)}
+        selectionCards={results}
+        onSelectCard={setSelectedCard}
         ownedQty={selectedOwned?.quantity ?? 0}
         labels={selectedOwned?.labels ?? []}
         labelSuggestions={allLabels}

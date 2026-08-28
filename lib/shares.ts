@@ -116,7 +116,8 @@ export function parseShare(
       data.cards as Record<string, unknown>,
     )) {
       if (typeof qty === "number" && qty > 0 && Number.isFinite(qty)) {
-        cards[id] = Math.floor(qty);
+        const normalized = Math.floor(qty);
+        if (normalized > 0) cards[id] = normalized;
       }
     }
   }
