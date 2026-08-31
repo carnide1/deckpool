@@ -107,10 +107,17 @@ export function ChangeLeaderModal({
                   preferredByCardId,
                 );
                 return (
-                  <button
+                  <div
                     key={leader.id}
-                    type="button"
                     onClick={() => setSelectedLeaderId(leader.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setSelectedLeaderId(leader.id);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
                     className={[
                       "rounded-xl border-2 p-2 text-left",
                       selected
@@ -134,7 +141,7 @@ export function ChangeLeaderModal({
                     <div className="mt-1">
                       <ColorPills colors={leader.colors} />
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>

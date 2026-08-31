@@ -319,7 +319,7 @@ export function WantedBoard() {
         preferredImageUrl={
           selectedCard ? imageForCard(selectedCard, preferredByCardId) : null
         }
-        showCollectionEditor
+        showCollectionEditor={Boolean(selectedOwned)}
         onQuantityDelta={(delta) => {
           if (!selectedCard) return;
           void adjustQuantity(selectedCard.id, delta);

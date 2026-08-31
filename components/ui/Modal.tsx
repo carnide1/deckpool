@@ -23,7 +23,7 @@ export function Modal({
   overlayContent?: ReactNode;
 }) {
   const titleId = useId();
-  const panelRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const onCloseRef = useRef(onClose);
 
@@ -54,7 +54,7 @@ export function Modal({
       if (event.key !== "Tab") return;
 
       const focusable = Array.from(
-        panelRef.current?.querySelectorAll<HTMLElement>(
+        modalRef.current?.querySelectorAll<HTMLElement>(
           'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
         ) ?? [],
       );
@@ -87,12 +87,12 @@ export function Modal({
 
   return createPortal(
     <div
+      ref={modalRef}
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
       onClick={onClose}
       role="presentation"
     >
       <div
-        ref={panelRef}
         className={[
           "poster-panel flex max-h-[min(90dvh,720px)] w-full flex-col shadow-[var(--shadow-poster)]",
           size === "wide" ? "max-w-4xl" : "max-w-lg",

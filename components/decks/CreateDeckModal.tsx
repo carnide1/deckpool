@@ -117,13 +117,21 @@ export function CreateDeckModal({
                   preferredByCardId,
                 );
                 return (
-                  <button
+                  <div
                     key={leader.id}
-                    type="button"
                     onClick={() => {
                       setSelectedLeaderId(leader.id);
                       if (!name.trim()) setName(leader.name);
                     }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setSelectedLeaderId(leader.id);
+                        if (!name.trim()) setName(leader.name);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
                     className={[
                       "rounded-xl border-2 p-2 text-left transition-colors",
                       selected
@@ -150,7 +158,7 @@ export function CreateDeckModal({
                     <div className="mt-1">
                       <ColorPills colors={leader.colors} />
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>

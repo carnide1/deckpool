@@ -72,23 +72,18 @@ export function BuilderCardResults({
             ].join(" ")}
           >
             <div className="relative mx-auto w-full max-w-[120px]">
-              <button
-                type="button"
-                onClick={() => onInspect(card)}
-                className="block w-full cursor-zoom-in text-left transition-transform hover:-translate-y-0.5"
-                aria-label={`Inspect ${card.name}`}
-              >
-                {image ? (
-                  <CardImage
-                    src={image}
-                    fallbackSrcs={fallbacks}
-                    alt={card.name}
-                    width={120}
-                    height={168}
-                    className="h-auto w-full"
-                  />
-                ) : null}
-              </button>
+              {image ? (
+                <CardImage
+                  src={image}
+                  fallbackSrcs={fallbacks}
+                  alt={card.name}
+                  width={120}
+                  height={168}
+                  className="h-auto w-full transition-transform hover:-translate-y-0.5"
+                  onClick={() => onInspect(card)}
+                  ariaLabel={`Inspect ${card.name}`}
+                />
+              ) : null}
               <div className="absolute right-1 bottom-1 z-10">
                 <WantedStamp
                   posted={wantedQty > 0}

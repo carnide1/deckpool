@@ -119,13 +119,13 @@ export function computeVariationStats(
     copies += qty;
     byCategory[card.category] += qty;
 
-    // A missing printed cost represents a zero-cost card in a main deck.
-    const cost = card.cost ?? 0;
-    costSum += cost * qty;
-    costCopies += qty;
-    costCounts.set(cost, (costCounts.get(cost) ?? 0) + qty);
-    if (lowestCost == null || cost < lowestCost) lowestCost = cost;
-    if (highestCost == null || cost > highestCost) highestCost = cost;
+    if (card.cost != null) {
+      costSum += card.cost * qty;
+      costCopies += qty;
+      costCounts.set(card.cost, (costCounts.get(card.cost) ?? 0) + qty);
+      if (lowestCost == null || card.cost < lowestCost) lowestCost = card.cost;
+      if (highestCost == null || card.cost > highestCost) highestCost = card.cost;
+    }
     if (card.category === "Character") {
       // A Character without a printed power is a zero-power Character.
       const power = card.power ?? 0;

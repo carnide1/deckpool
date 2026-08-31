@@ -76,31 +76,27 @@ export function CardGrid({
             ].join(" ")}
           >
             <div className="relative mx-auto w-full max-w-[160px]">
-              <button
-                type="button"
-                onClick={() => onSelect(card)}
-                className="block w-full text-left transition-transform hover:-translate-y-0.5"
-              >
-                {image ? (
-                  <CardImage
-                    src={image}
-                    fallbackSrcs={fallbacks}
-                    alt={card.name}
-                    width={160}
-                    height={224}
-                    className="w-full"
-                  />
-                ) : (
-                  <div className="flex h-[224px] items-center justify-center rounded-md bg-[var(--bg-inset)] text-xs text-[var(--ink-muted)]">
-                    No art
-                  </div>
-                )}
-                {qty > 0 ? (
-                  <span className="absolute top-1 right-1 rounded-md bg-[var(--bg-panel)]/95 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[var(--ink-primary)]">
-                    ×{qty}
-                  </span>
-                ) : null}
-              </button>
+              {image ? (
+                <CardImage
+                  src={image}
+                  fallbackSrcs={fallbacks}
+                  alt={card.name}
+                  width={160}
+                  height={224}
+                  className="w-full transition-transform hover:-translate-y-0.5"
+                  onClick={() => onSelect(card)}
+                  ariaLabel={`Inspect ${card.name}`}
+                />
+              ) : (
+                <div className="flex h-[224px] items-center justify-center rounded-md bg-[var(--bg-inset)] text-xs text-[var(--ink-muted)]">
+                  No art
+                </div>
+              )}
+              {qty > 0 ? (
+                <span className="absolute top-1 right-1 rounded-md bg-[var(--bg-panel)]/95 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[var(--ink-primary)]">
+                  ×{qty}
+                </span>
+              ) : null}
               {onToggleWanted ? (
                 <div className="absolute right-1 bottom-1 z-10">
                   <WantedStamp

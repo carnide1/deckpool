@@ -124,10 +124,11 @@ describe("computeVariationStats", () => {
     assert.deepEqual(stats.bySet, []);
   });
 
-  it("treats missing costs and character power as zero", () => {
-    const noCost = card({
+  it("includes zero costs and treats missing character power as zero", () => {
+    const zeroCost = card({
       id: "X1",
       category: "Character",
+      cost: 0,
       power: 6000,
       setCode: "OP03",
     });
@@ -137,7 +138,7 @@ describe("computeVariationStats", () => {
       cost: 1,
     });
     const cardsById = new Map<string, DeckPoolCard>([
-      [noCost.id, noCost],
+      [zeroCost.id, zeroCost],
       [noPower.id, noPower],
     ]);
     const stats = computeVariationStats(
@@ -160,6 +161,23 @@ describe("computeVariationStats", () => {
       { power: 6000, copies: 2 },
     ]);
     assert.equal(stats.counter0, 4);
+  });
+
+  it("reports zero power for a list of only zero-power Characters", () => {
+    const zeroPower = card({
+      id: "ZERO",
+      category: "Character",
+      cost: 0,
+    });
+    const stats = computeVariationStats(
+      { ZERO: 4 },
+      new Map([[zeroPower.id, zeroPower]]),
+    );
+
+    assert.equal(stats.avgPower, 0);
+    assert.equal(stats.lowestPower, 0);
+    assert.equal(stats.highestPower, 0);
+    assert.deepEqual(stats.byPower, [{ power: 0, copies: 4 }]);
   });
 
   it("breaks down colors only for multi-color Leaders and skips Leaders in the map", () => {

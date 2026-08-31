@@ -212,12 +212,12 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 - Pagination: 60 per page.
 - Binder qty stepper only adjusts existing rows. To log a **new** card, use `/cards` or **Caught** on Wanted.
 - Card tiles have a WANTED stamp (bottom-right of the art). Tap posts bounty 1 or drops the poster. Owned `×qty` stays top-right.
-- Card detail opens in a wide, two-column modal with which decks include that number, plus a **Bounty** stepper (extra copies to buy). Previous/Next controls sit outside the modal panel, and the modal includes a focus-isolated, scroll-locking full-screen art lightbox.
+- Card detail opens in a wide, two-column modal with which decks include that number, plus a **Bounty** stepper (extra copies to buy). Previous/Next controls sit outside the modal panel but remain in the modal keyboard focus loop, and the modal includes a focus-isolated, scroll-locking full-screen art lightbox.
 
 ### Wanted board (`/collection?view=wanted`)
 
 - Flat shopping list of posted bounties. Count on the stamp (`×4`).
-- **Caught** adds the remaining want to the binder and deletes the poster. **Caught 1** does one copy. Both use `catchWantedCopies`. Wanted card details also use the shared navigation and full-screen art zoom.
+- **Caught** adds the remaining want to the binder and deletes the poster. **Caught 1** does one copy. Both use `catchWantedCopies`. Wanted card details also use the shared navigation and full-screen art zoom; collection labels are editable only once the wanted card is already owned.
 - Empty copy: “No posters.”
 - Does not add cards to decks. If a card is already in a list, logging binder copies is enough for Owned/Unowned.
 
@@ -321,7 +321,7 @@ Do **not** call a language model to decide legality.
 | `scripts/ingest-catalog.ts` | From punk-records English JSON |
 | `scripts/ingest-products.ts` | From One Piece Player HTML, with `scripts/product-urls.json` and `scripts/product-overrides/` |
 
-Card shape: `types/catalog.ts` (`DeckPoolCard`). `cost` on a Leader is Life. `images[]` is every known scan for that number; user picks one per account in `cardPrefs`. Grids, deck rows, builder portraits, and Leader pickers all use `imageCandidates` → `CardImage`. Load order is built in `lib/cardImageUrl.ts` (`displayImageCandidates`: preferred/other scans → optional mirror, then `/card-art/{file}.png`). `CardImage` uses a plain `<img>` (not `/_next/image`). The proxy (`lib/cardArtPath.ts` + `lib/cardArtFetch.ts` + `app/card-art/[file]/route.ts`) validates filenames, times out upstream fetches, coalesces concurrent loads, returns ETag/304, and sets long cache headers. One retry per URL, then the next candidate; then “No art” + **Retry**.
+Card shape: `types/catalog.ts` (`DeckPoolCard`). `cost` on a Leader is Life. Ingest normalizes punk-records’ null Event costs to printed `0`; other unavailable costs remain `null`. `images[]` is every known scan for that number; user picks one per account in `cardPrefs`. Grids, deck rows, builder portraits, and Leader pickers all use `imageCandidates` → `CardImage`. Load order is built in `lib/cardImageUrl.ts` (`displayImageCandidates`: preferred/other scans → optional mirror, then `/card-art/{file}.png`). `CardImage` uses a plain `<img>` (not `/_next/image`). The proxy (`lib/cardArtPath.ts` + `lib/cardArtFetch.ts` + `app/card-art/[file]/route.ts`) validates filenames, times out upstream fetches, coalesces concurrent loads, returns ETag/304, and sets long cache headers. One retry per URL, then the next candidate; then “No art” + **Retry**.
 
 **Note:** Catalog JSON is still committed offline. `/card-art` only fetches **image bytes** on demand (cached). It is not catalog scrape-at-runtime. A full CDN mirror remains the most robust long-term option if Bandai blocks datacenter IPs.
 

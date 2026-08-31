@@ -62,6 +62,15 @@ type RawCard = {
   img_full_url?: string | null;
 };
 
+function normalizeCardCost(
+  category: CardCategory,
+  rawCost: number | null | undefined,
+): number | null {
+  if (typeof rawCost === "number" && Number.isFinite(rawCost)) return rawCost;
+  // punk-records uses null for the printed zero cost on Event cards.
+  return category === "Event" && rawCost == null ? 0 : null;
+}
+
 type RawPack = {
   id: string;
   raw_title: string;
@@ -285,7 +294,7 @@ async function main() {
       category: category as CardCategory,
       rarity: raw.rarity ?? "",
       colors,
-      cost: typeof raw.cost === "number" ? raw.cost : null,
+      cost: normalizeCardCost(category as CardCategory, raw.cost),
       attributes: raw.attributes ?? [],
       power: typeof raw.power === "number" ? raw.power : null,
       counter: typeof raw.counter === "number" ? raw.counter : null,

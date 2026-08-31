@@ -1,4 +1,4 @@
-import { forwardRef, type InputHTMLAttributes } from "react";
+import { forwardRef, useId, type InputHTMLAttributes } from "react";
 
 type TextInputProps = InputHTMLAttributes<HTMLInputElement> & {
   label?: string;
@@ -6,8 +6,24 @@ type TextInputProps = InputHTMLAttributes<HTMLInputElement> & {
 };
 
 export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
-  function TextInput({ label, error, id, className = "", ...props }, ref) {
-    const inputId = id ?? props.name;
+  function TextInput(
+    {
+      label,
+      error,
+      id,
+      className = "",
+      "aria-describedby": ariaDescribedBy,
+      "aria-invalid": ariaInvalid,
+      ...props
+    },
+    ref,
+  ) {
+    const generatedId = useId();
+    const inputId = id ?? props.name ?? generatedId;
+    const errorId = `${inputId}-error`;
+    const describedBy = [ariaDescribedBy, error ? errorId : null]
+      .filter(Boolean)
+      .join(" ") || undefined;
 
     return (
       <label className="flex min-w-0 flex-col gap-1.5 text-sm">
@@ -17,6 +33,8 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
         <input
           ref={ref}
           id={inputId}
+          aria-describedby={describedBy}
+          aria-invalid={error ? true : ariaInvalid}
           className={[
             "h-10 w-full min-w-0 rounded-lg border bg-white px-3 text-base text-[var(--ink-primary)] placeholder:text-[var(--ink-muted)]",
             error
@@ -27,7 +45,13 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
           {...props}
         />
         {error ? (
-          <span className="text-xs text-[var(--accent-pirate-red)]">{error}</span>
+          <span
+            id={errorId}
+            role="alert"
+            className="text-xs text-[var(--accent-pirate-red)]"
+          >
+            {error}
+          </span>
         ) : null}
       </label>
     );
