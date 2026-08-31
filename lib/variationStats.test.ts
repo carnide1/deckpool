@@ -124,24 +124,42 @@ describe("computeVariationStats", () => {
     assert.deepEqual(stats.bySet, []);
   });
 
-  it("treats missing costs as zero while skipping missing power", () => {
+  it("treats missing costs and character power as zero", () => {
     const noCost = card({
       id: "X1",
       category: "Character",
       power: 6000,
       setCode: "OP03",
     });
-    const cardsById = new Map<string, DeckPoolCard>([[noCost.id, noCost]]);
-    const stats = computeVariationStats({ X1: 2, MISSING: 4 }, cardsById);
-    assert.equal(stats.copies, 2);
-    assert.equal(stats.avgCost, 0);
+    const noPower = card({
+      id: "X2",
+      category: "Character",
+      cost: 1,
+    });
+    const cardsById = new Map<string, DeckPoolCard>([
+      [noCost.id, noCost],
+      [noPower.id, noPower],
+    ]);
+    const stats = computeVariationStats(
+      { X1: 2, X2: 2, MISSING: 4 },
+      cardsById,
+    );
+    assert.equal(stats.copies, 4);
+    assert.equal(stats.avgCost, 0.5);
     assert.equal(stats.lowestCost, 0);
-    assert.equal(stats.highestCost, 0);
-    assert.deepEqual(stats.byCost, [{ cost: 0, copies: 2 }]);
-    assert.equal(stats.avgPower, 6000);
+    assert.equal(stats.highestCost, 1);
+    assert.deepEqual(stats.byCost, [
+      { cost: 0, copies: 2 },
+      { cost: 1, copies: 2 },
+    ]);
+    assert.equal(stats.avgPower, 3000);
+    assert.equal(stats.lowestPower, 0);
     assert.equal(stats.highestPower, 6000);
-    assert.equal(stats.lowestPower, 6000);
-    assert.equal(stats.counter0, 2);
+    assert.deepEqual(stats.byPower, [
+      { power: 0, copies: 2 },
+      { power: 6000, copies: 2 },
+    ]);
+    assert.equal(stats.counter0, 4);
   });
 
   it("breaks down colors only for multi-color Leaders and skips Leaders in the map", () => {

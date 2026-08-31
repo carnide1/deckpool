@@ -126,15 +126,17 @@ export function computeVariationStats(
     costCounts.set(cost, (costCounts.get(cost) ?? 0) + qty);
     if (lowestCost == null || cost < lowestCost) lowestCost = cost;
     if (highestCost == null || cost > highestCost) highestCost = cost;
-    if (card.power != null) {
-      powerSum += card.power * qty;
+    if (card.category === "Character") {
+      // A Character without a printed power is a zero-power Character.
+      const power = card.power ?? 0;
+      powerSum += power * qty;
       powerCopies += qty;
-      powerCounts.set(card.power, (powerCounts.get(card.power) ?? 0) + qty);
-      if (lowestPower == null || card.power < lowestPower) {
-        lowestPower = card.power;
+      powerCounts.set(power, (powerCounts.get(power) ?? 0) + qty);
+      if (lowestPower == null || power < lowestPower) {
+        lowestPower = power;
       }
-      if (highestPower == null || card.power > highestPower) {
-        highestPower = card.power;
+      if (highestPower == null || power > highestPower) {
+        highestPower = power;
       }
     }
 
