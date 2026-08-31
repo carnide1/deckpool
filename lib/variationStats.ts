@@ -33,7 +33,7 @@ export type VariationStats = {
   byCategory: Record<CardCategory, number>;
   /** Copies keyed by printed cost (only costs that appear). */
   byCost: { cost: number; copies: number }[];
-  /** Copies keyed by printed power (only powers that appear). */
+  /** Copies keyed by displayed power; null-power Characters are grouped under 0. */
   byPower: { power: number; copies: number }[];
   flags: Record<VariationStatFlag, number>;
   counter1000: number;
