@@ -1,7 +1,7 @@
 # DeckPool — Codebase snapshot
 
 **Status:** Living summary of the **as-built** app  
-**Last updated:** 2026-08-27  
+**Last updated:** 2026-08-30
 **Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `f3d2997` — “Record deployed Firestore rules in codebase snapshot.”)
 **Local path:** `C:\DeckPool`
 
@@ -247,7 +247,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 - Result tiles are a dense 3-column grid on mobile, images capped at 120px wide (`h-auto w-full`) so they do not blow up versus View. Click an image or name to inspect a card; use the explicit Add button to add a copy. The detail modal supports outside Previous/Next controls through the current results and full-screen art zoom. Leader portrait and result tiles use preferred art.
 - WANTED stamp on results does **not** add to the 50. **Post all unowned** raises Wanted to `in this variation − owned` for the active variation (does not stack on top of an existing bounty).
 - Manifest lines show id, category, cost, and power, plus in-deck / owned. Status panel: Legal/Illegal, Owned/Unowned, reason bullets for the **active tab**.
-- List summary (active tab): compact collapsed row (avg cost, avg power, Character/Event/Stage, keyword pills including Unblockable and Searcher) with a smooth expand; expanded shows cost/power avg·low·high with horizontal distributions, composition bar, keywords, counters, multi-color Leader color counts, and set counts (Leader excluded). `searcher` is a derived ingest flag (look at top of deck + add to hand), not a Bandai bracket keyword.
+- List summary (active tab): compact collapsed row (avg cost, avg power, Character/Event/Stage, keyword pills including Unblockable and Searcher) with a smooth expand; expanded shows cost/power avg·low·high with horizontal distributions, including zero-cost cards in the cost average and zero bucket, composition bar, keywords, counters, multi-color Leader color counts, and set counts (Leader excluded). `searcher` is a derived ingest flag (look at top of deck + add to hand), not a Bandai bracket keyword.
 - Variations: tabs ordered **favorite first**, then most recently edited. Opening the page selects the favorite. Star a tab (or **Set as main**) to pin it. Clone, rename, delete (cannot delete the last). Compare modal shows count diffs only.
 - Change Leader: warning, then strip illegal cards from **every** variation of that deck.
 - Writes go to Firestore through a queued `setVariationCards` so rapid clicks do not race.

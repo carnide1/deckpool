@@ -124,7 +124,7 @@ describe("computeVariationStats", () => {
     assert.deepEqual(stats.bySet, []);
   });
 
-  it("skips unknown ids and null cost/power when averaging", () => {
+  it("treats missing costs as zero while skipping missing power", () => {
     const noCost = card({
       id: "X1",
       category: "Character",
@@ -134,7 +134,10 @@ describe("computeVariationStats", () => {
     const cardsById = new Map<string, DeckPoolCard>([[noCost.id, noCost]]);
     const stats = computeVariationStats({ X1: 2, MISSING: 4 }, cardsById);
     assert.equal(stats.copies, 2);
-    assert.equal(stats.avgCost, null);
+    assert.equal(stats.avgCost, 0);
+    assert.equal(stats.lowestCost, 0);
+    assert.equal(stats.highestCost, 0);
+    assert.deepEqual(stats.byCost, [{ cost: 0, copies: 2 }]);
     assert.equal(stats.avgPower, 6000);
     assert.equal(stats.highestPower, 6000);
     assert.equal(stats.lowestPower, 6000);
