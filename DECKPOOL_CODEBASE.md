@@ -1,8 +1,8 @@
 # DeckPool — Codebase snapshot
 
 **Status:** Living summary of the **as-built** app  
-**Last updated:** 2026-08-30
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `85c1d58` — “Harden catalog and modal interactions.”)
+**Last updated:** 2026-09-09
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (Sidebar + Wanted nav revamp)
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -73,7 +73,7 @@ V1 cost rules still in force in code: no paid search service, no language-model 
 | Data | Cloud Firestore, nested under `users/{uid}/…`. Client SDK writes. |
 | Catalog | Static JSON in `data/`, loaded in the browser. ~**2785** English cards. Don cards stripped at ingest. |
 | Images | Same-origin `/card-art/{file}.png` proxy for Bandai (avoids Chrome **CORP** and Vercel `/_next/image` **402**). Strict filename allowlist, upstream timeout, ETag/304, in-flight coalesce, long cache. Optional CDN mirror first via `NEXT_PUBLIC_CARD_IMAGE_ORIGIN`. Retries + **Retry** UI. |
-| Hosting (intended) | Vercel Hobby. No `vercel.json` in the repo. `.vercel/` is gitignored. |
+| Hosting (intended) | Vercel Hobby. No `vercel.json` in the repo. `.vercel/` is gitignored. Redirects (e.g. `/collection?view=wanted` → `/wanted`) live in `next.config.ts`. |
 | Package manager | **npm** (`package-lock.json`) |
 | Tests | `npm test` → `tsx --test lib/**/*.test.ts` |
 | No | Firebase Admin, Storage uploads, cron, Resend, OAuth, Algolia |
@@ -131,11 +131,15 @@ Never commit `.env.local`. Never put a language-model key in the browser.
 **Public (logged out):** `/`, `/login`, `/signup`, `/forgot-password`, and **`/s/[shareId]`** (shared deck snapshot).  
 Logged-in users on the auth landing routes (`/`, `/login`, `/signup`, `/forgot-password`) are sent to `/decks`, or `/collection` if they own zero cards (`lib/auth-routing.ts`). Logged-in users **stay** on `/s/…` (AuthGate treats share links as public but not as auth landings).
 
-**App (requires login), nav in `AppShell`:** Collection, Cards, Decks, Profile. Desktop sidebar, mobile bottom nav.
+**App (requires login), nav in `AppShell`:** Collection, Wanted, Cards, Decks as primary; Profile separate.
+
+- **Desktop (`md+`):** Collapsible sidebar that **resizes** the main column (no overlay). Expanded header: “DeckPool” + `PanelLeftClose` collapse control on the right. Collapsed header shows “DP”. **Collapse** is button-only. **Expand** is click empty rail chrome (nav links still navigate). Preference in `localStorage` `deckpool.sidebarExpanded`. Profile pinned at the bottom of the rail.
+- **Mobile (`< md`):** No sidebar. Top header = DeckPool + Profile. Bottom bar = Collection, Wanted, Cards, Decks (safe-area padding).
 
 | Route | Job |
 |---|---|
-| `/collection` | **Owned binder** by default. Modes: Binder, Summary (`?view=summary`), **Wanted** (`?view=wanted`). Binder cannot create new card numbers (`useCollectionWrite(false)`). Wanted is extra copies to buy; **Caught** can create binder rows. |
+| `/collection` | **Owned binder** by default. Modes: Binder, Summary (`?view=summary`). Binder cannot create new card numbers (`useCollectionWrite(false)`). |
+| `/wanted` | **Wanted** shopping board — extra copies to buy. **Caught** can create binder rows. Old `/collection?view=wanted` redirects here. |
 | `/cards` | **Full catalog.** Name + filters, URL-synced. `owned=1` limits to owned. `wanted=1` limits to posters. Click a card to set qty (this **can** create new collection rows), bounty, labels, preferred art. Starter-deck add lives here too. |
 | `/decks` | List decks, grouped by Leader. Create / rename / delete. |
 | `/decks/[id]` | **View** by default (`DeckView`). **Edit** at `?mode=edit` (`BuilderView`). |
@@ -206,20 +210,23 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 ### Collection (`/collection`)
 
 - **Binder** shows **only cards with qty > 0**.
-- Modes: **Binder** (grid), **Summary** (breakdown by category, color, cost, rarity), and **Wanted** (`?view=wanted`).
-- Filters: text (name or id), colors, categories, costs, rarities, types, attributes, sets, has-flags, labels, **which decks the card appears in**. Wanted uses the same filters; labels only exist if the card is already owned.
-- Sort includes **recently updated** (binder uses collection timestamps; Wanted uses wanted timestamps).
+- Modes: **Binder** (grid) and **Summary** (breakdown by category, color, cost, rarity). Wanted is a separate route (`/wanted`), not a Collection mode.
+- Filters: text (name or id), colors, categories, costs, rarities, types, attributes, sets, has-flags, labels, **which decks the card appears in**.
+- Sort includes **recently updated** (binder uses collection timestamps).
 - Pagination: 60 per page.
 - Binder qty stepper only adjusts existing rows. To log a **new** card, use `/cards` or **Caught** on Wanted.
 - Card tiles have a WANTED stamp (bottom-right of the art). Tap posts bounty 1 or drops the poster. Owned `×qty` stays top-right.
 - Card detail opens in a wide, two-column modal with which decks include that number, plus a **Bounty** stepper (extra copies to buy). Previous/Next controls sit outside the modal panel but remain in the modal keyboard focus loop, and the modal includes a focus-isolated, scroll-locking full-screen art lightbox.
 
-### Wanted board (`/collection?view=wanted`)
+### Wanted board (`/wanted`)
 
-- Flat shopping list of posted bounties. Count on the stamp (`×4`).
+- Page header matches Collection (title + supporting line; no leftover Collection-mode accent bar).
+- Flat shopping list of posted bounties. Count on the stamp (`×4`). Primary nav item (not a Collection tab).
 - **Caught** adds the remaining want to the binder and deletes the poster. **Caught 1** does one copy. Both use `catchWantedCopies`. Wanted card details also use the shared navigation and full-screen art zoom; collection labels are editable only once the wanted card is already owned.
 - Empty copy: “No posters.”
 - Does not add cards to decks. If a card is already in a list, logging binder copies is enough for Owned/Unowned.
+- Legacy URL `/collection?view=wanted` redirects to `/wanted` (`next.config.ts` + lightweight client fallback that avoids mounting the binder).
+- Wanted uses the same filters as Collection; labels only exist if the card is already owned. Sort includes recently updated (wanted timestamps).
 
 ### Cards (`/cards`)
 
@@ -333,6 +340,7 @@ When a new set releases: pull punk-records, run both ingest scripts, commit `dat
 
 ```
 app/                    routes + layouts + globals.css + card-art/[file] proxy
+app/(app)/wanted/       Wanted board page (authenticated)
 components/             UI by area: auth, builder, cards, collection, decks, profile, search, share, ui, wanted
 contexts/               Auth, UserProfile, Catalog, Collection, Wanted, CardPrefs, Decks
 hooks/                  useCollectionWrite, useWantedWrite
@@ -387,7 +395,7 @@ The blueprint is still the product source of truth for **rules** (color identity
 | Builder search state may stay in the component | True. View vs Edit is `?mode=edit`. |
 | Paste-a-list import, match history, LLM, scanner | Not built. See `DECKPOOL_FUTURE_FEATURES.md`. |
 | Compact Legal/Owned on `/decks` is **any** variation | Compact Legal/Owned is the **favorite** variation. Profile still counts every variation. |
-| Wishlist (future-features #5) | Built as **Wanted**: extra copies to buy, Collection third mode, Cards `wanted=1`, catch into the binder. |
+| Wishlist (future-features #5) | Built as **Wanted**: extra copies to buy, top-level `/wanted` route + nav, Cards `wanted=1`, catch into the binder. Not a Collection mode. |
 | No public deck gallery / share network | **Share links** only: owner copies `/s/{id}` for one variation snapshot. Not a browseable gallery. |
 
 Do not silently revert Collection to a full-catalog logger, or rip out the filter UI to restore `color:purple` in the box, without the user asking.
@@ -402,6 +410,7 @@ Do not silently revert Collection to a full-catalog logger, or rip out the filte
 - One favorite variation per deck (`favoriteVariationId`). `/decks` Legal/Owned uses that list. View/Edit badges follow the open tab.
 - Do not auto-add Wanted cards to decks. Caught only touches the binder.
 - Do not add Google/Apple login, dark mode, Don cards, or a browseable public deck gallery in V1. Per-variation **share links** (`/s/{id}`) are allowed.
+- Primary app nav is Collection, Wanted, Cards, Decks. Profile stays separate (sidebar bottom / mobile header), not in the mobile bottom bar. Desktop sidebar resizes main content; collapse via header button, expand via click on collapsed rail chrome. Mobile uses header + bottom nav only.
 - New public routes must be allowlisted in `AuthGate` without treating them as auth landings (logged-in users must not be bounced off `/s/…`). Public routes must render while Auth is still loading.
 - Prefer npm. Do not add Yarn.
 - Mobile-first; Builder is allowed to feel denser. Do not block the whole app on Auth IndexedDB — keep the public-route bypass and Auth ready timeout.

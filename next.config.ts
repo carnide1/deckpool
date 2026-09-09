@@ -42,6 +42,16 @@ const nextConfig: NextConfig = {
       ...(mirror ? [mirror] : []),
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/collection",
+        has: [{ type: "query", key: "view", value: "wanted" }],
+        destination: "/wanted",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

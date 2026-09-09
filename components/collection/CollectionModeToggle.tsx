@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-export type CollectionView = "binder" | "summary" | "wanted";
+export type CollectionView = "binder" | "summary";
 
 export function CollectionModeToggle({
   mode,
@@ -32,17 +32,6 @@ export function CollectionModeToggle({
         ].join(" ")}
       >
         Summary
-      </Link>
-      <Link
-        href="/collection?view=wanted"
-        className={[
-          "rounded-md px-3 py-1.5",
-          mode === "wanted"
-            ? "bg-[var(--bg-inset)] text-[var(--ink-primary)]"
-            : "text-[var(--ink-muted)] hover:text-[var(--ink-primary)]",
-        ].join(" ")}
-      >
-        Wanted
       </Link>
     </div>
   );

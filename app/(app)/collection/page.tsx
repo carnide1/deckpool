@@ -9,13 +9,12 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SlidersHorizontal } from "lucide-react";
 import { CardDetailModal } from "@/components/cards/CardDetailModal";
 import { CardGrid } from "@/components/cards/CardGrid";
 import { CollectionModeToggle, type CollectionView } from "@/components/collection/CollectionModeToggle";
 import { CollectionSummary } from "@/components/collection/CollectionSummary";
-import { WantedBoard } from "@/components/wanted/WantedBoard";
 import { FilterPanel } from "@/components/search/FilterPanel";
 import { NameSearchBar } from "@/components/search/NameSearchBar";
 import { SortSelect } from "@/components/search/SortSelect";
@@ -56,11 +55,29 @@ const PAGE_SIZE = 60;
 
 function parseCollectionView(raw: string | null): CollectionView {
   if (raw === "summary") return "summary";
-  if (raw === "wanted") return "wanted";
   return "binder";
 }
 
+/** Belt-and-suspenders if next.config redirect is skipped (e.g. client nav). */
+function WantedLegacyRedirect() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/wanted");
+  }, [router]);
+  return (
+    <p className="text-sm text-[var(--ink-muted)]">Opening Wanted…</p>
+  );
+}
+
 function CollectionPageContent() {
+  const searchParams = useSearchParams();
+  if (searchParams.get("view") === "wanted") {
+    return <WantedLegacyRedirect />;
+  }
+  return <CollectionPageMain />;
+}
+
+function CollectionPageMain() {
   const searchParams = useSearchParams();
   const view = parseCollectionView(searchParams.get("view"));
   const { cards, cardsById, loading: catalogLoading } = useCatalog();
@@ -217,40 +234,21 @@ function CollectionPageContent() {
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div
-            className={
-              view === "wanted"
-                ? "relative overflow-hidden rounded-xl"
-                : undefined
-            }
-          >
-            {view === "wanted" ? (
-              <div className="absolute top-0 right-0 left-0 h-1.5 bg-[var(--accent-pirate-red)]" />
-            ) : null}
-            <div className={view === "wanted" ? "pt-3" : undefined}>
-              <h1 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
-                {view === "wanted" ? "Wanted" : "Collection"}
-              </h1>
-              <p className="mt-1 text-sm text-[var(--ink-muted)]">
-                {view === "wanted" ? (
-                  "Copies to hunt — extra cards to buy, not a deck list."
-                ) : (
-                  <>
-                    Your binder — browse art, change copies, and pick scans. Add
-                    new card numbers from{" "}
-                    <Link
-                      href="/cards"
-                      className="text-[var(--accent-ocean)] hover:underline"
-                    >
-                      Cards
-                    </Link>
-                    .
-                  </>
-                )}
-              </p>
-            </div>
-          </div>
-          {view !== "wanted" && !collectionLoading ? (
+          <h1 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
+            Collection
+          </h1>
+          <p className="mt-1 text-sm text-[var(--ink-muted)]">
+            Your binder — browse art, change copies, and pick scans. Add new
+            card numbers from{" "}
+            <Link
+              href="/cards"
+              className="text-[var(--accent-ocean)] hover:underline"
+            >
+              Cards
+            </Link>
+            .
+          </p>
+          {!collectionLoading ? (
             <p className="mt-2 text-sm tabular-nums text-[var(--ink-muted)]">
               <span className="font-semibold text-[var(--ink-primary)]">
                 {ownedCardCount}
@@ -282,8 +280,6 @@ function CollectionPageContent() {
         ) : (
           <CollectionSummary breakdown={breakdown} />
         )
-      ) : view === "wanted" ? (
-        <WantedBoard />
       ) : (
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <div className="order-2 min-w-0 flex-1 lg:order-1">
