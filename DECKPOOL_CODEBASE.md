@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-09-10
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: local WIP — audit fixes for auth, profile isolation, labels, rules, Cards deck filter)
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `21d1b33` — “Harden auth, profile isolation, labels, and Firestore rules after audit.”)
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
