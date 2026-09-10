@@ -4,26 +4,28 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getPostLoginPath } from "@/lib/auth-routing";
+import {
+  getPostLoginPath,
+  isAuthLandingPath,
+  isSafeNextPath,
+} from "@/lib/auth-routing";
 import { Button } from "@/components/ui/Button";
-
-/** Landing / auth pages: guests OK; signed-in users are sent into the app. */
-const AUTH_LANDING_ROUTES = new Set([
-  "/",
-  "/login",
-  "/signup",
-  "/forgot-password",
-]);
-
-function isAuthLanding(pathname: string): boolean {
-  return AUTH_LANDING_ROUTES.has(pathname);
-}
 
 /** Guests may open these without logging in; signed-in users stay on the page. */
 function isPublicRoute(pathname: string): boolean {
-  if (isAuthLanding(pathname)) return true;
+  if (isAuthLandingPath(pathname)) return true;
   if (pathname === "/s" || pathname.startsWith("/s/")) return true;
   return false;
+}
+
+function currentReturnPath(pathname: string): string {
+  if (typeof window === "undefined") return pathname;
+  return `${pathname}${window.location.search}`;
+}
+
+function readNextParam(): string | null {
+  if (typeof window === "undefined") return null;
+  return new URLSearchParams(window.location.search).get("next");
 }
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
@@ -32,19 +34,30 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const publicRoute = isPublicRoute(pathname);
-  const authLanding = isAuthLanding(pathname);
+  const authLanding = isAuthLandingPath(pathname);
 
   useEffect(() => {
     if (loading) return;
 
-    if (!user && !publicRoute) {
-      router.replace("/login");
+    // Do not auto-redirect while Auth timed out — Retry must stay usable.
+    if (!user && !publicRoute && !authTimedOut) {
+      const returnTo = currentReturnPath(pathname);
+      const loginUrl = isSafeNextPath(returnTo)
+        ? `/login?next=${encodeURIComponent(returnTo)}`
+        : "/login";
+      router.replace(loginUrl);
       return;
     }
 
     if (!user || !authLanding) return;
 
     let cancelled = false;
+    const next = readNextParam();
+    if (isSafeNextPath(next)) {
+      router.replace(next);
+      return;
+    }
+
     void getPostLoginPath(user.uid).then((path) => {
       if (cancelled) return;
       router.replace(path);
@@ -53,7 +66,15 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user, loading, publicRoute, authLanding, pathname, router]);
+  }, [
+    user,
+    loading,
+    authTimedOut,
+    publicRoute,
+    authLanding,
+    pathname,
+    router,
+  ]);
 
   // Public pages (landing, login, share links) must not wait on Firebase Auth.
   // Mobile Safari can hang on IndexedDB and would otherwise freeze the whole site.
@@ -71,6 +92,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (!user && !publicRoute) {
     if (authTimedOut) {
+      const returnTo = currentReturnPath(pathname);
+      const loginHref = isSafeNextPath(returnTo)
+        ? `/login?next=${encodeURIComponent(returnTo)}`
+        : "/login";
       return (
         <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
           <p className="text-sm text-[var(--ink-muted)]">
@@ -81,7 +106,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
               Retry
             </Button>
             <Link
-              href="/login"
+              href={loginHref}
               className="text-sm font-semibold text-[var(--accent-ocean)] hover:underline"
             >
               Go to log in

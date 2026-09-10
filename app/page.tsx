@@ -31,8 +31,8 @@ export default function LandingPage() {
           Brew decks from the cards you actually own
         </h1>
         <p className="mt-4 max-w-lg text-lg text-[var(--ink-muted)]">
-          Track your binder, search like Limitless, and build named variations —
-          all in one place.
+          Track your binder, filter the English catalog, and build named
+          variations — all in one place.
         </p>
         <Link
           href="/signup"

@@ -2,7 +2,7 @@ import type { DeckPoolCard } from "@/types/catalog";
 
 const MAX_RESULTS = 60;
 
-/** Simple id/name search for Collection until Phase 10 parser ships. */
+/** Simple id/name search for Leader pickers. Full catalog uses FilterPanel. */
 export function searchCatalog(
   cards: DeckPoolCard[],
   query: string,

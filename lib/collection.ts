@@ -13,6 +13,9 @@ import { mergeLabels } from "@/lib/labels";
 import { timestampToMillis } from "@/lib/timestamps";
 import type { CollectionItem } from "@/types/collection";
 
+/** Matches firestore.rules label list size cap. */
+export const MAX_COLLECTION_LABELS = 50;
+
 export function userCollectionRef(uid: string) {
   return collection(getFirebaseDb(), "users", uid, "collection");
 }
@@ -51,6 +54,22 @@ export function nextCollectionQuantity(
   return Math.max(0, current + delta);
 }
 
+export function normalizeCollectionLabels(labels: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const label of labels) {
+    if (typeof label !== "string") continue;
+    const trimmed = label.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(trimmed);
+    if (out.length >= MAX_COLLECTION_LABELS) break;
+  }
+  return out.sort((a, b) => a.localeCompare(b));
+}
+
 export async function setCollectionQuantity(
   uid: string,
   cardId: string,
@@ -68,8 +87,40 @@ export async function setCollectionQuantity(
     quantity: normalized,
     updatedAt: serverTimestamp(),
   };
-  if (labels !== undefined) payload.labels = labels;
+  if (labels !== undefined) {
+    payload.labels = normalizeCollectionLabels(labels);
+  }
   await setDoc(ref, payload, { merge: true });
+}
+
+/**
+ * Update labels without rewriting quantity.
+ * Avoids races where a stale ownedMap qty overwrites a concurrent stepper/catch.
+ */
+export async function setCollectionLabels(
+  uid: string,
+  cardId: string,
+  labels: string[],
+  allowCreate: boolean,
+): Promise<void> {
+  const ref = collectionDocRef(uid, cardId);
+  const nextLabels = normalizeCollectionLabels(labels);
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) {
+      if (nextLabels.length === 0 || !allowCreate) return;
+      tx.set(ref, {
+        quantity: 1,
+        labels: nextLabels,
+        updatedAt: serverTimestamp(),
+      });
+      return;
+    }
+    tx.update(ref, {
+      labels: nextLabels,
+      updatedAt: serverTimestamp(),
+    });
+  });
 }
 
 export async function adjustCollectionQuantity(

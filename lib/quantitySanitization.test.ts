@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { nextCollectionQuantity, parseCollectionItem } from "@/lib/collection";
+import {
+  nextCollectionQuantity,
+  normalizeCollectionLabels,
+  parseCollectionItem,
+} from "@/lib/collection";
 import { nextWantedQuantity, parseWantedItem } from "@/lib/wanted";
 
 describe("quantity sanitization", () => {
@@ -23,5 +27,14 @@ describe("quantity sanitization", () => {
   it("rejects non-finite quantity calculations", () => {
     assert.equal(nextCollectionQuantity(1, Number.NaN, true), null);
     assert.equal(nextWantedQuantity(1, Number.POSITIVE_INFINITY), 0);
+  });
+
+  it("normalizes collection labels and caps at 50", () => {
+    assert.deepEqual(normalizeCollectionLabels(["  B  ", "a", "A", ""]), [
+      "a",
+      "B",
+    ]);
+    const many = Array.from({ length: 60 }, (_, i) => `L${i}`);
+    assert.equal(normalizeCollectionLabels(many).length, 50);
   });
 });

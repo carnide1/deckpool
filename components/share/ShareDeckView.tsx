@@ -9,6 +9,7 @@ import { ColorPills } from "@/components/decks/ColorPills";
 import { useCatalog } from "@/contexts/CatalogContext";
 import { mainDeckCount } from "@/lib/builder";
 import { imageCandidates, imageForCard } from "@/lib/cardPrefs";
+import { isShareablePreferredUrl } from "@/lib/shares";
 import { sortCards } from "@/lib/search/sortCards";
 import type { CardCategory, DeckPoolCard } from "@/types/catalog";
 import type { DeckShare } from "@/types/share";
@@ -103,7 +104,11 @@ export function ShareDeckView({ share }: { share: DeckShare }) {
   const [selectedCard, setSelectedCard] = useState<DeckPoolCard | null>(null);
 
   const leader = cardsById.get(share.leaderId) ?? null;
-  const leaderPreferredUrl = share.preferredImages[share.leaderId] ?? null;
+  const rawLeaderPreferred = share.preferredImages[share.leaderId] ?? null;
+  const leaderPreferredUrl =
+    rawLeaderPreferred && isShareablePreferredUrl(rawLeaderPreferred)
+      ? rawLeaderPreferred
+      : null;
   const [leaderImage, ...leaderFallbacks] = leader
     ? imageCandidates(leader, share.preferredImages)
     : leaderPreferredUrl

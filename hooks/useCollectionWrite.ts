@@ -3,17 +3,15 @@
 import { useCallback, useState } from "react";
 import toast from "react-hot-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCollection } from "@/contexts/CollectionContext";
 import { useWanted } from "@/contexts/WantedContext";
 import {
   adjustCollectionQuantity,
-  setCollectionQuantity,
+  setCollectionLabels,
 } from "@/lib/collection";
 import { catchWantedCopies } from "@/lib/wanted";
 
 export function useCollectionWrite(allowCreate: boolean) {
   const { user } = useAuth();
-  const { ownedMap } = useCollection();
   const { wantedMap } = useWanted();
   const [saving, setSaving] = useState(false);
 
@@ -47,13 +45,9 @@ export function useCollectionWrite(allowCreate: boolean) {
   const setLabels = useCallback(
     async (cardId: string, labels: string[]) => {
       if (!user) return;
-      const currentQty = ownedMap[cardId]?.quantity ?? 0;
-      const quantity =
-        currentQty <= 0 && labels.length > 0 && allowCreate ? 1 : currentQty;
-      if (quantity <= 0) return;
       setSaving(true);
       try {
-        await setCollectionQuantity(user.uid, cardId, quantity, labels);
+        await setCollectionLabels(user.uid, cardId, labels, allowCreate);
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : "Could not update labels",
@@ -62,7 +56,7 @@ export function useCollectionWrite(allowCreate: boolean) {
         setSaving(false);
       }
     },
-    [user, ownedMap, allowCreate],
+    [user, allowCreate],
   );
 
   return { saving, adjustQuantity, setLabels };

@@ -24,7 +24,11 @@ import { useWanted } from "@/contexts/WantedContext";
 import { useCollectionWrite } from "@/hooks/useCollectionWrite";
 import { useWantedWrite } from "@/hooks/useWantedWrite";
 import { imageForCard } from "@/lib/cardPrefs";
-import { deckLabelsByCardIdFromIndex, indexDeckMembership } from "@/lib/deckMembership";
+import {
+  deckIdsByCardIdFromIndex,
+  deckLabelsByCardIdFromIndex,
+  indexDeckMembership,
+} from "@/lib/deckMembership";
 import {
   applySearchFilters,
   cardsSearchString,
@@ -136,9 +140,22 @@ function CardsPageContent() {
     [decks, variationsByDeckId],
   );
 
+  const deckIdsByCardId = useMemo(
+    () => deckIdsByCardIdFromIndex(membership),
+    [membership],
+  );
+
   const deckLabelsByCardId = useMemo(
     () => deckLabelsByCardIdFromIndex(membership),
     [membership],
+  );
+
+  const deckOptions = useMemo(
+    () =>
+      [...decks]
+        .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
+        .map((deck) => ({ id: deck.id, name: deck.name })),
+    [decks],
   );
 
   const cardLabelsById = useMemo(() => {
@@ -160,6 +177,7 @@ function CardsPageContent() {
       wantedOnly,
       wantedIds,
       labelsByCardId,
+      deckIdsByCardId,
     });
     return sortCards(next, sort);
   }, [
@@ -170,6 +188,7 @@ function CardsPageContent() {
     wantedOnly,
     wantedIds,
     labelsByCardId,
+    deckIdsByCardId,
     sort,
   ]);
 
@@ -256,6 +275,7 @@ function CardsPageContent() {
         onChange={setFilters}
         cards={cards}
         labelOptions={allLabels}
+        deckOptions={deckOptions}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-2">

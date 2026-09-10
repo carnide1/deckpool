@@ -8,7 +8,7 @@ import { LabelEditor } from "@/components/collection/LabelEditor";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCardPrefs } from "@/contexts/CardPrefsContext";
 import { imageCandidates } from "@/lib/cardPrefs";
-import { setCollectionQuantity } from "@/lib/collection";
+import { setCollectionLabels, setCollectionQuantity } from "@/lib/collection";
 import type { DeckPoolCard } from "@/types/catalog";
 import type { CollectionItem } from "@/types/collection";
 
@@ -37,11 +37,11 @@ export function CollectionRow({
   const labels = owned?.labels ?? [];
   const [image, ...fallbacks] = imageCandidates(card, preferredByCardId);
 
-  const persist = async (nextQty: number, nextLabels: string[]) => {
+  const setQuantity = async (nextQty: number) => {
     if (!user) return;
     setSaving(true);
     try {
-      await setCollectionQuantity(user.uid, card.id, nextQty, nextLabels);
+      await setCollectionQuantity(user.uid, card.id, Math.max(0, nextQty));
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Could not update collection",
@@ -51,16 +51,18 @@ export function CollectionRow({
     }
   };
 
-  const setQuantity = (nextQty: number) => {
-    void persist(Math.max(0, nextQty), labels);
-  };
-
-  const setLabels = (nextLabels: string[]) => {
-    if (quantity <= 0 && nextLabels.length > 0) {
-      void persist(1, nextLabels);
-      return;
+  const setLabels = async (nextLabels: string[]) => {
+    if (!user) return;
+    setSaving(true);
+    try {
+      await setCollectionLabels(user.uid, card.id, nextLabels, true);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not update labels",
+      );
+    } finally {
+      setSaving(false);
     }
-    void persist(quantity, nextLabels);
   };
 
   return (
@@ -101,7 +103,7 @@ export function CollectionRow({
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => setQuantity(quantity - 1)}
+              onClick={() => void setQuantity(quantity - 1)}
               disabled={saving || quantity <= 0}
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--bg-inset)] bg-[var(--bg-panel)] text-[var(--ink-primary)] disabled:opacity-40"
               aria-label="Decrease quantity"
@@ -115,14 +117,14 @@ export function CollectionRow({
               onChange={(event) => {
                 const parsed = Number.parseInt(event.target.value, 10);
                 if (Number.isNaN(parsed)) return;
-                setQuantity(parsed);
+                void setQuantity(parsed);
               }}
               className="h-8 w-12 rounded-lg border border-[var(--bg-inset)] bg-white text-center text-sm tabular-nums focus:border-[var(--accent-ocean)] focus:outline-none"
               aria-label="Owned quantity"
             />
             <button
               type="button"
-              onClick={() => setQuantity(quantity + 1)}
+              onClick={() => void setQuantity(quantity + 1)}
               disabled={saving}
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--bg-inset)] bg-[var(--bg-panel)] text-[var(--ink-primary)] disabled:opacity-40"
               aria-label="Increase quantity"
@@ -136,7 +138,7 @@ export function CollectionRow({
           <LabelEditor
             labels={labels}
             suggestions={labelSuggestions}
-            onChange={setLabels}
+            onChange={(next) => void setLabels(next)}
             disabled={saving}
           />
         </div>

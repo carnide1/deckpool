@@ -11,6 +11,24 @@ service cloud.firestore {
         && request.resource.data[field].size() <= maxLen;
     }
 
+    function validUserProfileCreate() {
+      return request.resource.data.keys().hasOnly([
+          'displayName',
+          'email',
+          'createdAt'
+        ])
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 80
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 320
+        && request.resource.data.createdAt is timestamp;
+    }
+
+    function validUserProfileUpdate() {
+      return validUserProfileCreate()
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
     function validCollectionItem() {
       return request.resource.data.keys().hasOnly([
           'quantity',
@@ -66,6 +84,8 @@ service cloud.firestore {
           || request.resource.data.createdAt is timestamp);
     }
 
+    // cards map values (positive ints) are cleaned client-side (cleanCardsMap).
+    // Rules cannot iterate dynamic map values; size + keys are enforced here.
     function validVariation() {
       return request.resource.data.keys().hasOnly([
           'name',
@@ -81,7 +101,10 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read, write: if isOwner(uid);
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && validUserProfileCreate();
+      allow update: if isOwner(uid) && validUserProfileUpdate();
+      allow delete: if isOwner(uid);
       match /collection/{cardId} {
         allow read: if isOwner(uid);
         allow create, update: if isOwner(uid) && validCollectionItem();
@@ -112,6 +135,7 @@ service cloud.firestore {
     // Public read-only deck list snapshots for SMS share links (/s/{id}).
     // Owner decks under users/{uid}/decks stay private.
     // get (single doc) is public; list is denied so shares are not a browsable gallery.
+    // cards / preferredImages map *values* are sanitized by the client on write and parse.
     match /shares/{shareId} {
       allow get: if true;
       allow list: if false;
@@ -142,7 +166,9 @@ service cloud.firestore {
         && request.resource.data.cards.size() > 0
         && request.resource.data.cards.size() <= 60
         && request.resource.data.preferredImages is map
-        && request.resource.data.preferredImages.size() <= 61;
+        && request.resource.data.preferredImages.size() <= 61
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp;
       allow update: if false;
       allow delete: if request.auth != null
         && resource.data.ownerUid == request.auth.uid;

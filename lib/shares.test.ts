@@ -29,7 +29,7 @@ describe("sharePagePath / shareAbsoluteUrl", () => {
 });
 
 describe("pickPreferredImagesForShare", () => {
-  it("keeps only Bandai https prefs for requested ids", () => {
+  it("keeps only Bandai cardlist https prefs for requested ids", () => {
     assert.deepEqual(
       pickPreferredImagesForShare(
         ["OP01-001", "OP01-002"],
@@ -45,6 +45,18 @@ describe("pickPreferredImagesForShare", () => {
         "OP01-001":
           "https://en.onepiece-cardgame.com/images/cardlist/card/OP01-001.png",
       },
+    );
+  });
+
+  it("rejects Bandai URLs that are not cardlist card PNGs", () => {
+    assert.deepEqual(
+      pickPreferredImagesForShare(
+        ["OP01-001"],
+        {
+          "OP01-001": "https://en.onepiece-cardgame.com/images/other/x.png",
+        },
+      ),
+      {},
     );
   });
 });

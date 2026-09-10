@@ -171,6 +171,7 @@ Builder search never shows off-color cards (owned or unowned). Changing Leader *
 - **Click-to-add cap** = per-id copy limit only: **4**, or construction `copyLimit` for that id (`null` = no max). Example: Biscuit Warrior has no copy cap.
 - **Not** capped by owned qty — unowned copies are allowed (§5.4).
 - **Not** hard-capped at 50 on click — user may exceed 50 and the variation becomes **Illegal** until trimmed.
+  - **As-built note (see `DECKPOOL_CODEBASE.md`):** the live Builder **hard-stops** adds at 50. Trust the snapshot for today’s UI.
 - The **Owned / Unowned** tag reflects whether every line satisfies `inDeck ≤ ownedQty` (and Leader owned).
 
 ### 5.2 Collection (one binder + labels)

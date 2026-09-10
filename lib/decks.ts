@@ -239,6 +239,11 @@ export async function deleteVariation(
   variationId: string,
   nextFavoriteId?: string | null,
 ): Promise<void> {
+  const variationsSnap = await getDocs(deckVariationsRef(uid, deckId));
+  if (variationsSnap.size <= 1) {
+    throw new Error("Keep at least one variation.");
+  }
+
   const batch = writeBatch(getFirebaseDb());
   batch.delete(variationDocRef(uid, deckId, variationId));
   const patch: Record<string, unknown> = {

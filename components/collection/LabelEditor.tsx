@@ -2,6 +2,7 @@
 
 import { useId, useState, type KeyboardEvent } from "react";
 import { X } from "lucide-react";
+import { MAX_COLLECTION_LABELS } from "@/lib/collection";
 
 export function LabelEditor({
   labels,
@@ -21,6 +22,10 @@ export function LabelEditor({
     const trimmed = raw.trim();
     if (!trimmed) return;
     if (labels.some((l) => l.toLowerCase() === trimmed.toLowerCase())) {
+      setDraft("");
+      return;
+    }
+    if (labels.length >= MAX_COLLECTION_LABELS) {
       setDraft("");
       return;
     }
@@ -59,7 +64,7 @@ export function LabelEditor({
           ) : null}
         </span>
       ))}
-      {!disabled ? (
+      {!disabled && labels.length < MAX_COLLECTION_LABELS ? (
         <>
           <input
             value={draft}

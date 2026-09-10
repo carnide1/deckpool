@@ -11,6 +11,8 @@ import type { DeckShare } from "@/types/share";
 
 const MAX_UNIQUE_CARDS = 60;
 const BANDAI_IMAGE_HOST = "en.onepiece-cardgame.com";
+const BANDAI_CARD_PATH =
+  /^\/images\/cardlist\/card\/[A-Za-z0-9][A-Za-z0-9._-]{0,38}\.png$/;
 
 export function sharesCollectionRef() {
   return collection(getFirebaseDb(), "shares");
@@ -38,11 +40,14 @@ export function shareAbsoluteUrl(shareId: string, origin?: string): string {
   return path;
 }
 
-function isShareablePreferredUrl(url: string): boolean {
+/** Bandai cardlist PNG only — matches cardPrefs Firestore regex intent. */
+export function isShareablePreferredUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     return (
-      parsed.protocol === "https:" && parsed.hostname === BANDAI_IMAGE_HOST
+      parsed.protocol === "https:" &&
+      parsed.hostname === BANDAI_IMAGE_HOST &&
+      BANDAI_CARD_PATH.test(parsed.pathname)
     );
   } catch {
     return false;

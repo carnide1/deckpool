@@ -1,8 +1,8 @@
 # DeckPool — Codebase snapshot
 
 **Status:** Living summary of the **as-built** app  
-**Last updated:** 2026-09-09
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `10dd077` — “Promote Wanted to its own route and refresh the app shell nav.”)
+**Last updated:** 2026-09-10
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: local WIP — audit fixes for auth, profile isolation, labels, rules, Cards deck filter)
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -129,7 +129,7 @@ Never commit `.env.local`. Never put a language-model key in the browser.
 ## Routes
 
 **Public (logged out):** `/`, `/login`, `/signup`, `/forgot-password`, and **`/s/[shareId]`** (shared deck snapshot).  
-Logged-in users on the auth landing routes (`/`, `/login`, `/signup`, `/forgot-password`) are sent to `/decks`, or `/collection` if they own zero cards (`lib/auth-routing.ts`). Logged-in users **stay** on `/s/…` (AuthGate treats share links as public but not as auth landings).
+Logged-in users on the auth landing routes (`/`, `/login`, `/signup`, `/forgot-password`) are sent to a safe `?next=` path when present, otherwise `/decks`, or `/collection` if they own zero cards (`lib/auth-routing.ts`). Logged-in users **stay** on `/s/…` (AuthGate treats share links as public but not as auth landings).
 
 **App (requires login), nav in `AppShell`:** Collection, Wanted, Cards, Decks as primary; Profile separate.
 
@@ -153,7 +153,7 @@ There is **no** `/api/*` folder. Card art uses App Router `GET /card-art/[file]`
 
 ## Provider tree
 
-Root (`app/layout.tsx`): `AuthProvider` → `UserProfileProvider` → toaster → `AuthGate`
+Root (`app/layout.tsx`): `Providers` (`AuthProvider` → `UserProfileProvider` + sibling `Toaster`) → `AuthGate`
 
 Authenticated shell (`app/(app)/layout.tsx`): `CatalogProvider` → `CollectionProvider` → `WantedProvider` → `CardPrefsProvider` → `DecksProvider` → `AppShell`
 
@@ -164,14 +164,18 @@ Authenticated shell (`app/(app)/layout.tsx`): `CatalogProvider` → `CollectionP
 | Wanted | Firestore snapshot `users/{uid}/wanted` |
 | Card prefs | Firestore snapshot `users/{uid}/cardPrefs` |
 | Decks | Firestore snapshot `users/{uid}/decks` plus each deck’s `variations` |
+| User profile | `ensureUserDoc` for `users/{uid}`; gated like other providers so prior-account data is hidden until the current uid loads |
 
 ### AuthGate (as built)
 
 - Wraps the whole app. **No** `middleware.ts`.
 - **Public** (render even while Auth is still loading): `/`, `/login`, `/signup`, `/forgot-password`, `/s/…`. This avoids a mobile Safari hang where IndexedDB never resolves and the UI stuck on “Loading…”.
-- **Protected** app routes wait for Auth. If Auth does not become ready within **8 seconds**, loading ends with `authTimedOut`; the gate shows Retry / Go to log in instead of spinning forever.
+- **Protected** app routes wait for Auth. If Auth does not become ready within **8 seconds**, loading ends with `authTimedOut`; the gate shows Retry / Go to log in and does **not** auto-redirect to `/login` (so Retry works).
+- Guests sent to login get `?next=` with the intended app path (safe allowlist in `lib/auth-routing.ts`). After sign-in, AuthGate prefers a safe `next` over the default post-login path.
+- Post-login default (`getPostLoginPath`) races owned-count against a **5s** timeout and falls back to `/decks`.
 - Auth init (`lib/firebase.ts`): `initializeAuth` with persistence **IndexedDB → localStorage → memory**. Duplicate init (HMR) falls back to `getAuth`.
-- Auth landings redirect signed-in users via `getPostLoginPath`. Share routes are public but **not** auth landings (signed-in users stay on `/s/…`).
+- Auth landings redirect signed-in users via `getPostLoginPath` (or `?next=`). Share routes are public but **not** auth landings (signed-in users stay on `/s/…`).
+- Unknown app paths may hit `app/not-found.tsx`; guests on non-public paths still go through AuthGate first.
 
 ---
 
@@ -180,7 +184,7 @@ Authenticated shell (`app/(app)/layout.tsx`): `CatalogProvider` → `CollectionP
 Owner-only. Rules file: `firestore.rules`.
 
 ```
-users/{uid}                          displayName, email, createdAt
+users/{uid}                          displayName, email, createdAt (field-allowlisted in rules)
   collection/{cardId}                quantity, labels[], updatedAt
   wanted/{cardId}                    quantity (extra copies to buy), updatedAt
   cardPrefs/{cardId}                 preferredImageUrl
@@ -193,11 +197,12 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 
 - Collection document **id** is the card number. Qty 0 **deletes** the doc.
 - Wanted document **id** is the same card number. Qty is extra copies to buy, not a total target. Qty 0 **deletes** the doc.
-- **Shares** are immutable snapshots (create + single-doc public **get**; **list denied** so there is no gallery). Create requires signed-in `ownerUid`, `keys().hasOnly(...)` (no extra fields), non-empty `cards` map of size ≤ 60, and short string fields. Owner decks stay private. Preferred art URLs stored on shares are filtered to Bandai HTTPS by the client. Collection, Wanted, card-preference, deck, and variation writes are shape-checked by the deployed `firestore.rules`.
-- User labels live only on owned collection rows. Card tiles also show derived `Deck: <name>` labels for current deck membership; these are not stored as user labels and update automatically when decks change.
+- **Shares** are immutable snapshots (create + single-doc public **get**; **list denied** so there is no gallery). Create requires signed-in `ownerUid`, `keys().hasOnly(...)` (no extra fields), non-empty `cards` map of size ≤ 60, preferredImages map ≤ 61, and **createdAt/updatedAt timestamps**. Rules cannot iterate dynamic map *values*; the client cleans card qtys (`cleanCardsMap`) and preferred art (`isShareablePreferredUrl` — Bandai cardlist PNG path) on write and parse. Owner decks stay private.
+- Collection, Wanted, card-preference, deck, and user-profile writes are shape-checked by the deployed `firestore.rules`. Variation writes check keys/name/map size/timestamp; positive int card values are enforced client-side.
+- User labels live only on owned collection rows. Label updates use `setCollectionLabels` (transaction) and **do not rewrite quantity**. Cap is 50 labels (UI + rules). Card tiles also show derived `Deck: <name>` labels for current deck membership; these are not stored as user labels and update automatically when decks change.
 - **Caught** writes binder and Wanted in one Firestore transaction. Collection `+` while a poster exists uses that same catch helper.
-- Deck and variation operations that update multiple documents use batched writes so metadata and list changes commit together.
-- Wanted stepper deltas use transactions, and user-scoped providers hide prior-account data until the current account snapshot arrives.
+- Deck and variation operations that update multiple documents use batched writes so metadata and list changes commit together. `deleteVariation` refuses to delete the last variation (lib + UI).
+- Wanted stepper deltas use transactions, and user-scoped providers (Collection, Wanted, Decks, CardPrefs, **UserProfile**) hide prior-account data until the current account snapshot arrives.
 - Decrementing owned qty does **not** put the bounty back.
 - Variation `cards` is a full count map of the 50 (or draft). Leader is **not** in that map.
 - `favoriteVariationId` is the list the owner usually plays. New decks set it in the same write as `Main`. Older decks without the field fall back to a variation named `Main`, then to the most recently edited list. Tab order and first-opened tab use that same resolve. Deleting the favorite points it at another remaining variation.
@@ -231,7 +236,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 ### Cards (`/cards`)
 
 - Full English catalog (no Don).
-- Filters sync to the URL (`lib/search/filters.ts`). Owned toggle: `owned=1`. Wanted toggle: `wanted=1`. Both can be on.
+- Filters sync to the URL (`lib/search/filters.ts`). Owned toggle: `owned=1`. Wanted toggle: `wanted=1`. Both can be on. Deck membership filter (`deck=`) is wired like Collection (options + `deckIdsByCardId`).
 - Sort: newest / oldest / serial / name / category / cost. Newest = latest set family.
 - Page size 48, load-more style.
 - Modal: qty (can create), bounty, user labels, art picker, decks that use the card, outside Previous/Next controls through the currently loaded results, and click-to-zoom full-screen art. Card tiles show current user labels plus derived deck labels.
@@ -257,7 +262,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 - List summary (active tab): compact collapsed row (avg cost, avg power, Character/Event/Stage, keyword pills including Unblockable and Searcher) with a smooth expand; expanded shows cost/power avg·low·high with horizontal distributions, including zero-cost cards and zero-power Characters in the averages and zero buckets, composition bar, keywords, counters, multi-color Leader color counts, and set counts (Leader excluded). `searcher` is a derived ingest flag (look at top of deck + add to hand), not a Bandai bracket keyword.
 - Variations: tabs ordered **favorite first**, then most recently edited. Opening the page selects the favorite. Star a tab (or **Set as main**) to pin it. Clone, rename, delete (cannot delete the last). Compare modal shows count diffs only.
 - Change Leader: warning, then strip illegal cards from **every** variation of that deck.
-- Writes go to Firestore through a queued `setVariationCards` so rapid clicks do not race.
+- Writes go to Firestore through a queued `setVariationCards` so rapid clicks do not race. On write failure, optimistic local cards clear so the UI falls back to the Firestore snapshot.
 
 ### Deck view (`/decks/[id]` without `mode=edit`)
 
@@ -269,7 +274,8 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 ### Shared deck (`/s/[shareId]`)
 
 - Public, no login. CatalogProvider only (no binder / Wanted / AppShell). Does **not** wait on AuthGate Auth loading.
-- Shows Leader art (preferred URL if Leader is missing from catalog), deck name, variation name, Character / Event / Stage grids with counts. Tap a card for effect text.
+- Shows Leader art (preferred URL if Leader is missing from catalog — only when the URL passes `isShareablePreferredUrl`), deck name, variation name, Character / Event / Stage grids with counts. Tap a card for effect text.
+- Header CTA: guests see “Make your own” → `/signup`; signed-in users see “Open Decks” → `/decks`.
 - Does not expose ownership, Wanted, or other variations. Unknown catalog ids are listed; if every id is unknown, copy says the catalog is behind the snapshot (not “empty list”).
 
 ### Profile
@@ -283,7 +289,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 **What the UI uses:** `lib/search/filters.ts` + `NameSearchBar` + `FilterPanel`.
 
 - Text matches **name or card id** substring.
-- Facets: color, category, cost, rarity, type, attribute, set, has, label, deck (collection only).
+- Facets: color, category, cost, rarity, type, attribute, set, has, label, deck (Collection, Wanted, and Cards).
 - Cards URL stores those filters plus `owned=1` and `wanted=1`. Builder keeps filters in component state.
 
 **What exists in code but is not the live UI:** Limitless-style query language in `lib/search/parseQuery.ts` + `filterCards.ts` (`color:purple type:"Big Mom Pirates"`, `or`, `-term`, quotes, parens). Covered by `lib/search/search.test.ts`. Do not assume the search box parses `color:purple` unless you wire it up.
@@ -361,7 +367,8 @@ Key libraries:
 |---|---|
 | `lib/firebase.ts` | Init from env; Auth persistence IndexedDB → localStorage → memory |
 | `lib/users.ts` | Signup doc, `ensureUserDoc`, display name, owned-count for routing |
-| `lib/collection.ts` | Qty set/adjust, label merge, batch starter add |
+| `lib/auth-routing.ts` | Post-login path, safe `?next=` allowlist, auth landing helpers |
+| `lib/collection.ts` | Qty set/adjust, label-only updates, label merge, batch starter add |
 | `lib/wanted.ts` | Bounty qty, catch transaction, raise gaps from a variation |
 | `lib/cardArtPath.ts` | Safe Bandai filename parse + `/card-art/{file}` paths |
 | `lib/cardArtFetch.ts` | Upstream Bandai fetch with timeout, size cap, ETag, in-flight coalesce |
@@ -391,6 +398,7 @@ The blueprint is still the product source of truth for **rules** (color identity
 |---|---|
 | Collection searches the **full** catalog to log new cards | Collection is **owned-only**. New cards are logged on `/cards`. |
 | Limitless `q=` language in the search box | Filter panel + name/id text. Query parser exists but is unused in pages. |
+| Soft 50 (may exceed on click, then Illegal) | Builder **hard-stops** adds at 50. |
 | Display font Fredoka | Cinzel |
 | Builder search state may stay in the component | True. View vs Edit is `?mode=edit`. |
 | Paste-a-list import, match history, LLM, scanner | Not built. See `DECKPOOL_FUTURE_FEATURES.md`. |
@@ -406,12 +414,12 @@ Do not silently revert Collection to a full-catalog logger, or rip out the filte
 
 - Client components for anything that uses Firebase or hooks. Keep legality/search as pure functions with tests.
 - Firestore writes: owner tree only. New subcollections need a matching `firestore.rules` change **and a deploy**.
-- Collection qty 0 = delete the document. Wanted qty 0 = delete the document.
-- One favorite variation per deck (`favoriteVariationId`). `/decks` Legal/Owned uses that list. View/Edit badges follow the open tab.
+- Collection qty 0 = delete the document. Wanted qty 0 = delete the document. Label edits must not rewrite quantity (`setCollectionLabels`).
+- One favorite variation per deck (`favoriteVariationId`). `/decks` Legal/Owned uses that list. View/Edit badges follow the open tab. Never delete the last variation (`deleteVariation` throws).
 - Do not auto-add Wanted cards to decks. Caught only touches the binder.
 - Do not add Google/Apple login, dark mode, Don cards, or a browseable public deck gallery in V1. Per-variation **share links** (`/s/{id}`) are allowed.
 - Primary app nav is Collection, Wanted, Cards, Decks. Profile stays separate (sidebar bottom / mobile header), not in the mobile bottom bar. Desktop sidebar resizes main content; collapse via header button, expand via click on collapsed rail chrome. Mobile uses header + bottom nav only.
-- New public routes must be allowlisted in `AuthGate` without treating them as auth landings (logged-in users must not be bounced off `/s/…`). Public routes must render while Auth is still loading.
+- New public routes must be allowlisted in `AuthGate` without treating them as auth landings (logged-in users must not be bounced off `/s/…`). Public routes must render while Auth is still loading. Preserve deep links with safe `?next=` on forced login. Do not auto-redirect to `/login` while `authTimedOut`.
 - Prefer npm. Do not add Yarn.
 - Mobile-first; Builder is allowed to feel denser. Do not block the whole app on Auth IndexedDB — keep the public-route bypass and Auth ready timeout.
 

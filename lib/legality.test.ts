@@ -23,6 +23,11 @@ const rules = [
     whenLeader: "OP12-001",
     match: { cost: { op: ">=" as const, value: 5 } },
   },
+  {
+    kind: "forbid" as const,
+    whenLeader: "P-117",
+    match: { requireTypes: ["East Blue"] },
+  },
 ] satisfies ConstructionRule[];
 
 function leader(
@@ -93,6 +98,40 @@ describe("construction", () => {
   it("forbids Rayleigh cost>=5", () => {
     const expensive = mainCard("EB01-002", { colors: ["Red"], cost: 5 });
     assert.equal(isForbiddenByLeader(expensive, "OP12-001", rules), true);
+  });
+
+  it("forbids non–East Blue cards under Nami P-117", () => {
+    const eastBlue = mainCard("EB02-011", {
+      colors: ["Blue"],
+      types: ["East Blue"],
+    });
+    const other = mainCard("OP01-016", {
+      colors: ["Blue"],
+      types: ["Straw Hat Crew"],
+    });
+    assert.equal(isForbiddenByLeader(eastBlue, "P-117", rules), false);
+    assert.equal(isForbiddenByLeader(other, "P-117", rules), true);
+  });
+
+  it("hides non–East Blue cards from Nami builder search", () => {
+    const nami = leader("P-117", ["Blue"]);
+    const eastBlue = mainCard("EB02-011", {
+      colors: ["Blue"],
+      types: ["East Blue"],
+    });
+    const other = mainCard("OP01-016", {
+      colors: ["Blue"],
+      types: ["Straw Hat Crew"],
+    });
+    const results = filterBuilderCatalog([eastBlue, other], nami, EMPTY_FILTERS, {
+      ownedOnly: false,
+      ownedIds: new Set(),
+      rules,
+    });
+    assert.deepEqual(
+      results.map((card) => card.id),
+      ["EB02-011"],
+    );
   });
 
   it("hides Imu-forbidden Events from builder search", () => {

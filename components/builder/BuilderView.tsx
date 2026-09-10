@@ -107,6 +107,8 @@ export function BuilderView({ deck }: { deck: Deck }) {
   const cardsRef = useRef<Record<string, number>>({});
   const writeChain = useRef(Promise.resolve());
   const pendingWrites = useRef(0);
+  const activeVariationIdRef = useRef(activeVariationId);
+  activeVariationIdRef.current = activeVariationId;
 
   const deferredFilters = useDeferredValue(filters);
 
@@ -270,6 +272,13 @@ export function BuilderView({ deck }: { deck: Deck }) {
         toast.error(
           error instanceof Error ? error.message : "Could not save deck list",
         );
+        // Only roll back when no newer write is still pending for this tab.
+        if (
+          activeVariationIdRef.current === variationId &&
+          pendingWrites.current <= 1
+        ) {
+          setLocalCards(null);
+        }
       })
       .finally(() => {
         pendingWrites.current = Math.max(0, pendingWrites.current - 1);

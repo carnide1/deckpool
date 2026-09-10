@@ -1,4 +1,5 @@
 import { CatalogProvider } from "@/contexts/CatalogContext";
+import { ShareHeaderCta } from "@/components/share/ShareHeaderCta";
 import Link from "next/link";
 
 export default function ShareLayout({
@@ -16,12 +17,7 @@ export default function ShareLayout({
           >
             DeckPool
           </Link>
-          <Link
-            href="/signup"
-            className="text-sm font-semibold text-[var(--accent-ocean)] hover:underline"
-          >
-            Make your own
-          </Link>
+          <ShareHeaderCta />
         </header>
         {children}
       </div>

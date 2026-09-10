@@ -30,6 +30,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [loadedUid, setLoadedUid] = useState<string | null>(null);
 
   const loadProfile = useCallback(async (authUser: User) => {
     const expectedUid = authUser.uid;
@@ -37,9 +38,9 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     setProfileError(null);
     try {
       const next = await ensureUserDoc(authUser);
-      // Ignore stale responses after logout / account switch.
       if (expectedUid !== authUser.uid) return;
       setProfile(next);
+      setLoadedUid(expectedUid);
     } catch (error) {
       console.error(error);
       if (expectedUid !== authUser.uid) return;
@@ -49,6 +50,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
           : "Could not load your profile. Check Firestore rules.",
       );
       setProfile(null);
+      setLoadedUid(expectedUid);
     } finally {
       if (expectedUid === authUser.uid) setProfileLoading(false);
     }
@@ -59,6 +61,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       setProfileError(null);
       setProfileLoading(false);
+      setLoadedUid(null);
       return;
     }
     await loadProfile(user);
@@ -67,43 +70,48 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
-    const timer = setTimeout(() => {
-      if (cancelled) return;
-      if (!user || !uid) {
-        setProfile(null);
-        setProfileError(null);
-        setProfileLoading(false);
-        return;
-      }
+    if (!user || !uid) {
+      setProfile(null);
+      setProfileError(null);
+      setProfileLoading(false);
+      setLoadedUid(null);
+      return () => {
+        cancelled = true;
+      };
+    }
 
-      const expectedUid = uid;
-      void (async () => {
-        setProfileLoading(true);
-        setProfileError(null);
-        try {
-          const next = await ensureUserDoc(user);
-          if (cancelled || expectedUid !== user.uid) return;
-          setProfile(next);
-        } catch (error) {
-          console.error(error);
-          if (cancelled || expectedUid !== user.uid) return;
-          setProfileError(
-            error instanceof Error
-              ? error.message
-              : "Could not load your profile. Check Firestore rules.",
-          );
-          setProfile(null);
-        } finally {
-          if (!cancelled && expectedUid === user.uid) {
-            setProfileLoading(false);
-          }
+    // Hide the previous account immediately on switch (do not wait for async).
+    setProfile(null);
+    setProfileError(null);
+    setLoadedUid(null);
+    setProfileLoading(true);
+
+    const expectedUid = uid;
+    void (async () => {
+      try {
+        const next = await ensureUserDoc(user);
+        if (cancelled || expectedUid !== user.uid) return;
+        setProfile(next);
+        setLoadedUid(expectedUid);
+      } catch (error) {
+        console.error(error);
+        if (cancelled || expectedUid !== user.uid) return;
+        setProfileError(
+          error instanceof Error
+            ? error.message
+            : "Could not load your profile. Check Firestore rules.",
+        );
+        setProfile(null);
+        setLoadedUid(expectedUid);
+      } finally {
+        if (!cancelled && expectedUid === user.uid) {
+          setProfileLoading(false);
         }
-      })();
-    }, 0);
+      }
+    })();
 
     return () => {
       cancelled = true;
-      clearTimeout(timer);
     };
   }, [user, uid]);
 
@@ -121,15 +129,25 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     [user, updateDisplayName],
   );
 
+  const hasCurrentUserData = Boolean(uid && loadedUid === uid);
+
   const value = useMemo(
     () => ({
+      profile: hasCurrentUserData ? profile : null,
+      profileLoading: Boolean(uid) && !hasCurrentUserData ? true : profileLoading,
+      profileError: hasCurrentUserData ? profileError : null,
+      refreshProfile,
+      saveDisplayName,
+    }),
+    [
+      uid,
+      hasCurrentUserData,
       profile,
       profileLoading,
       profileError,
       refreshProfile,
       saveDisplayName,
-    }),
-    [profile, profileLoading, profileError, refreshProfile, saveDisplayName],
+    ],
   );
 
   return (
