@@ -8,12 +8,13 @@ import {
   useRef,
   useState,
 } from "react";
-import { ArrowLeft, Pencil, RefreshCw } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { ArrowLeft, Info, Pencil, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 import { CardImage } from "@/components/CardImage";
 import { CardDetailModal } from "@/components/cards/CardDetailModal";
 import { BuilderCardResults } from "@/components/builder/BuilderCardResults";
-import { BuilderManifest } from "@/components/builder/BuilderManifest";
+import { BuilderDeckBoard } from "@/components/builder/BuilderDeckBoard";
 import { BuilderStatusPanel } from "@/components/builder/BuilderStatusPanel";
 import { ChangeLeaderModal } from "@/components/builder/ChangeLeaderModal";
 import { CompareVariationsModal } from "@/components/builder/CompareVariationsModal";
@@ -42,6 +43,10 @@ import {
   filterBuilderUniverse,
   mainDeckCount,
 } from "@/lib/builder";
+import {
+  buildDeckStacks,
+  DEFAULT_DECK_STACK_SORT,
+} from "@/lib/builderDeckStacks";
 import { getConstructionRules } from "@/lib/construction";
 import { setFavoriteVariation, setVariationCards } from "@/lib/decks";
 import { imageCandidates, imageForCard } from "@/lib/cardPrefs";
@@ -63,6 +68,8 @@ const BUILDER_SORTS: SortKey[] = ["newest", "serial", "name", "cost", "category"
 
 export function BuilderView({ deck }: { deck: Deck }) {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const variationFromUrl = searchParams.get("variation");
   const { cards, cardsById } = useCatalog();
   const { preferredByCardId } = useCardPrefs();
   const { ownedMap, allLabels } = useCollection();
@@ -92,6 +99,7 @@ export function BuilderView({ deck }: { deck: Deck }) {
   const [activeVariationId, setActiveVariationId] = useState("");
   const [filters, setFilters] = useState<SearchFilters>(EMPTY_FILTERS);
   const [sort, setSort] = useState<SortKey>("newest");
+  const [deckSort, setDeckSort] = useState<SortKey>(DEFAULT_DECK_STACK_SORT);
   const [ownedOnly, setOwnedOnly] = useState(true);
   const [renameDeckOpen, setRenameDeckOpen] = useState(false);
   const [changeLeaderOpen, setChangeLeaderOpen] = useState(false);
@@ -100,6 +108,9 @@ export function BuilderView({ deck }: { deck: Deck }) {
   const [renameVariationOpen, setRenameVariationOpen] = useState(false);
   const [deleteVariationOpen, setDeleteVariationOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<DeckPoolCard | null>(null);
+  const [inspectSource, setInspectSource] = useState<"results" | "deck">(
+    "results",
+  );
   const [saving, setSaving] = useState(false);
   const [localCards, setLocalCards] = useState<Record<string, number> | null>(
     null,
@@ -117,10 +128,21 @@ export function BuilderView({ deck }: { deck: Deck }) {
       setActiveVariationId("");
       return;
     }
-    if (!activeVariationId || !variations.some((row) => row.id === activeVariationId)) {
-      setActiveVariationId(variations[0].id);
+    if (
+      activeVariationId &&
+      variations.some((row) => row.id === activeVariationId)
+    ) {
+      return;
     }
-  }, [variations, activeVariationId]);
+    if (
+      variationFromUrl &&
+      variations.some((row) => row.id === variationFromUrl)
+    ) {
+      setActiveVariationId(variationFromUrl);
+      return;
+    }
+    setActiveVariationId(variations[0].id);
+  }, [variations, activeVariationId, variationFromUrl]);
 
   const activeVariation =
     variations.find((row) => row.id === activeVariationId) ?? null;
@@ -206,6 +228,19 @@ export function BuilderView({ deck }: { deck: Deck }) {
 
   const deckCount = mainDeckCount(variationCards);
 
+  const deckStacks = useMemo(
+    () => buildDeckStacks(variationCards, cardsById, deckSort),
+    [variationCards, cardsById, deckSort],
+  );
+
+  const deckInspectCards = useMemo(() => {
+    const list = deckStacks.map((row) => row.card);
+    if (leader && !list.some((card) => card.id === leader.id)) {
+      return [leader, ...list];
+    }
+    return list;
+  }, [deckStacks, leader]);
+
   const variationStats = useMemo(
     () =>
       computeVariationStats(variationCards, cardsById, {
@@ -233,23 +268,6 @@ export function BuilderView({ deck }: { deck: Deck }) {
     ownedQtyById,
     constructionRules,
   ]);
-
-  const manifestLines = useMemo(() => {
-    if (!activeVariation) return [];
-    return Object.entries(variationCards)
-      .filter(([, qty]) => qty > 0)
-      .map(([cardId, inDeck]) => {
-        const card = cardsById.get(cardId);
-        if (!card) return null;
-        return {
-          card,
-          inDeck,
-          ownedQty: ownedQtyById[cardId] ?? 0,
-        };
-      })
-      .filter((row): row is NonNullable<typeof row> => row !== null)
-      .sort((a, b) => a.card.name.localeCompare(b.card.name));
-  }, [activeVariation, variationCards, cardsById, ownedQtyById]);
 
   const unownedGaps = useMemo(
     () => gapsFromVariation(variationCards, ownedQtyById),
@@ -317,6 +335,16 @@ export function BuilderView({ deck }: { deck: Deck }) {
     persistCards(next);
   };
 
+  const handleInspectResults = (card: DeckPoolCard) => {
+    setInspectSource("results");
+    setSelectedCard(card);
+  };
+
+  const handleInspectDeck = (card: DeckPoolCard) => {
+    setInspectSource("deck");
+    setSelectedCard(card);
+  };
+
   const handleVariationDeleted = () => {
     const remaining = variations.filter((row) => row.id !== activeVariationId);
     setActiveVariationId(remaining[0]?.id ?? "");
@@ -350,7 +378,7 @@ export function BuilderView({ deck }: { deck: Deck }) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/decks"
@@ -363,24 +391,39 @@ export function BuilderView({ deck }: { deck: Deck }) {
           {saving ? (
             <span className="text-xs text-[var(--ink-muted)]">Saving…</span>
           ) : null}
-          <DeckModeToggle deckId={deck.id} mode="edit" />
+          <DeckModeToggle
+            deckId={deck.id}
+            mode="edit"
+            variationId={activeVariationId || undefined}
+          />
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
         <section className="flex min-w-0 flex-col gap-4">
           <div className="poster-panel p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-3">
-                {leaderImage ? (
-                  <CardImage
-                    src={leaderImage}
-                    fallbackSrcs={leaderFallbacks}
-                    alt={leader.name}
-                    width={72}
-                    height={100}
-                  />
-                ) : null}
+                <div className="relative shrink-0">
+                  {leaderImage ? (
+                    <CardImage
+                      src={leaderImage}
+                      fallbackSrcs={leaderFallbacks}
+                      alt={leader.name}
+                      width={96}
+                      height={134}
+                      className="h-auto w-[96px]"
+                    />
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => handleInspectDeck(leader)}
+                    className="absolute bottom-1 left-1 z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--bg-panel)]/95 text-[var(--ink-muted)] shadow hover:text-[var(--ink-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ocean)]"
+                    aria-label={`Details for ${leader.name}`}
+                  >
+                    <Info className="h-3.5 w-3.5" />
+                  </button>
+                </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <h1 className="truncate font-display text-xl font-bold text-[var(--ink-primary)]">
@@ -412,38 +455,72 @@ export function BuilderView({ deck }: { deck: Deck }) {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <label className="inline-flex items-center gap-2 text-sm font-medium text-[var(--ink-primary)]">
-              <input
-                type="checkbox"
-                checked={ownedOnly}
-                onChange={(event) => setOwnedOnly(event.target.checked)}
-                className="rounded border-[var(--bg-inset)]"
-              />
-              Owned only
-            </label>
+          <div className="sticky top-0 z-20 -mx-1 bg-[var(--bg-page)] px-1 py-1 md:static md:z-auto md:mx-0 md:bg-transparent md:px-0 md:py-0">
+            <BuilderDeckBoard
+              stacks={deckStacks}
+              deckCount={deckCount}
+              deckSort={deckSort}
+              onDeckSort={setDeckSort}
+              legal={status.legal}
+              owned={status.owned}
+              onRemove={handleRemove}
+              onInspect={handleInspectDeck}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
             <NameSearchBar
               value={filters.text}
               onChange={(text) => setFilters((prev) => ({ ...prev, text }))}
+              inputClassName="h-9 rounded-lg text-sm shadow-none"
             />
-            <FilterPanel
-              filters={filters}
-              onChange={setFilters}
-              cards={legalPool}
-              labelOptions={allLabels}
-              allowedColors={leader.colors}
-              allowedCategories={["Character", "Event", "Stage"]}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <FilterPanel
+                filters={filters}
+                onChange={setFilters}
+                cards={legalPool}
+                labelOptions={allLabels}
+                allowedColors={leader.colors}
+                allowedCategories={["Character", "Event", "Stage"]}
+                showHeading={false}
+              />
+              <button
+                type="button"
+                role="switch"
+                aria-checked={ownedOnly}
+                onClick={() => setOwnedOnly((prev) => !prev)}
+                className="ml-auto inline-flex shrink-0 items-center gap-2 text-xs font-medium text-[var(--ink-primary)]"
+              >
+                <span
+                  className={[
+                    "relative h-5 w-9 rounded-full transition-colors",
+                    ownedOnly
+                      ? "bg-[var(--accent-ocean)]"
+                      : "bg-[var(--bg-inset)]",
+                  ].join(" ")}
+                  aria-hidden
+                >
+                  <span
+                    className={[
+                      "absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
+                      ownedOnly ? "translate-x-4" : "translate-x-0",
+                    ].join(" ")}
+                  />
+                </span>
+                Owned
+              </button>
+            </div>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-[var(--ink-muted)]">
                 {searchResults.length.toLocaleString()} shown
-                {searchResults.length >= MAX_RESULTS ? "+" : ""}. Hard filters:
-                Leader colors, construction rules, no Don.
+                {searchResults.length >= MAX_RESULTS ? "+" : ""}. Tap a card to
+                add.
               </p>
               <SortSelect
                 value={sort}
                 onChange={setSort}
                 options={BUILDER_SORTS}
+                compact
               />
             </div>
           </div>
@@ -464,7 +541,7 @@ export function BuilderView({ deck }: { deck: Deck }) {
               )
             }
             onAdd={handleAdd}
-            onInspect={setSelectedCard}
+            onInspect={handleInspectResults}
             onToggleWanted={(card) => void togglePosted(card.id)}
             wantedSaving={wantedSaving}
           />
@@ -495,16 +572,11 @@ export function BuilderView({ deck }: { deck: Deck }) {
             onDelete={() => setDeleteVariationOpen(true)}
             onCompare={() => setCompareOpen(true)}
           />
+          <VariationStatsPanel stats={variationStats} />
           <BuilderStatusPanel
             legal={status.legal}
             owned={status.owned}
             reasons={status.reasons}
-          />
-          <VariationStatsPanel stats={variationStats} />
-          <BuilderManifest
-            lines={manifestLines}
-            deckCount={deckCount}
-            onRemove={handleRemove}
           />
         </aside>
       </div>
@@ -560,7 +632,9 @@ export function BuilderView({ deck }: { deck: Deck }) {
         card={selectedCard}
         open={selectedCard !== null}
         onClose={() => setSelectedCard(null)}
-        selectionCards={searchResults}
+        selectionCards={
+          inspectSource === "deck" ? deckInspectCards : searchResults
+        }
         onSelectCard={setSelectedCard}
         ownedQty={selectedCard ? ownedQtyById[selectedCard.id] ?? 0 : 0}
         wantedQty={selectedCard ? wantedQtyById[selectedCard.id] ?? 0 : 0}

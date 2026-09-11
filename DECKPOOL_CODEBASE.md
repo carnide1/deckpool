@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-09-10
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (commit at last update: `21d1b33` — “Harden auth, profile isolation, labels, and Firestore rules after audit.”)
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (snapshot includes Edit visual-deck rework; prior noted commit `21d1b33`)
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -253,21 +253,25 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 
 ### Builder (`/decks/[id]?mode=edit`)
 
-- Search defaults to **owned only** (toggle off to add unowned copies).
-- Hard filters always: Leader colors (card colors must be a subset of Leader colors), Leader forbid rules, no Leaders/Don in the 50.
-- Use the explicit **Add** button on a result to add a copy. Cap is construction copy limit (usually 4), **not** owned qty. Hard stop at **50** cards in the list. Minus on the list to remove.
-- Result tiles are a dense 3-column grid on mobile, images capped at 120px wide (`h-auto w-full`) so they do not blow up versus View. Click an image or name to inspect a card; use the explicit Add button to add a copy. The detail modal supports outside Previous/Next controls through the current results and full-screen art zoom. Leader portrait and result tiles use preferred art.
+- Layout: deck **above** search results. Aside on `lg+` (sticky): variations → list summary → Legal/Owned status. Status reasons do not sit on card art. On mobile the visual deck band is **sticky** while results scroll; compact Legal/Owned badges also appear in the deck header.
+- Leader art lives in the **page header** (info opens detail), not in the main-deck strip.
+- Visual main deck (`BuilderDeckBoard`): **stacked copies** (up to **4** faces; no qty badge — the fan is the count). Tap a stack to **remove one**. Info opens detail. Default sort **cost** via a compact select (also name / category / serial).
+- Search defaults to **owned only** (toggle off to add unowned copies). Hard filters always: Leader colors (subset of Leader), Leader forbid rules, no Leaders/Don in the 50.
+- Result tiles are art-first (no bordered meta chrome, no Add button). **Tap art to add** one copy (construction copy limit, owned-only, hard stop at **50**). Bottom-right stack (fixed slots): frosted **Own** / **Listed** chips, then WANTED. **Info** (bottom-left) opens detail (Prev/Next uses results or deck order by source). Preferred art on Leader and tiles.
 - WANTED stamp on results does **not** add to the 50. **Post all unowned** raises Wanted to `in this variation − owned` for the active variation (does not stack on top of an existing bounty).
-- Manifest lines show id, category, cost, and power, plus in-deck / owned. Status panel: Legal/Illegal, Owned/Unowned, reason bullets for the **active tab**.
-- List summary (active tab): compact collapsed row (avg cost, avg power, Character/Event/Stage, keyword pills including Unblockable and Searcher) with a smooth expand; expanded shows cost/power avg·low·high with horizontal distributions, including zero-cost cards and zero-power Characters in the averages and zero buckets, composition bar, keywords, counters, multi-color Leader color counts, and set counts (Leader excluded). `searcher` is a derived ingest flag (look at top of deck + add to hand), not a Bandai bracket keyword.
-- Variations: tabs ordered **favorite first**, then most recently edited. Opening the page selects the favorite. Star a tab (or **Set as main**) to pin it. Clone, rename, delete (cannot delete the last). Compare modal shows count diffs only.
+- Search toolbar: search alone; filters + Owned toggle on the next row; result count left / sort right on the third.
+- List summary (active tab): oval pills grouped under **Averages**, **Composition**, and **Keywords** (keywords in a 2-col grid). Composition uses **Character** when the panel is wide enough, otherwise **Char**. Header chevron expands the full breakdown. `searcher` is a derived ingest flag (look at top of deck + add to hand), not a Bandai bracket keyword.
+- Status: plain **Legal · Owned** text (not pill buttons); reason notes collapse behind **“N notes”** with max-height scroll so long Unowned lists do not push List Summary.
+- View ↔ Edit keeps the open variation via `?variation=` on the mode toggle (does not jump back to the favorite).
+- Variations: **custom dropdown** picks the active list (matching panel borders; chevron rotates open/closed); star button pins favorite. Clone, rename, delete (cannot delete the last). Compare shows count diffs. Clone/Rename disable overlay-click dismiss and focus the name field (not the X).
 - Change Leader: warning, then strip illegal cards from **every** variation of that deck.
 - Writes go to Firestore through a queued `setVariationCards` so rapid clicks do not race. On write failure, optimistic local cards clear so the UI falls back to the Firestore snapshot.
+- There is **no** text Manifest in Edit anymore (`BuilderManifest` removed).
 
 ### Deck view (`/decks/[id]` without `mode=edit`)
 
-- Read-only look at the active variation. Opens on the favorite. Switch to Edit to brew. Card details support outside Previous/Next controls through the active variation and full-screen art zoom.
-- Same tab order, star-to-pin, and list summary as Edit. Legal/Owned follow the tab you are looking at.
+- Read-only look at the active variation. Opens on the favorite unless `?variation=` is set (View ↔ Edit preserves the open list). Switch to Edit to brew. Card details support outside Previous/Next controls through the active variation and full-screen art zoom.
+- Same variation dropdown (favorite ★), star-to-pin, and list summary as Edit. Legal/Owned follow the list you are looking at.
 - Leader portrait uses preferred art. WANTED stamp and bounty stepper still work from this page.
 - **Copy share link** creates a public `shares/{id}` snapshot of the **active** variation (deck name, Leader, variation name, card counts, preferred art URLs), copies `{origin}/s/{id}` to the clipboard for texting. Empty lists cannot be shared (client + rules). The link is a frozen snapshot — later edits do not change old links. If clipboard fails, the toast shows the URL for manual copy.
 
@@ -347,7 +351,7 @@ When a new set releases: pull punk-records, run both ingest scripts, commit `dat
 ```
 app/                    routes + layouts + globals.css + card-art/[file] proxy
 app/(app)/wanted/       Wanted board page (authenticated)
-components/             UI by area: auth, builder, cards, collection, decks, profile, search, share, ui, wanted
+components/             UI by area: auth, builder (DeckBoard/CardStack/CardResults), cards, collection, decks, profile, search, share, ui, wanted
 contexts/               Auth, UserProfile, Catalog, Collection, Wanted, CardPrefs, Decks
 hooks/                  useCollectionWrite, useWantedWrite
 lib/                    firebase, users, collection, wanted, shares, cardPrefs, cardArt*, cardImageUrl, variations, decks, legality, builder, search, tests
@@ -377,6 +381,7 @@ Key libraries:
 | `lib/compileHas.ts` | Ingest `has` flags from effect/trigger text (official tags + derived `searcher`) |
 | `lib/variations.ts` | Favorite resolve + tab order (resolved favorite first, then recency) |
 | `lib/variationStats.ts` | Average cost/power, category and keyword counts for a list |
+| `lib/builderDeckStacks.ts` | Edit visual deck: stack sort + visible-face cap (4) |
 | `lib/decks.ts` | Deck/variation CRUD, favorite pin, starter→deck, change Leader, delete cascade |
 | `lib/shares.ts` | Public share snapshots: create, parse, SMS URL helpers, clipboard copy |
 | `lib/labels.ts` | Union-merge labels |
@@ -399,6 +404,7 @@ The blueprint is still the product source of truth for **rules** (color identity
 | Collection searches the **full** catalog to log new cards | Collection is **owned-only**. New cards are logged on `/cards`. |
 | Limitless `q=` language in the search box | Filter panel + name/id text. Query parser exists but is unused in pages. |
 | Soft 50 (may exceed on click, then Illegal) | Builder **hard-stops** adds at 50. |
+| Builder manifest as text lines + Add on results | Edit uses a **visual stacked deck** (tap remove) and art-first results (tap add + info). |
 | Display font Fredoka | Cinzel |
 | Builder search state may stay in the component | True. View vs Edit is `?mode=edit`. |
 | Paste-a-list import, match history, LLM, scanner | Not built. See `DECKPOOL_FUTURE_FEATURES.md`. |
@@ -421,7 +427,7 @@ Do not silently revert Collection to a full-catalog logger, or rip out the filte
 - Primary app nav is Collection, Wanted, Cards, Decks. Profile stays separate (sidebar bottom / mobile header), not in the mobile bottom bar. Desktop sidebar resizes main content; collapse via header button, expand via click on collapsed rail chrome. Mobile uses header + bottom nav only.
 - New public routes must be allowlisted in `AuthGate` without treating them as auth landings (logged-in users must not be bounced off `/s/…`). Public routes must render while Auth is still loading. Preserve deep links with safe `?next=` on forced login. Do not auto-redirect to `/login` while `authTimedOut`.
 - Prefer npm. Do not add Yarn.
-- Mobile-first; Builder is allowed to feel denser. Do not block the whole app on Auth IndexedDB — keep the public-route bypass and Auth ready timeout.
+- Mobile-first; Builder Edit is art-first (tap results to add, tap deck stacks to remove, info for detail). Do not block the whole app on Auth IndexedDB — keep the public-route bypass and Auth ready timeout.
 
 ---
 

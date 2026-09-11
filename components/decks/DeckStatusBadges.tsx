@@ -6,27 +6,28 @@ export function DeckStatusBadges({
   owned: boolean;
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <p className="flex flex-wrap items-baseline gap-x-1.5 text-xs font-semibold">
       <span
-        className={[
-          "rounded-full px-2 py-0.5 text-[0.625rem] font-bold uppercase tracking-wide",
+        className={
           legal
-            ? "bg-[var(--badge-legal)]/15 text-[var(--badge-legal)]"
-            : "border border-[var(--badge-illegal)] text-[var(--badge-illegal)]",
-        ].join(" ")}
+            ? "text-[var(--badge-legal)]"
+            : "text-[var(--badge-illegal)]"
+        }
       >
         {legal ? "Legal" : "Illegal"}
       </span>
+      <span className="font-normal text-[var(--ink-muted)]" aria-hidden>
+        ·
+      </span>
       <span
-        className={[
-          "rounded-full px-2 py-0.5 text-[0.625rem] font-bold uppercase tracking-wide",
+        className={
           owned
-            ? "bg-[var(--badge-owned)]/15 text-[var(--badge-owned)]"
-            : "bg-[var(--badge-unowned)]/15 text-[var(--badge-unowned)]",
-        ].join(" ")}
+            ? "text-[var(--badge-owned)]"
+            : "text-[var(--badge-unowned)]"
+        }
       >
         {owned ? "Owned" : "Unowned"}
       </span>
-    </div>
+    </p>
   );
 }

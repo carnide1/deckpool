@@ -38,19 +38,6 @@ function formatInt(value: number | null): string {
   return value.toLocaleString("en-US");
 }
 
-function StatChip({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg bg-[var(--bg-inset)] px-2 py-1.5">
-      <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-        {label}
-      </p>
-      <p className="mt-0.5 text-sm font-bold tabular-nums text-[var(--ink-primary)]">
-        {value}
-      </p>
-    </div>
-  );
-}
-
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
     <p className="text-[0.625rem] font-bold uppercase tracking-[0.14em] text-[var(--accent-ocean)]">
@@ -153,64 +140,96 @@ export function VariationStatsPanel({ stats }: { stats: VariationStats }) {
     stats.counterOther;
   const colorMax = Math.max(1, ...stats.byColor.map((row) => row.copies));
   const setMax = Math.max(1, ...stats.bySet.map((row) => row.copies));
-  const flagMax = Math.max(
-    1,
-    ...VARIATION_STAT_FLAGS.map((flag) => stats.flags[flag]),
-  );
 
   return (
-    <div className="poster-panel p-3">
+    <div className="@container/summary poster-panel p-3">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-expanded={open}
-        className="flex w-full items-start gap-2 text-left"
+        className="flex w-full items-center justify-between gap-2 text-left"
       >
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="font-display text-sm font-bold text-[var(--ink-primary)]">
-              List summary
-            </h3>
-            <ChevronDown
-              className={[
-                "h-4 w-4 shrink-0 text-[var(--ink-muted)] transition-transform duration-300 ease-out",
-                open ? "rotate-180" : "",
-              ].join(" ")}
-              aria-hidden
-            />
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+          List summary
+        </h3>
+        <ChevronDown
+          className={[
+            "h-4 w-4 shrink-0 text-[var(--ink-muted)] transition-transform duration-300 ease-out",
+            open ? "rotate-180" : "",
+          ].join(" ")}
+          aria-hidden
+        />
+      </button>
+
+      <div className="mt-2 flex flex-col gap-2">
+        <div>
+          <p className="mb-1 text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+            Averages
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            <span className="inline-flex items-center gap-1 rounded-full border border-[var(--bg-inset)] bg-[var(--bg-inset)]/50 px-2.5 py-1 text-[0.6875rem] text-[var(--ink-muted)]">
+              Cost
+              <span className="font-semibold tabular-nums text-[var(--ink-primary)]">
+                {formatAvg(stats.avgCost, 1)}
+              </span>
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-[var(--bg-inset)] bg-[var(--bg-inset)]/50 px-2.5 py-1 text-[0.6875rem] text-[var(--ink-muted)]">
+              Power
+              <span className="font-semibold tabular-nums text-[var(--ink-primary)]">
+                {formatAvg(stats.avgPower, 0)}
+              </span>
+            </span>
           </div>
-          <div className="mt-2 grid grid-cols-3 gap-1.5 sm:grid-cols-5">
-            <StatChip label="Avg cost" value={formatAvg(stats.avgCost, 1)} />
-            <StatChip label="Avg power" value={formatAvg(stats.avgPower, 0)} />
-            <StatChip
-              label="Characters"
-              value={String(stats.byCategory.Character)}
-            />
-            <StatChip label="Events" value={String(stats.byCategory.Event)} />
-            <StatChip label="Stages" value={String(stats.byCategory.Stage)} />
+        </div>
+
+        <div>
+          <p className="mb-1 text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+            Composition
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            <span className="inline-flex items-center gap-1 rounded-full border border-[var(--bg-inset)] px-2.5 py-1 text-[0.6875rem] text-[var(--ink-muted)]">
+              <span className="@min-[17rem]/summary:hidden">Char</span>
+              <span className="hidden @min-[17rem]/summary:inline">
+                Character
+              </span>
+              <span className="font-semibold tabular-nums text-[var(--ink-primary)]">
+                {stats.byCategory.Character}
+              </span>
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-[var(--bg-inset)] px-2.5 py-1 text-[0.6875rem] text-[var(--ink-muted)]">
+              Event
+              <span className="font-semibold tabular-nums text-[var(--ink-primary)]">
+                {stats.byCategory.Event}
+              </span>
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-[var(--bg-inset)] px-2.5 py-1 text-[0.6875rem] text-[var(--ink-muted)]">
+              Stage
+              <span className="font-semibold tabular-nums text-[var(--ink-primary)]">
+                {stats.byCategory.Stage}
+              </span>
+            </span>
           </div>
-          <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+        </div>
+
+        <div>
+          <p className="mb-1 text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+            Keywords
+          </p>
+          <div className="grid grid-cols-2 gap-1.5">
             {VARIATION_STAT_FLAGS.map((flag) => {
               const value = stats.flags[flag];
               return (
                 <span
                   key={flag}
                   className={[
-                    "inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs tabular-nums",
+                    "inline-flex min-w-0 items-center justify-between gap-1 rounded-full border px-2.5 py-1 text-[0.6875rem]",
                     value > 0
-                      ? "bg-[rgb(46_99_164_/_0.1)] text-[var(--ink-muted)]"
-                      : "bg-[var(--bg-inset)] text-[var(--ink-muted)]",
+                      ? "border-[var(--bg-inset)] bg-[var(--bg-panel)] text-[var(--ink-primary)]"
+                      : "border-[var(--bg-inset)]/70 bg-[var(--bg-inset)]/35 text-[var(--ink-muted)]",
                   ].join(" ")}
                 >
-                  {FLAG_LABEL[flag]}
-                  <span
-                    className={[
-                      "font-bold",
-                      value > 0
-                        ? "text-[var(--accent-ocean)]"
-                        : "text-[var(--ink-primary)]",
-                    ].join(" ")}
-                  >
+                  <span className="truncate">{FLAG_LABEL[flag]}</span>
+                  <span className="shrink-0 font-semibold tabular-nums">
                     {value}
                   </span>
                 </span>
@@ -218,7 +237,7 @@ export function VariationStatsPanel({ stats }: { stats: VariationStats }) {
             })}
           </div>
         </div>
-      </button>
+      </div>
 
       <div
         className={[
@@ -247,7 +266,7 @@ export function VariationStatsPanel({ stats }: { stats: VariationStats }) {
                 ] as const
               ).map(([label, value]) => (
                 <div key={label}>
-                  <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+                  <p className="text-[0.625rem] font-medium text-[var(--ink-muted)]">
                     {label}
                   </p>
                   <p className="mt-0.5 text-base font-bold tabular-nums text-[var(--ink-primary)]">
@@ -275,7 +294,7 @@ export function VariationStatsPanel({ stats }: { stats: VariationStats }) {
                 ] as const
               ).map(([label, value]) => (
                 <div key={label}>
-                  <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+                  <p className="text-[0.625rem] font-medium text-[var(--ink-muted)]">
                     {label}
                   </p>
                   <p className="mt-0.5 text-base font-bold tabular-nums text-[var(--ink-primary)]">
@@ -343,7 +362,7 @@ export function VariationStatsPanel({ stats }: { stats: VariationStats }) {
                   <span
                     className={["h-1.5 w-1.5 rounded-full", swatch].join(" ")}
                   />
-                  <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+                  <p className="text-[0.625rem] font-medium text-[var(--ink-muted)]">
                     {label}
                   </p>
                   <p className="text-base font-bold tabular-nums text-[var(--ink-primary)]">
@@ -380,41 +399,27 @@ export function VariationStatsPanel({ stats }: { stats: VariationStats }) {
           ) : null}
 
           <SectionCard label="Keywords">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="flex flex-col gap-1.5">
               {VARIATION_STAT_FLAGS.map((flag) => {
                 const value = stats.flags[flag];
-                const hot = value > 0;
                 return (
                   <div
                     key={flag}
-                    className={[
-                      "rounded-xl border px-2.5 py-2",
-                      hot
-                        ? "border-[var(--accent-ocean)]/30 bg-[rgb(46_99_164_/_0.08)]"
-                        : "border-[var(--bg-inset)] bg-[var(--bg-inset)]/60",
-                    ].join(" ")}
+                    className="flex items-baseline justify-between gap-2 text-xs"
                   >
-                    <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+                    <span className="text-[var(--ink-muted)]">
                       {FLAG_LABEL[flag]}
-                    </p>
-                    <div className="mt-1 flex items-end justify-between gap-2">
-                      <p
-                        className={[
-                          "text-lg font-bold tabular-nums",
-                          hot
-                            ? "text-[var(--accent-ocean)]"
-                            : "text-[var(--ink-muted)]",
-                        ].join(" ")}
-                      >
-                        {value}
-                      </p>
-                      <div className="mb-1 h-1 w-10 overflow-hidden rounded-full bg-[var(--bg-panel)]">
-                        <div
-                          className="h-full rounded-full bg-[var(--accent-ocean)]"
-                          style={{ width: `${(value / flagMax) * 100}%` }}
-                        />
-                      </div>
-                    </div>
+                    </span>
+                    <span
+                      className={[
+                        "font-semibold tabular-nums",
+                        value > 0
+                          ? "text-[var(--ink-primary)]"
+                          : "text-[var(--ink-muted)]",
+                      ].join(" ")}
+                    >
+                      {value}
+                    </span>
                   </div>
                 );
               })}

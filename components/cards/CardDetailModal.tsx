@@ -101,14 +101,14 @@ export function CardDetailModal({
         overlayContent={
           hasSelectionNavigation ? (
             <div
-              className="pointer-events-none absolute inset-0 z-10 flex items-center justify-between px-1 sm:px-3"
+              className="pointer-events-none absolute inset-y-0 left-0 right-0 z-10"
               onClick={(event) => event.stopPropagation()}
             >
               <button
                 type="button"
                 onClick={() => navigate(-1)}
                 disabled={!previousCard}
-                className="pointer-events-auto rounded-full border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-2 text-[var(--ink-primary)] shadow-[var(--shadow-poster)] hover:bg-[var(--bg-inset)] disabled:cursor-not-allowed disabled:opacity-40 sm:p-3"
+                className="pointer-events-auto absolute top-1/2 left-0 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-2 text-[var(--ink-primary)] shadow-[var(--shadow-poster)] hover:bg-[var(--bg-inset)] disabled:cursor-not-allowed disabled:opacity-40 sm:-translate-x-[calc(100%+0.75rem)] sm:p-3"
                 aria-label={
                   previousCard
                     ? `Previous card: ${previousCard.name}`
@@ -121,7 +121,7 @@ export function CardDetailModal({
                 type="button"
                 onClick={() => navigate(1)}
                 disabled={!nextCard}
-                className="pointer-events-auto rounded-full border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-2 text-[var(--ink-primary)] shadow-[var(--shadow-poster)] hover:bg-[var(--bg-inset)] disabled:cursor-not-allowed disabled:opacity-40 sm:p-3"
+                className="pointer-events-auto absolute top-1/2 right-0 z-10 translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-2 text-[var(--ink-primary)] shadow-[var(--shadow-poster)] hover:bg-[var(--bg-inset)] disabled:cursor-not-allowed disabled:opacity-40 sm:translate-x-[calc(100%+0.75rem)] sm:p-3"
                 aria-label={
                   nextCard ? `Next card: ${nextCard.name}` : "Next card"
                 }
@@ -129,7 +129,8 @@ export function CardDetailModal({
                 <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
-          ) : null}
+          ) : null
+        }
       >
         <div className="grid gap-6 lg:grid-cols-[minmax(240px,320px)_minmax(0,1fr)]">
           <div className="space-y-4">

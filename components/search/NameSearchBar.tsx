@@ -6,20 +6,27 @@ export function NameSearchBar({
   value,
   onChange,
   placeholder = "Search by name or number",
+  className = "",
+  inputClassName = "",
 }: {
   value: string;
   onChange: (next: string) => void;
   placeholder?: string;
+  className?: string;
+  inputClassName?: string;
 }) {
   return (
-    <label className="relative block">
+    <label className={["relative block min-w-0", className].join(" ")}>
       <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" />
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="h-11 w-full rounded-xl border border-[var(--bg-inset)] bg-[var(--bg-panel)] pr-4 pl-10 text-[var(--ink-primary)] shadow-[var(--shadow-paper)] placeholder:text-[var(--ink-muted)] focus:border-[var(--accent-ocean)] focus:outline-none"
+        className={[
+          "h-11 w-full rounded-xl border border-[var(--bg-inset)] bg-[var(--bg-panel)] pr-4 pl-10 text-[var(--ink-primary)] shadow-[var(--shadow-paper)] placeholder:text-[var(--ink-muted)] focus:border-[var(--accent-ocean)] focus:outline-none",
+          inputClassName,
+        ].join(" ")}
       />
     </label>
   );

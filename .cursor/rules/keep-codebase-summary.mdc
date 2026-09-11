@@ -1,0 +1,11 @@
+---
+description: Read and update DECKPOOL_CODEBASE.md instead of re-scanning the repo
+alwaysApply: true
+---
+
+# Keep the codebase snapshot current
+
+- At the start of a task, read `DECKPOOL_CODEBASE.md`. That is the as-built briefing. Do not re-review the whole repo unless that file is missing, stale, or the user asked for a full audit.
+- If you change routes, Firestore, search, builder, ingest, env, or deploy details, update `DECKPOOL_CODEBASE.md` in the same commit. Set **Last updated**. Write what the code does now, in plain language.
+- `DECKPOOL_V1_BLUEPRINT.md` is product rules, not a guarantee of the live UI. If they disagree on current behavior, trust the snapshot.
+- Do not implement `DECKPOOL_FUTURE_FEATURES.md` unless the user asked.

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import { CardImage } from "@/components/CardImage";
@@ -35,6 +36,8 @@ const VIEW_GROUPS: CardCategory[] = ["Character", "Event", "Stage"];
 
 export function DeckView({ deck }: { deck: Deck }) {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const variationFromUrl = searchParams.get("variation");
   const { cardsById } = useCatalog();
   const { ownedMap } = useCollection();
   const { wantedMap } = useWanted();
@@ -66,12 +69,20 @@ export function DeckView({ deck }: { deck: Deck }) {
       return;
     }
     if (
-      !activeVariationId ||
-      !variations.some((row) => row.id === activeVariationId)
+      activeVariationId &&
+      variations.some((row) => row.id === activeVariationId)
     ) {
-      setActiveVariationId(variations[0].id);
+      return;
     }
-  }, [variations, activeVariationId]);
+    if (
+      variationFromUrl &&
+      variations.some((row) => row.id === variationFromUrl)
+    ) {
+      setActiveVariationId(variationFromUrl);
+      return;
+    }
+    setActiveVariationId(variations[0].id);
+  }, [variations, activeVariationId, variationFromUrl]);
 
   const activeVariation =
     variations.find((row) => row.id === activeVariationId) ?? null;
@@ -190,7 +201,11 @@ export function DeckView({ deck }: { deck: Deck }) {
               preferredImages={preferredByCardId}
             />
           ) : null}
-          <DeckModeToggle deckId={deck.id} mode="view" />
+          <DeckModeToggle
+            deckId={deck.id}
+            mode="view"
+            variationId={activeVariationId || undefined}
+          />
         </div>
       </div>
 

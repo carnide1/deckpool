@@ -35,6 +35,7 @@ export function FilterPanel({
   allowedColors,
   allowedCategories,
   layout = "inline",
+  showHeading = true,
 }: {
   filters: SearchFilters;
   onChange: (next: SearchFilters) => void;
@@ -44,6 +45,8 @@ export function FilterPanel({
   allowedColors?: OptcgColor[];
   allowedCategories?: CardCategory[];
   layout?: "inline" | "sidebar";
+  /** When false, omit the Filters heading (still shows Clear when active). */
+  showHeading?: boolean;
 }) {
   const options = useMemo(() => uniqueFilterOptions(cards), [cards]);
   const deckNameById = useMemo(() => {
@@ -165,22 +168,45 @@ export function FilterPanel({
     </>
   );
 
-  return (
-    <div className={stacked ? "flex flex-col gap-2" : "flex flex-col gap-3"}>
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-[var(--ink-primary)]">
-          Filters
-        </h2>
+  if (!showHeading && !stacked) {
+    return (
+      <>
         {hasActiveFilters(filters) ? (
           <button
             type="button"
             onClick={() => onChange({ ...EMPTY_FILTERS })}
             className="text-xs font-semibold text-[var(--accent-ocean)] hover:underline"
           >
-            Clear filters
+            Clear
           </button>
         ) : null}
-      </div>
+        {selects}
+      </>
+    );
+  }
+
+  return (
+    <div className={stacked ? "flex flex-col gap-2" : "flex flex-col gap-2"}>
+      {showHeading || hasActiveFilters(filters) ? (
+        <div className="flex items-center justify-between gap-3">
+          {showHeading ? (
+            <h2 className="text-sm font-semibold text-[var(--ink-primary)]">
+              Filters
+            </h2>
+          ) : (
+            <span className="sr-only">Filters</span>
+          )}
+          {hasActiveFilters(filters) ? (
+            <button
+              type="button"
+              onClick={() => onChange({ ...EMPTY_FILTERS })}
+              className="text-xs font-semibold text-[var(--accent-ocean)] hover:underline"
+            >
+              Clear filters
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       <div
         className={
           stacked ? "flex flex-col gap-2" : "flex flex-wrap gap-2"

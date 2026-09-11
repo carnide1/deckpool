@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Modal, ModalActions } from "@/components/ui/Modal";
 import { TextInput } from "@/components/ui/TextInput";
@@ -24,6 +24,7 @@ export function CloneVariationModal({
   const { user } = useAuth();
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open && variation) setName(`${variation.name} copy`);
@@ -51,6 +52,8 @@ export function CloneVariationModal({
       title="Clone variation"
       open={open}
       onClose={onClose}
+      closeOnOverlayClick={false}
+      initialFocusRef={nameInputRef}
       footer={
         <ModalActions
           onCancel={onClose}
@@ -62,10 +65,10 @@ export function CloneVariationModal({
       }
     >
       <TextInput
+        ref={nameInputRef}
         label="New variation name"
         value={name}
         onChange={(event) => setName(event.target.value)}
-        autoFocus
       />
     </Modal>
   );
@@ -85,6 +88,7 @@ export function RenameVariationModal({
   const { user } = useAuth();
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open && variation) setName(variation.name);
@@ -111,6 +115,8 @@ export function RenameVariationModal({
       title="Rename variation"
       open={open}
       onClose={onClose}
+      closeOnOverlayClick={false}
+      initialFocusRef={nameInputRef}
       footer={
         <ModalActions
           onCancel={onClose}
@@ -122,10 +128,10 @@ export function RenameVariationModal({
       }
     >
       <TextInput
+        ref={nameInputRef}
         label="Variation name"
         value={name}
         onChange={(event) => setName(event.target.value)}
-        autoFocus
       />
     </Modal>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { CardImage } from "@/components/CardImage";
+import { CardQtyChip } from "@/components/ui/CardQtyChip";
 import { QuantityStepper } from "@/components/ui/QuantityStepper";
 import { WantedStamp } from "@/components/wanted/WantedStamp";
 import { imageCandidates } from "@/lib/cardPrefs";
@@ -93,9 +94,14 @@ export function CardGrid({
                 </div>
               )}
               {qty > 0 ? (
-                <span className="absolute top-1 right-1 rounded-md bg-[var(--bg-panel)]/95 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[var(--ink-primary)]">
-                  ×{qty}
-                </span>
+                <div className="absolute top-1 right-1 z-10">
+                  <CardQtyChip
+                    label="Own"
+                    value={qty}
+                    accentClassName="bg-[var(--badge-owned)]"
+                    visible
+                  />
+                </div>
               ) : null}
               {onToggleWanted ? (
                 <div className="absolute right-1 bottom-1 z-10">

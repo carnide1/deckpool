@@ -1,7 +1,18 @@
 "use client";
 
-import { Copy, GitCompare, Pencil, Star, Trash2 } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import {
+  ChevronDown,
+  Copy,
+  GitCompare,
+  Pencil,
+  Star,
+  Trash2,
+} from "lucide-react";
 import type { Variation } from "@/types/deck";
+
+const actionBtnClass =
+  "inline-flex min-w-0 flex-1 items-center justify-center gap-1 rounded-md border border-[var(--bg-inset)] bg-[var(--bg-panel)] px-1.5 py-1.5 text-[0.625rem] font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-inset)] hover:text-[var(--ink-primary)] disabled:cursor-not-allowed disabled:opacity-40";
 
 export function VariationTabs({
   variations,
@@ -26,117 +37,163 @@ export function VariationTabs({
   onCompare?: () => void;
   readOnly?: boolean;
 }) {
-  const activeIndex = variations.findIndex((row) => row.id === activeId);
+  const listboxId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
   const activeIsFavorite = Boolean(favoriteId && activeId === favoriteId);
+  const active = variations.find((row) => row.id === activeId) ?? null;
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("mousedown", onPointer);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", onPointer);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap gap-2">
-        {variations.map((variation) => {
-          const active = variation.id === activeId;
-          const favorite = variation.id === favoriteId;
-          return (
-            <div
-              key={variation.id}
+    <div className="poster-panel flex flex-col gap-2 p-3">
+      <p className="text-[0.625rem] font-bold uppercase tracking-[0.14em] text-[var(--accent-ocean)]">
+        Variation
+      </p>
+
+      <div className="flex items-center gap-1.5">
+        <div ref={rootRef} className="relative min-w-0 flex-1">
+          <button
+            type="button"
+            id={`${listboxId}-trigger`}
+            aria-haspopup="listbox"
+            aria-expanded={open}
+            aria-controls={listboxId}
+            onClick={() => setOpen((prev) => !prev)}
+            className={[
+              "inline-flex h-8 w-full items-center justify-between gap-2 rounded-lg border bg-[var(--bg-panel)] py-1 pr-2.5 pl-2.5 text-left text-sm font-medium text-[var(--ink-primary)] transition-colors",
+              open
+                ? "border-[var(--accent-ocean)]"
+                : "border-[var(--bg-inset)] hover:border-[var(--accent-ocean)]",
+            ].join(" ")}
+          >
+            <span className="min-w-0 truncate">
+              {active?.name ?? "Select variation"}
+            </span>
+            <ChevronDown
               className={[
-                "inline-flex items-center overflow-hidden rounded-full border text-xs font-semibold",
-                active
-                  ? "border-[var(--accent-pirate-red)] bg-[var(--bg-inset)] text-[var(--ink-primary)]"
-                  : "border-[var(--bg-inset)] bg-[var(--bg-panel)] text-[var(--ink-muted)]",
+                "h-3.5 w-3.5 shrink-0 text-[var(--ink-muted)] transition-transform duration-300 ease-out",
+                open ? "rotate-180" : "",
               ].join(" ")}
+              aria-hidden
+            />
+          </button>
+          {open ? (
+            <ul
+              id={listboxId}
+              role="listbox"
+              aria-labelledby={`${listboxId}-trigger`}
+              className="absolute top-full right-0 left-0 z-30 mt-1 max-h-56 overflow-y-auto rounded-lg border border-[var(--bg-inset)] bg-[var(--bg-panel)] py-1 shadow-[var(--shadow-poster)]"
             >
-              <button
-                type="button"
-                onClick={() => onSelect(variation.id)}
-                className="px-3 py-1 hover:text-[var(--ink-primary)]"
-              >
-                {variation.name}
-              </button>
-              {onSetFavorite ? (
-                <button
-                  type="button"
-                  onClick={() => onSetFavorite(variation.id)}
-                  className={[
-                    "border-l border-[var(--bg-inset)] px-2 py-1",
-                    favorite
-                      ? "text-[var(--accent-gold)]"
-                      : "text-[var(--ink-muted)] hover:text-[var(--accent-gold)]",
-                  ].join(" ")}
-                  aria-label={
-                    favorite
-                      ? `${variation.name} is the main variation`
-                      : `Set ${variation.name} as main`
-                  }
-                  aria-pressed={favorite}
-                >
-                  <Star
-                    className="h-3.5 w-3.5"
-                    fill={favorite ? "currentColor" : "none"}
-                  />
-                </button>
-              ) : favorite ? (
-                <span
-                  className="border-l border-[var(--bg-inset)] px-2 py-1 text-[var(--accent-gold)]"
-                  aria-label={`${variation.name} is the main variation`}
-                >
-                  <Star className="h-3.5 w-3.5" fill="currentColor" />
-                </span>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-      {readOnly ? null : (
-        <div className="flex flex-wrap gap-2">
-          {onSetFavorite && !activeIsFavorite && activeId ? (
-            <button
-              type="button"
-              onClick={() => onSetFavorite(activeId)}
-              className="inline-flex items-center gap-1 rounded-lg border border-[var(--bg-inset)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-inset)]"
-            >
-              <Star className="h-3.5 w-3.5" />
-              Set as main
-            </button>
+              {variations.map((variation) => {
+                const selected = variation.id === activeId;
+                return (
+                  <li key={variation.id} role="presentation">
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      onClick={() => {
+                        onSelect(variation.id);
+                        setOpen(false);
+                      }}
+                      className={[
+                        "flex w-full items-center px-2.5 py-1.5 text-left text-sm transition-colors",
+                        selected
+                          ? "bg-[var(--accent-ocean)]/12 font-semibold text-[var(--accent-ocean)]"
+                          : "text-[var(--ink-primary)] hover:bg-[var(--bg-inset)]",
+                      ].join(" ")}
+                    >
+                      <span className="min-w-0 truncate">{variation.name}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           ) : null}
+        </div>
+        {onSetFavorite && activeId ? (
+          <button
+            type="button"
+            onClick={() => onSetFavorite(activeId)}
+            disabled={activeIsFavorite}
+            className={[
+              "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[var(--bg-inset)]",
+              activeIsFavorite
+                ? "border-[var(--accent-gold)]/40 text-[var(--accent-gold)]"
+                : "text-[var(--ink-muted)] hover:bg-[var(--bg-inset)] hover:text-[var(--accent-gold)]",
+              "disabled:cursor-default",
+            ].join(" ")}
+            aria-label={
+              activeIsFavorite
+                ? `${active?.name ?? "Variation"} is the favorite`
+                : `Set ${active?.name ?? "variation"} as favorite`
+            }
+            aria-pressed={activeIsFavorite}
+            title={
+              activeIsFavorite ? "Favorite variation" : "Set as favorite"
+            }
+          >
+            <Star
+              className="h-3.5 w-3.5"
+              fill={activeIsFavorite ? "currentColor" : "none"}
+            />
+          </button>
+        ) : null}
+      </div>
+
+      {readOnly ? null : (
+        <div className="grid grid-cols-4 gap-1">
           <button
             type="button"
             onClick={() => onClone?.()}
-            className="inline-flex items-center gap-1 rounded-lg border border-[var(--bg-inset)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-inset)]"
+            className={actionBtnClass}
           >
-            <Copy className="h-3.5 w-3.5" />
+            <Copy className="h-3 w-3 shrink-0" />
             Clone
           </button>
           <button
             type="button"
             onClick={() => onRename?.()}
-            className="inline-flex items-center gap-1 rounded-lg border border-[var(--bg-inset)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-inset)]"
+            className={actionBtnClass}
           >
-            <Pencil className="h-3.5 w-3.5" />
+            <Pencil className="h-3 w-3 shrink-0" />
             Rename
           </button>
           <button
             type="button"
             onClick={() => onDelete?.()}
             disabled={variations.length <= 1}
-            className="inline-flex items-center gap-1 rounded-lg border border-[var(--bg-inset)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-inset)] disabled:opacity-40"
+            className={actionBtnClass}
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-3 w-3 shrink-0" />
             Delete
           </button>
           <button
             type="button"
             onClick={() => onCompare?.()}
             disabled={variations.length < 2}
-            className="inline-flex items-center gap-1 rounded-lg border border-[var(--bg-inset)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-inset)] disabled:opacity-40"
+            className={actionBtnClass}
           >
-            <GitCompare className="h-3.5 w-3.5" />
+            <GitCompare className="h-3 w-3 shrink-0" />
             Compare
           </button>
-          {activeIndex > 0 ? (
-            <span className="self-center text-[0.625rem] text-[var(--ink-muted)]">
-              Compare defaults to current vs previous tab
-            </span>
-          ) : null}
         </div>
       )}
     </div>

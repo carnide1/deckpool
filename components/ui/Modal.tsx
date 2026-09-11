@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -13,6 +19,8 @@ export function Modal({
   footer,
   size = "default",
   overlayContent,
+  closeOnOverlayClick = true,
+  initialFocusRef,
 }: {
   title: string;
   open: boolean;
@@ -21,6 +29,10 @@ export function Modal({
   footer?: ReactNode;
   size?: "default" | "wide";
   overlayContent?: ReactNode;
+  /** When false, backdrop clicks do not dismiss (Escape / X / Cancel still work). */
+  closeOnOverlayClick?: boolean;
+  /** Prefer this element on open instead of the close button. */
+  initialFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const titleId = useId();
   const modalRef = useRef<HTMLDivElement>(null);
@@ -42,6 +54,11 @@ export function Modal({
     document.body.style.overflow = "hidden";
 
     const focusFrame = window.requestAnimationFrame(() => {
+      const target = initialFocusRef?.current;
+      if (target) {
+        target.focus();
+        return;
+      }
       closeButtonRef.current?.focus();
     });
 
@@ -80,7 +97,7 @@ export function Modal({
       document.body.style.overflow = previousOverflow;
       if (previouslyFocused?.isConnected) previouslyFocused.focus();
     };
-  }, [open]);
+  }, [open, initialFocusRef]);
 
   if (!open) return null;
   if (typeof document === "undefined") return null;
@@ -89,42 +106,50 @@ export function Modal({
     <div
       ref={modalRef}
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
-      onClick={onClose}
+      onClick={closeOnOverlayClick ? onClose : undefined}
       role="presentation"
     >
       <div
         className={[
-          "poster-panel flex max-h-[min(90dvh,720px)] w-full flex-col shadow-[var(--shadow-poster)]",
+          "relative w-full",
           size === "wide" ? "max-w-4xl" : "max-w-lg",
         ].join(" ")}
-        onClick={(event) => event.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
       >
-        <div className="flex items-start justify-between gap-3 border-b border-[var(--bg-inset)] px-5 py-4">
-          <h2
-            id={titleId}
-            className="font-display text-lg font-bold text-[var(--ink-primary)]"
-          >
-            {title}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            ref={closeButtonRef}
-            className="rounded-lg p-1 text-[var(--ink-muted)] hover:bg-[var(--bg-inset)] hover:text-[var(--ink-primary)]"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
+        <div
+          className="poster-panel flex max-h-[min(90dvh,720px)] w-full flex-col shadow-[var(--shadow-poster)]"
+          onClick={(event) => event.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+        >
+          <div className="flex items-start justify-between gap-3 border-b border-[var(--bg-inset)] px-5 py-4">
+            <h2
+              id={titleId}
+              className="font-display text-lg font-bold text-[var(--ink-primary)]"
+            >
+              {title}
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              ref={closeButtonRef}
+              className="rounded-lg p-1 text-[var(--ink-muted)] hover:bg-[var(--bg-inset)] hover:text-[var(--ink-primary)]"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+            {children}
+          </div>
+          {footer ? (
+            <div className="border-t border-[var(--bg-inset)] px-5 py-4">
+              {footer}
+            </div>
+          ) : null}
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
-        {footer ? (
-          <div className="border-t border-[var(--bg-inset)] px-5 py-4">{footer}</div>
-        ) : null}
+        {overlayContent}
       </div>
-      {overlayContent}
     </div>,
     document.body,
   );
