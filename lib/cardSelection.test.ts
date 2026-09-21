@@ -22,6 +22,7 @@ function card(id: string): DeckPoolCard {
     series: "OP",
     images: [],
     has: [],
+    timings: [],
   };
 }
 

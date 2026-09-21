@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { withCompiledTimings } from "@/lib/compileTimings";
 import type { DeckPoolCard } from "@/types/catalog";
 
 type CatalogContextValue = {
@@ -30,7 +31,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     void import("@/data/cards.json")
       .then((mod) => {
         if (cancelled) return;
-        const rows = mod.default as DeckPoolCard[];
+        const rows = (mod.default as DeckPoolCard[]).map(withCompiledTimings);
         setCards(rows);
         setError(null);
       })

@@ -97,7 +97,7 @@ export function CreateDeckModal({
 
         {ownedLeaders.length === 0 ? (
           <div className="poster-panel p-4 text-sm text-[var(--ink-muted)]">
-            You do not own any Leaders yet. Add Leaders on Cards or add a
+            You do not own any Leaders yet. Add Leaders on Explore or add a
             starter deck there first.
           </div>
         ) : (

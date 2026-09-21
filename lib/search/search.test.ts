@@ -22,6 +22,7 @@ const linlin: DeckPoolCard = {
   series: "ST",
   images: [],
   has: ["effect"],
+  timings: [],
 };
 
 const bigMomPurple: DeckPoolCard = {
@@ -42,6 +43,7 @@ const bigMomPurple: DeckPoolCard = {
   series: "ST",
   images: [],
   has: ["counter"],
+  timings: [],
 };
 
 const anana: DeckPoolCard = {
@@ -62,6 +64,7 @@ const anana: DeckPoolCard = {
   series: "ST",
   images: [],
   has: ["effect"],
+  timings: [],
 };
 
 const lowCostPurple: DeckPoolCard = {
@@ -82,6 +85,7 @@ const lowCostPurple: DeckPoolCard = {
   series: "OP",
   images: [],
   has: ["effect"],
+  timings: [],
 };
 
 const yellowCharacter: DeckPoolCard = {
@@ -102,6 +106,7 @@ const yellowCharacter: DeckPoolCard = {
   series: "OP",
   images: [],
   has: [],
+  timings: [],
 };
 
 const cards = [linlin, bigMomPurple, anana, lowCostPurple, yellowCharacter];

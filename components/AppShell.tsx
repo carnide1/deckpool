@@ -18,7 +18,7 @@ const SIDEBAR_STORAGE_KEY = "deckpool.sidebarExpanded";
 const PRIMARY_NAV = [
   { href: "/collection", label: "Collection", icon: Layers },
   { href: "/wanted", label: "Wanted", icon: ScrollText },
-  { href: "/cards", label: "Cards", icon: Compass },
+  { href: "/explore", label: "Explore", icon: Compass },
   { href: "/decks", label: "Decks", icon: Anchor },
 ] as const;
 

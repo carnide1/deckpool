@@ -52,6 +52,7 @@ function leader(
     series: "OP",
     images: [],
     has: [],
+    timings: [],
   };
 }
 
@@ -77,6 +78,7 @@ function mainCard(
     series: "OP",
     images: [],
     has: [],
+    timings: [],
     ...overrides,
   };
 }

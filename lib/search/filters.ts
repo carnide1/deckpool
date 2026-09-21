@@ -1,3 +1,7 @@
+import {
+  isTimingSlug,
+  sortTimingSlugs,
+} from "@/lib/compileTimings";
 import type { CardCategory, DeckPoolCard, OptcgColor } from "@/types/catalog";
 
 export const OPTCG_COLORS: OptcgColor[] = [
@@ -18,8 +22,11 @@ export const CARD_CATEGORIES: CardCategory[] = [
 
 export const COST_VALUES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
+export type SearchTextField = "name" | "description";
+
 export type SearchFilters = {
   text: string;
+  textField: SearchTextField;
   colors: OptcgColor[];
   categories: CardCategory[];
   costs: number[];
@@ -28,12 +35,14 @@ export type SearchFilters = {
   attributes: string[];
   sets: string[];
   has: string[];
+  timings: string[];
   labels: string[];
   deckIds: string[];
 };
 
 export const EMPTY_FILTERS: SearchFilters = {
   text: "",
+  textField: "name",
   colors: [],
   categories: [],
   costs: [],
@@ -42,6 +51,7 @@ export const EMPTY_FILTERS: SearchFilters = {
   attributes: [],
   sets: [],
   has: [],
+  timings: [],
   labels: [],
   deckIds: [],
 };
@@ -49,6 +59,7 @@ export const EMPTY_FILTERS: SearchFilters = {
 export function cloneFilters(filters: SearchFilters): SearchFilters {
   return {
     text: filters.text,
+    textField: filters.textField,
     colors: [...filters.colors],
     categories: [...filters.categories],
     costs: [...filters.costs],
@@ -57,6 +68,7 @@ export function cloneFilters(filters: SearchFilters): SearchFilters {
     attributes: [...filters.attributes],
     sets: [...filters.sets],
     has: [...filters.has],
+    timings: [...filters.timings],
     labels: [...filters.labels],
     deckIds: [...filters.deckIds],
   };
@@ -73,6 +85,7 @@ export function hasActiveFilters(filters: SearchFilters): boolean {
     filters.attributes.length > 0 ||
     filters.sets.length > 0 ||
     filters.has.length > 0 ||
+    filters.timings.length > 0 ||
     filters.labels.length > 0 ||
     filters.deckIds.length > 0
   );
@@ -90,6 +103,7 @@ export type FilterOptions = {
   rarities: string[];
   attributes: string[];
   has: string[];
+  timings: string[];
 };
 
 export function uniqueFilterOptions(cards: DeckPoolCard[]): FilterOptions {
@@ -98,6 +112,7 @@ export function uniqueFilterOptions(cards: DeckPoolCard[]): FilterOptions {
   const rarities = new Set<string>();
   const attributes = new Set<string>();
   const has = new Set<string>();
+  const timings = new Set<string>();
 
   for (const card of cards) {
     for (const type of card.types) types.add(type);
@@ -105,6 +120,7 @@ export function uniqueFilterOptions(cards: DeckPoolCard[]): FilterOptions {
     if (card.rarity) rarities.add(card.rarity);
     for (const attr of card.attributes) attributes.add(attr);
     for (const flag of card.has) has.add(flag);
+    for (const timing of card.timings ?? []) timings.add(timing);
   }
 
   const byName = (a: string, b: string) => a.localeCompare(b);
@@ -114,12 +130,22 @@ export function uniqueFilterOptions(cards: DeckPoolCard[]): FilterOptions {
     rarities: [...rarities].sort(byName),
     attributes: [...attributes].sort(byName),
     has: [...has].sort(byName),
+    timings: sortTimingSlugs([...timings]),
   };
 }
 
-function matchesText(card: DeckPoolCard, raw: string): boolean {
+function matchesText(
+  card: DeckPoolCard,
+  raw: string,
+  textField: SearchTextField = "name",
+): boolean {
   const q = raw.trim().toLowerCase();
   if (!q) return true;
+  if (textField === "description") {
+    if ((card.effect ?? "").toLowerCase().includes(q)) return true;
+    if ((card.trigger ?? "").toLowerCase().includes(q)) return true;
+    return false;
+  }
   if (card.name.toLowerCase().includes(q)) return true;
   if (card.id.toLowerCase().includes(q)) return true;
   return false;
@@ -156,7 +182,7 @@ export function applySearchFilters(
   return cards.filter((card) => {
     if (ctx.ownedOnly && !ownedIds.has(card.id)) return false;
     if (ctx.wantedOnly && !wantedIds.has(card.id)) return false;
-    if (!matchesText(card, filters.text)) return false;
+    if (!matchesText(card, filters.text, filters.textField ?? "name")) return false;
 
     if (filters.colors.length > 0) {
       if (!filters.colors.some((color) => card.colors.includes(color))) {
@@ -194,6 +220,13 @@ export function applySearchFilters(
     }
 
     if (filters.has.length > 0 && !includesAll(card.has, filters.has)) {
+      return false;
+    }
+
+    if (
+      filters.timings.length > 0 &&
+      !includesAll(card.timings ?? [], filters.timings)
+    ) {
       return false;
     }
 
@@ -250,6 +283,7 @@ export function filtersFromSearchParams(params: URLSearchParams): SearchFilters 
 
   return {
     text: params.get("q") ?? "",
+    textField: params.get("in") === "text" ? "description" : "name",
     colors,
     categories,
     costs,
@@ -258,6 +292,7 @@ export function filtersFromSearchParams(params: URLSearchParams): SearchFilters 
     attributes: readList(params, "attr"),
     sets: readList(params, "set"),
     has: readList(params, "has"),
+    timings: readList(params, "timing").filter(isTimingSlug),
     labels: readList(params, "label"),
     deckIds: readList(params, "deck"),
   };
@@ -269,6 +304,9 @@ export function writeFiltersToSearchParams(
 ): void {
   if (filters.text.trim()) params.set("q", filters.text);
   else params.delete("q");
+
+  if (filters.textField === "description") params.set("in", "text");
+  else params.delete("in");
 
   writeList(
     params,
@@ -286,6 +324,7 @@ export function writeFiltersToSearchParams(
   writeList(params, "attr", filters.attributes);
   writeList(params, "set", filters.sets);
   writeList(params, "has", filters.has);
+  writeList(params, "timing", filters.timings);
   writeList(params, "label", filters.labels);
   writeList(params, "deck", filters.deckIds);
 }

@@ -12,6 +12,7 @@ const SAFE_NEXT_PREFIXES = [
   "/collection",
   "/wanted",
   "/cards",
+  "/explore",
   "/decks",
   "/profile",
 ] as const;

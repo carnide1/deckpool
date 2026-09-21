@@ -1,7 +1,7 @@
 # DeckPool — Codebase snapshot
 
 **Status:** Living summary of the **as-built** app  
-**Last updated:** 2026-09-10
+**Last updated:** 2026-09-21
 **Git:** `main` at `https://github.com/carnide1/deckpool.git` (snapshot includes Edit visual-deck rework; prior noted commit `21d1b33`)
 **Local path:** `C:\DeckPool`
 
@@ -73,7 +73,7 @@ V1 cost rules still in force in code: no paid search service, no language-model 
 | Data | Cloud Firestore, nested under `users/{uid}/…`. Client SDK writes. |
 | Catalog | Static JSON in `data/`, loaded in the browser. ~**2785** English cards. Don cards stripped at ingest. |
 | Images | Same-origin `/card-art/{file}.png` proxy for Bandai (avoids Chrome **CORP** and Vercel `/_next/image` **402**). Strict filename allowlist, upstream timeout, ETag/304, in-flight coalesce, long cache. Optional CDN mirror first via `NEXT_PUBLIC_CARD_IMAGE_ORIGIN`. Retries + **Retry** UI. |
-| Hosting (intended) | Vercel Hobby. No `vercel.json` in the repo. `.vercel/` is gitignored. Redirects (e.g. `/collection?view=wanted` → `/wanted`) live in `next.config.ts`. |
+| Hosting (intended) | Vercel Hobby. No `vercel.json` in the repo. `.vercel/` is gitignored. Redirects (e.g. `/collection?view=wanted` → `/wanted`, `/cards` → `/explore`) live in `next.config.ts`. |
 | Package manager | **npm** (`package-lock.json`) |
 | Tests | `npm test` → `tsx --test lib/**/*.test.ts` |
 | No | Firebase Admin, Storage uploads, cron, Resend, OAuth, Algolia |
@@ -90,7 +90,7 @@ From `C:\DeckPool`:
 | `npm run build` / `npm run start` | Production build and serve |
 | `npm test` | Unit tests for search, legality, builder, variations, collection helpers |
 | `npm run lint` | ESLint |
-| `npm run ingest-catalog -- --input <punk-records english folder>` | Rebuild `data/cards.json`, packs, construction rules, has-flags |
+| `npm run ingest-catalog -- --input <punk-records english folder>` | Rebuild `data/cards.json`, packs, construction rules, has-flags, timing-flags |
 | `npm run ingest-products` | Rebuild `data/products/` (ST01–ST36) from One Piece Player pages |
 | `firebase deploy --only firestore:rules` | Publish `firestore.rules` to project `deckpool-64459`. The tightened rules were deployed after the audit on 2026-08-27. |
 
@@ -131,16 +131,16 @@ Never commit `.env.local`. Never put a language-model key in the browser.
 **Public (logged out):** `/`, `/login`, `/signup`, `/forgot-password`, and **`/s/[shareId]`** (shared deck snapshot).  
 Logged-in users on the auth landing routes (`/`, `/login`, `/signup`, `/forgot-password`) are sent to a safe `?next=` path when present, otherwise `/decks`, or `/collection` if they own zero cards (`lib/auth-routing.ts`). Logged-in users **stay** on `/s/…` (AuthGate treats share links as public but not as auth landings).
 
-**App (requires login), nav in `AppShell`:** Collection, Wanted, Cards, Decks as primary; Profile separate.
+**App (requires login), nav in `AppShell`:** Collection, Wanted, Explore, Decks as primary; Profile separate.
 
 - **Desktop (`md+`):** Collapsible sidebar that **resizes** the main column (no overlay). Expanded header: “DeckPool” + `PanelLeftClose` collapse control on the right. Collapsed header shows “DP”. **Collapse** is button-only. **Expand** is click empty rail chrome (nav links still navigate). Preference in `localStorage` `deckpool.sidebarExpanded`. Profile pinned at the bottom of the rail.
-- **Mobile (`< md`):** No sidebar. Top header = DeckPool + Profile. Bottom bar = Collection, Wanted, Cards, Decks (safe-area padding).
+- **Mobile (`< md`):** No sidebar. Top header = DeckPool + Profile. Bottom bar = Collection, Wanted, Explore, Decks (safe-area padding).
 
 | Route | Job |
 |---|---|
 | `/collection` | **Owned binder** by default. Modes: Binder, Summary (`?view=summary`). Binder cannot create new card numbers (`useCollectionWrite(false)`). |
 | `/wanted` | **Wanted** shopping board — extra copies to buy. **Caught** can create binder rows. Old `/collection?view=wanted` redirects here. |
-| `/cards` | **Full catalog.** Name + filters, URL-synced. `owned=1` limits to owned. `wanted=1` limits to posters. Click a card to set qty (this **can** create new collection rows), bounty, labels, preferred art. Starter-deck add lives here too. |
+| `/explore` | **Full catalog.** Name/text search + filters, URL-synced. `owned=1` limits to owned. `wanted=1` limits to posters. `in=text` searches rules text. `timing=` is printed ability windows (AND). Click a card to set qty (this **can** create new collection rows), bounty, labels, preferred art. Starter-deck add lives here too. Old `/cards` redirects here. |
 | `/decks` | List decks, grouped by Leader. Create / rename / delete. |
 | `/decks/[id]` | **View** by default (`DeckView`). **Edit** at `?mode=edit` (`BuilderView`). |
 | `/profile` | Display name (Auth + Firestore), email, stats, logout. |
@@ -159,7 +159,7 @@ Authenticated shell (`app/(app)/layout.tsx`): `CatalogProvider` → `CollectionP
 
 | Context | Source |
 |---|---|
-| Catalog | Dynamic import of `data/cards.json` into memory |
+| Catalog | Dynamic import of `data/cards.json` into memory; `compileTimings` fills `timings` if ingest has not persisted them |
 | Collection | Firestore snapshot `users/{uid}/collection` |
 | Wanted | Firestore snapshot `users/{uid}/wanted` |
 | Card prefs | Firestore snapshot `users/{uid}/cardPrefs` |
@@ -206,7 +206,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 - Decrementing owned qty does **not** put the bounty back.
 - Variation `cards` is a full count map of the 50 (or draft). Leader is **not** in that map.
 - `favoriteVariationId` is the list the owner usually plays. New decks set it in the same write as `Main`. Older decks without the field fall back to a variation named `Main`, then to the most recently edited list. Tab order and first-opened tab use that same resolve. Deleting the favorite points it at another remaining variation.
-- Catalog, construction rules, products, and `has:` flags are **files**, not Firestore.
+- Catalog, construction rules, products, `has:` flags, and timing windows are **files**, not Firestore.
 
 ---
 
@@ -216,10 +216,10 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 
 - **Binder** shows **only cards with qty > 0**.
 - Modes: **Binder** (grid) and **Summary** (breakdown by category, color, cost, rarity). Wanted is a separate route (`/wanted`), not a Collection mode.
-- Filters: text (name or id), colors, categories, costs, rarities, types, attributes, sets, has-flags, labels, **which decks the card appears in**.
+- Filters: text (name/id or rules text via Name/Text), colors, categories, costs, rarities, types, attributes, sets, has-flags, **timing** windows, labels, **which decks the card appears in**.
 - Sort includes **recently updated** (binder uses collection timestamps).
 - Pagination: 60 per page.
-- Binder qty stepper only adjusts existing rows. To log a **new** card, use `/cards` or **Caught** on Wanted.
+- Binder qty stepper only adjusts existing rows. To log a **new** card, use `/explore` or **Caught** on Wanted.
 - Card tiles have a WANTED stamp (bottom-right of the art). Tap posts bounty 1 or drops the poster. Owned `×qty` stays top-right.
 - Card detail opens in a wide, two-column modal with which decks include that number, plus a **Bounty** stepper (extra copies to buy). Previous/Next controls sit outside the modal panel but remain in the modal keyboard focus loop, and the modal includes a focus-isolated, scroll-locking full-screen art lightbox.
 
@@ -233,10 +233,11 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 - Legacy URL `/collection?view=wanted` redirects to `/wanted` (`next.config.ts` + lightweight client fallback that avoids mounting the binder).
 - Wanted uses the same filters as Collection; labels only exist if the card is already owned. Sort includes recently updated (wanted timestamps).
 
-### Cards (`/cards`)
+### Explore (`/explore`)
 
-- Full English catalog (no Don).
-- Filters sync to the URL (`lib/search/filters.ts`). Owned toggle: `owned=1`. Wanted toggle: `wanted=1`. Both can be on. Deck membership filter (`deck=`) is wired like Collection (options + `deckIdsByCardId`).
+- Full English catalog (no Don). Nav label **Explore**. `components/cards/` is still card tiles/modals.
+- Filters sync to the URL (`lib/search/filters.ts`). Owned toggle: `owned=1`. Wanted toggle: `wanted=1`. Both can be on. Deck membership filter (`deck=`). Description mode: `in=text`. Timing facet: `timing=on-play|on-ko` (AND). Old `/cards` redirects here and keeps the query string.
+- Search bar Name | Text: Name matches name or card id; Text matches `effect` + `trigger` substring. Switching modes keeps the query. Clearing filters resets to Name.
 - Sort: newest / oldest / serial / name / category / cost. Newest = latest set family.
 - Page size 48, load-more style.
 - Modal: qty (can create), bounty, user labels, art picker, decks that use the card, outside Previous/Next controls through the currently loaded results, and click-to-zoom full-screen art. Card tiles show current user labels plus derived deck labels.
@@ -259,7 +260,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 - Search defaults to **owned only** (toggle off to add unowned copies). Hard filters always: Leader colors (subset of Leader), Leader forbid rules, no Leaders/Don in the 50.
 - Result tiles are art-first (no bordered meta chrome, no Add button). **Tap art to add** one copy (construction copy limit, owned-only, hard stop at **50**). Bottom-right stack (fixed slots): frosted **Own** / **Listed** chips, then WANTED. **Info** (bottom-left) opens detail (Prev/Next uses results or deck order by source). Preferred art on Leader and tiles.
 - WANTED stamp on results does **not** add to the 50. **Post all unowned** raises Wanted to `in this variation − owned` for the active variation (does not stack on top of an existing bounty).
-- Search toolbar: search alone; filters + Owned toggle on the next row; result count left / sort right on the third.
+- Search toolbar: search with Name/Text mode; filters (including Timing) + Owned toggle on the next row; result count left / sort right on the third.
 - List summary (active tab): oval pills grouped under **Averages**, **Composition**, and **Keywords** (keywords in a 2-col grid). Composition uses **Character** when the panel is wide enough, otherwise **Char**. Header chevron expands the full breakdown. `searcher` is a derived ingest flag (look at top of deck + add to hand), not a Bandai bracket keyword.
 - Status: plain **Legal · Owned** text (not pill buttons); reason notes collapse behind **“N notes”** with max-height scroll so long Unowned lists do not push List Summary.
 - View ↔ Edit keeps the open variation via `?variation=` on the mode toggle (does not jump back to the favorite).
@@ -292,9 +293,9 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 
 **What the UI uses:** `lib/search/filters.ts` + `NameSearchBar` + `FilterPanel`.
 
-- Text matches **name or card id** substring.
-- Facets: color, category, cost, rarity, type, attribute, set, has, label, deck (Collection, Wanted, and Cards).
-- Cards URL stores those filters plus `owned=1` and `wanted=1`. Builder keeps filters in component state.
+- Text has two modes on Collection, Wanted, Explore, and Builder. **Name** matches name or card id substring. **Description** (`in=text` on Explore) matches effect or trigger text only (not name/id). Switching modes keeps the typed query. Clearing filters resets to Name.
+- Facets: color, category, cost, rarity, type, attribute, set, has (keywords), **timing**, label, deck (Collection, Wanted, and Explore). Timing values are compiled printed windows (`on-play`, `activate-main`, …) and **AND** when several are selected. Keywords stay on `card.has` (blocker, rush, searcher, …).
+- Explore URL stores those filters plus `owned=1`, `wanted=1`, optional `in=text`, and `timing=`. Builder / Collection / Wanted keep filters in component state.
 
 **What exists in code but is not the live UI:** Limitless-style query language in `lib/search/parseQuery.ts` + `filterCards.ts` (`color:purple type:"Big Mom Pirates"`, `or`, `-term`, quotes, parens). Covered by `lib/search/search.test.ts`. Do not assume the search box parses `color:purple` unless you wire it up.
 
@@ -333,6 +334,7 @@ Do **not** call a language model to decide legality.
 | `data/packs.json` | Set/pack metadata |
 | `data/construction-rules.json` | copyLimit + forbid |
 | `data/has-flags.json` | Flags such as blocker, rush, banish, double-attack, unblockable, searcher (derived), counter, effect, trigger |
+| `data/timing-flags.json` | Printed ability windows found at ingest (on-play, activate-main, on-ko, …) |
 | `data/products/index.json` | ST01–ST36 picker |
 | `data/products/STxx.json` | Real box counts (`cardId` → qty) |
 | `scripts/ingest-catalog.ts` | From punk-records English JSON |
@@ -350,6 +352,7 @@ When a new set releases: pull punk-records, run both ingest scripts, commit `dat
 
 ```
 app/                    routes + layouts + globals.css + card-art/[file] proxy
+app/(app)/explore/      Full-catalog Explore page (authenticated)
 app/(app)/wanted/       Wanted board page (authenticated)
 components/             UI by area: auth, builder (DeckBoard/CardStack/CardResults), cards, collection, decks, profile, search, share, ui, wanted
 contexts/               Auth, UserProfile, Catalog, Collection, Wanted, CardPrefs, Decks
@@ -379,6 +382,7 @@ Key libraries:
 | `lib/cardImageUrl.ts` | Preferred/candidates, optional mirror rewrite, browser proxy URLs |
 | `lib/cardPrefs.ts` | Preferred art Firestore read/write; re-exports image URL helpers |
 | `lib/compileHas.ts` | Ingest `has` flags from effect/trigger text (official tags + derived `searcher`) |
+| `lib/compileTimings.ts` | Ingest/hydrate printed timing windows (On Play, Activate: Main, On K.O., …) |
 | `lib/variations.ts` | Favorite resolve + tab order (resolved favorite first, then recency) |
 | `lib/variationStats.ts` | Average cost/power, category and keyword counts for a list |
 | `lib/builderDeckStacks.ts` | Edit visual deck: stack sort + visible-face cap (4) |
@@ -401,15 +405,16 @@ The blueprint is still the product source of truth for **rules** (color identity
 
 | Blueprint said | Code today |
 |---|---|
-| Collection searches the **full** catalog to log new cards | Collection is **owned-only**. New cards are logged on `/cards`. |
-| Limitless `q=` language in the search box | Filter panel + name/id text. Query parser exists but is unused in pages. |
+| Collection searches the **full** catalog to log new cards | Collection is **owned-only**. New cards are logged on `/explore`. |
+| Limitless `q=` language in the search box | Filter panel + Name/Text search. Query parser exists but is unused in pages. |
+| `/cards` catalog page | **Explore** at `/explore`. `/cards` redirects and stays a safe `?next=` prefix. |
 | Soft 50 (may exceed on click, then Illegal) | Builder **hard-stops** adds at 50. |
 | Builder manifest as text lines + Add on results | Edit uses a **visual stacked deck** (tap remove) and art-first results (tap add + info). |
 | Display font Fredoka | Cinzel |
 | Builder search state may stay in the component | True. View vs Edit is `?mode=edit`. |
 | Paste-a-list import, match history, LLM, scanner | Not built. See `DECKPOOL_FUTURE_FEATURES.md`. |
 | Compact Legal/Owned on `/decks` is **any** variation | Compact Legal/Owned is the **favorite** variation. Profile still counts every variation. |
-| Wishlist (future-features #5) | Built as **Wanted**: extra copies to buy, top-level `/wanted` route + nav, Cards `wanted=1`, catch into the binder. Not a Collection mode. |
+| Wishlist (future-features #5) | Built as **Wanted**: extra copies to buy, top-level `/wanted` route + nav, Explore `wanted=1`, catch into the binder. Not a Collection mode. |
 | No public deck gallery / share network | **Share links** only: owner copies `/s/{id}` for one variation snapshot. Not a browseable gallery. |
 
 Do not silently revert Collection to a full-catalog logger, or rip out the filter UI to restore `color:purple` in the box, without the user asking.
@@ -424,7 +429,7 @@ Do not silently revert Collection to a full-catalog logger, or rip out the filte
 - One favorite variation per deck (`favoriteVariationId`). `/decks` Legal/Owned uses that list. View/Edit badges follow the open tab. Never delete the last variation (`deleteVariation` throws).
 - Do not auto-add Wanted cards to decks. Caught only touches the binder.
 - Do not add Google/Apple login, dark mode, Don cards, or a browseable public deck gallery in V1. Per-variation **share links** (`/s/{id}`) are allowed.
-- Primary app nav is Collection, Wanted, Cards, Decks. Profile stays separate (sidebar bottom / mobile header), not in the mobile bottom bar. Desktop sidebar resizes main content; collapse via header button, expand via click on collapsed rail chrome. Mobile uses header + bottom nav only.
+- Primary app nav is Collection, Wanted, Explore, Decks. Profile stays separate (sidebar bottom / mobile header), not in the mobile bottom bar. Desktop sidebar resizes main content; collapse via header button, expand via click on collapsed rail chrome. Mobile uses header + bottom nav only.
 - New public routes must be allowlisted in `AuthGate` without treating them as auth landings (logged-in users must not be bounced off `/s/…`). Public routes must render while Auth is still loading. Preserve deep links with safe `?next=` on forced login. Do not auto-redirect to `/login` while `authTimedOut`.
 - Prefer npm. Do not add Yarn.
 - Mobile-first; Builder Edit is art-first (tap results to add, tap deck stacks to remove, info for detail). Do not block the whole app on Auth IndexedDB — keep the public-route bypass and Auth ready timeout.

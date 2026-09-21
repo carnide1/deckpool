@@ -1,6 +1,7 @@
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { compileHas } from "../lib/compileHas";
+import { compileTimings } from "../lib/compileTimings";
 import type { CardCategory, DeckPoolCard, OptcgColor, PackMeta } from "../types/catalog";
 import type { CardMatch, ConstructionRule } from "../types/construction";
 
@@ -306,6 +307,7 @@ async function main() {
       series: fromId.series,
       images: image ? [image] : [],
       has: [],
+      timings: [],
     };
 
     const existing = byId.get(id);
@@ -393,10 +395,13 @@ async function main() {
   for (const seed of SEED_RULES) addRule(seed);
 
   const allFlags = new Set<string>();
+  const allTimings = new Set<string>();
   const cards = [...byId.values()].sort((a, b) => a.id.localeCompare(b.id));
   for (const card of cards) {
     card.has = compileHas(card.effect, card.trigger, card.counter);
+    card.timings = compileTimings(card.effect, card.trigger);
     for (const flag of card.has) allFlags.add(flag);
+    for (const timing of card.timings) allTimings.add(timing);
   }
 
   await mkdir(DATA_DIR, { recursive: true });
@@ -425,12 +430,17 @@ async function main() {
     path.join(DATA_DIR, "has-flags.json"),
     JSON.stringify({ flags: [...allFlags].sort() }, null, 2),
   );
+  await writeFile(
+    path.join(DATA_DIR, "timing-flags.json"),
+    JSON.stringify({ flags: [...allTimings].sort() }, null, 2),
+  );
 
   console.log(`cards: ${cards.length}`);
   console.log(`dropped Don: ${droppedDon}`);
   console.log(`dropped unknown category: ${droppedUnknown}`);
   console.log(`construction rules: ${rules.length}`);
   console.log(`has flags: ${[...allFlags].join(", ")}`);
+  console.log(`timings: ${[...allTimings].join(", ")}`);
 }
 
 main().catch((error) => {

@@ -25,6 +25,7 @@ export interface DeckPoolCard {
   series: string;
   images: string[];
   has: string[];
+  timings: string[];
 }
 
 export interface PackMeta {

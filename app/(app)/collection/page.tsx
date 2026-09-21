@@ -241,10 +241,10 @@ function CollectionPageMain() {
             Your binder — browse art, change copies, and pick scans. Add new
             card numbers from{" "}
             <Link
-              href="/cards"
+              href="/explore"
               className="text-[var(--accent-ocean)] hover:underline"
             >
-              Cards
+              Explore
             </Link>
             .
           </p>
@@ -305,14 +305,14 @@ function CollectionPageMain() {
               <div className="poster-panel p-6 text-center">
                 <p className="poster-stamp mb-3">Empty binder</p>
                 <p className="text-sm text-[var(--ink-muted)]">
-                  Search the catalog on Cards to add what you own, or add a
+                  Search the catalog on Explore to add what you own, or add a
                   starter deck from there.
                 </p>
                 <Link
-                  href="/cards"
+                  href="/explore"
                   className="mt-4 inline-block text-sm font-semibold text-[var(--accent-ocean)] hover:underline"
                 >
-                  Go to Cards
+                  Go to Explore
                 </Link>
               </div>
             ) : (
@@ -358,6 +358,10 @@ function CollectionPageMain() {
                 value={filters.text}
                 onChange={(text) => setFilters((prev) => ({ ...prev, text }))}
                 placeholder="Search your binder"
+                textField={filters.textField}
+                onTextFieldChange={(textField) =>
+                  setFilters((prev) => ({ ...prev, textField }))
+                }
               />
               <FilterPanel
                 layout="sidebar"

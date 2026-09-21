@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { FacetMultiSelect } from "@/components/search/FacetMultiSelect";
+import { timingLabel } from "@/lib/compileTimings";
 import {
   CARD_CATEGORIES,
   COST_VALUES,
@@ -130,6 +131,15 @@ export function FilterPanel({
         options={options.has}
         selected={filters.has}
         onChange={(has) => patch({ has })}
+      />
+      <FacetMultiSelect
+        label="Timing"
+        fullWidth={stacked}
+        options={options.timings}
+        selected={filters.timings}
+        onChange={(timings) => patch({ timings })}
+        optionLabel={timingLabel}
+        renderOption={timingLabel}
       />
       <FacetMultiSelect
         label="Type"

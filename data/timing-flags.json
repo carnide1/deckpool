@@ -1,0 +1,16 @@
+{
+  "flags": [
+    "activate-main",
+    "counter",
+    "end-of-your-turn",
+    "main",
+    "on-block",
+    "on-ko",
+    "on-opponents-attack",
+    "on-play",
+    "opponents-turn",
+    "trigger",
+    "when-attacking",
+    "your-turn"
+  ]
+}

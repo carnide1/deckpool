@@ -472,6 +472,10 @@ export function BuilderView({ deck }: { deck: Deck }) {
             <NameSearchBar
               value={filters.text}
               onChange={(text) => setFilters((prev) => ({ ...prev, text }))}
+              textField={filters.textField}
+              onTextFieldChange={(textField) =>
+                setFilters((prev) => ({ ...prev, textField }))
+              }
               inputClassName="h-9 rounded-lg text-sm shadow-none"
             />
             <div className="flex flex-wrap items-center gap-2">

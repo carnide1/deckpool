@@ -54,7 +54,7 @@ function parseSort(raw: string | null): SortKey {
   return "newest";
 }
 
-function CardsPageContent() {
+function ExplorePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { cards, loading: catalogLoading, error: catalogError } = useCatalog();
@@ -198,7 +198,7 @@ function CardsPageContent() {
     const timer = window.setTimeout(() => {
       const search = cardsSearchString(filters, ownedOnly, sort, wantedOnly);
       if (search === urlKey) return;
-      router.replace(search ? `/cards?${search}` : "/cards", { scroll: false });
+      router.replace(search ? `/explore?${search}` : "/explore", { scroll: false });
     }, 350);
     return () => window.clearTimeout(timer);
   }, [filters, ownedOnly, wantedOnly, sort, urlKey, router]);
@@ -213,7 +213,7 @@ function CardsPageContent() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
-            Cards
+            Explore
           </h1>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
             Search the full catalog and add copies to your binder.
@@ -231,7 +231,7 @@ function CardsPageContent() {
                   sort,
                   wantedOnly,
                 );
-                router.replace(search ? `/cards?${search}` : "/cards", {
+                router.replace(search ? `/explore?${search}` : "/explore", {
                   scroll: false,
                 });
               }}
@@ -250,7 +250,7 @@ function CardsPageContent() {
                   sort,
                   event.target.checked,
                 );
-                router.replace(search ? `/cards?${search}` : "/cards", {
+                router.replace(search ? `/explore?${search}` : "/explore", {
                   scroll: false,
                 });
               }}
@@ -268,6 +268,10 @@ function CardsPageContent() {
       <NameSearchBar
         value={filters.text}
         onChange={(text) => setFilters((prev) => ({ ...prev, text }))}
+        textField={filters.textField}
+        onTextFieldChange={(textField) =>
+          setFilters((prev) => ({ ...prev, textField }))
+        }
       />
 
       <FilterPanel
@@ -353,14 +357,14 @@ function CardsPageContent() {
   );
 }
 
-export default function CardsPage() {
+export default function ExplorePage() {
   return (
     <Suspense
       fallback={
-        <div className="text-sm text-[var(--ink-muted)]">Loading cards…</div>
+        <div className="text-sm text-[var(--ink-muted)]">Loading catalog…</div>
       }
     >
-      <CardsPageContent />
+      <ExplorePageContent />
     </Suspense>
   );
 }

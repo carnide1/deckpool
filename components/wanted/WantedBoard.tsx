@@ -292,6 +292,10 @@ export function WantedBoard() {
             value={filters.text}
             onChange={(text) => setFilters((prev) => ({ ...prev, text }))}
             placeholder="Search Wanted"
+            textField={filters.textField}
+            onTextFieldChange={(textField) =>
+              setFilters((prev) => ({ ...prev, textField }))
+            }
           />
           <FilterPanel
             layout="sidebar"

@@ -20,6 +20,7 @@ describe("isSafeNextPath", () => {
     assert.equal(isSafeNextPath("/collection"), true);
     assert.equal(isSafeNextPath("/wanted"), true);
     assert.equal(isSafeNextPath("/cards?owned=1"), true);
+    assert.equal(isSafeNextPath("/explore?owned=1"), true);
     assert.equal(isSafeNextPath("/profile"), true);
   });
 

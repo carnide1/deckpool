@@ -27,6 +27,7 @@ function card(
     series: setCode.replace(/\d+/g, ""),
     images: [],
     has: [],
+    timings: [],
     ...extras,
   };
 }

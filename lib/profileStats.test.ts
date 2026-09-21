@@ -34,6 +34,7 @@ describe("profileStats", () => {
       series: "OP",
       images: [],
       has: [],
+      timings: [],
     };
     const filler: DeckPoolCard = {
       id: "OP08-072",
@@ -53,6 +54,7 @@ describe("profileStats", () => {
       series: "ST",
       images: [],
       has: [],
+      timings: [],
     };
     const cardsById = new Map<string, DeckPoolCard>([
       ["ST07-001", leader],

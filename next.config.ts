@@ -50,6 +50,11 @@ const nextConfig: NextConfig = {
         destination: "/wanted",
         permanent: false,
       },
+      {
+        source: "/cards",
+        destination: "/explore",
+        permanent: false,
+      },
     ];
   },
 };

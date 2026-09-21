@@ -29,6 +29,7 @@ const linlin: DeckPoolCard = {
   series: "ST",
   images: [],
   has: ["effect"],
+  timings: [],
 };
 
 const anana: DeckPoolCard = {
@@ -49,6 +50,7 @@ const anana: DeckPoolCard = {
   series: "ST",
   images: [],
   has: ["counter"],
+  timings: [],
 };
 
 const katakuri: DeckPoolCard = {
@@ -69,6 +71,7 @@ const katakuri: DeckPoolCard = {
   series: "ST",
   images: [],
   has: ["effect"],
+  timings: [],
 };
 
 const perona: DeckPoolCard = {
@@ -89,6 +92,7 @@ const perona: DeckPoolCard = {
   series: "OP",
   images: [],
   has: ["effect"],
+  timings: [],
 };
 
 const cards = [linlin, anana, katakuri, perona];
@@ -166,6 +170,48 @@ describe("applySearchFilters", () => {
       ["OP03-114", "ST07-002"],
     );
   });
+
+  it("matches description text, not name or id", () => {
+    const withText = [
+      { ...perona, effect: "Draw 1 card." },
+      { ...anana, name: "Draw", effect: null },
+    ];
+    const results = applySearchFilters(
+      withText,
+      filters({ text: "draw", textField: "description" }),
+    );
+    assert.deepEqual(
+      results.map((card) => card.id),
+      ["OP03-114"],
+    );
+  });
+
+  it("does not match card numbers in description mode", () => {
+    const results = applySearchFilters(
+      cards,
+      filters({ text: "st07-002", textField: "description" }),
+    );
+    assert.deepEqual(
+      results.map((card) => card.id),
+      [],
+    );
+  });
+
+  it("ANDs selected timings", () => {
+    const timed = [
+      { ...perona, timings: ["on-play", "when-attacking"] },
+      { ...anana, timings: ["on-play"] },
+      { ...katakuri, timings: ["when-attacking"] },
+    ];
+    const results = applySearchFilters(
+      timed,
+      filters({ timings: ["on-play", "when-attacking"] }),
+    );
+    assert.deepEqual(
+      results.map((card) => card.id),
+      ["OP03-114"],
+    );
+  });
 });
 
 describe("filter URL params", () => {
@@ -183,6 +229,30 @@ describe("filter URL params", () => {
     assert.deepEqual(parsed.colors, ["Red", "Blue"]);
     assert.deepEqual(parsed.categories, ["Character"]);
     assert.deepEqual(parsed.types, ["Straw Hat Crew"]);
+    assert.equal(parsed.textField, "name");
+    assert.equal(params.has("in"), false);
+  });
+
+  it("round-trips description mode and timings", () => {
+    const original = filters({
+      text: "blocker",
+      textField: "description",
+      timings: ["on-play", "on-ko"],
+    });
+    const params = new URLSearchParams();
+    writeFiltersToSearchParams(params, original);
+    const parsed = filtersFromSearchParams(params);
+    assert.equal(parsed.text, "blocker");
+    assert.equal(parsed.textField, "description");
+    assert.equal(params.get("in"), "text");
+    assert.deepEqual(parsed.timings, ["on-play", "on-ko"]);
+  });
+
+  it("drops unknown timing slugs", () => {
+    const parsed = filtersFromSearchParams(
+      new URLSearchParams("timing=on-play|not-a-window|blocker"),
+    );
+    assert.deepEqual(parsed.timings, ["on-play"]);
   });
 
   it("writes owned and wanted pool flags", () => {

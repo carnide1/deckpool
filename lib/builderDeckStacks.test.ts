@@ -24,6 +24,7 @@ function card(
     series: "OP",
     images: [],
     has: [],
+    timings: [],
     ...partial,
   };
 }
