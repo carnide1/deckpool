@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { AuthSwitchLink } from "@/components/auth/AuthSwitchLink";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -108,12 +108,7 @@ export function SignupForm() {
       </Button>
       <p className="text-center text-sm text-[var(--ink-muted)]">
         Already have an account?{" "}
-        <Link
-          href="/login"
-          className="font-medium text-[var(--accent-ocean)] hover:underline"
-        >
-          Log in
-        </Link>
+        <AuthSwitchLink href="/login">Log in</AuthSwitchLink>
       </p>
     </form>
   );

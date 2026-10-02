@@ -94,7 +94,7 @@ From `C:\DeckPool`:
 | `npm run lint` | ESLint |
 | `npm run ingest-catalog -- --input <punk-records english folder>` | Rebuild `data/cards.json`, packs, construction rules, has-flags, timing-flags |
 | `npm run ingest-products` | Rebuild `data/products/` (ST01–ST36) from One Piece Player pages |
-| `firebase deploy --only firestore:rules` | Publish `firestore.rules` to project `deckpool-64459`. The tightened rules were deployed after the audit on 2026-08-27. The Friends rules were deployed on 2026-10-02 (they only add access, so the older app code keeps working). |
+| `firebase deploy --only firestore:rules` | Publish `firestore.rules` to project `deckpool-64459`. The tightened rules were deployed after the audit on 2026-08-27. The Friends rules were deployed on 2026-10-02 (they only add access, so the older app code keeps working). The `invites` rule compiles but is **not deployed yet**; deploy it before shipping invite links. |
 
 Ingest is a **local** maintainer task. Vercel must not scrape Bandai or One Piece Player at runtime. Commit the generated JSON.
 
@@ -130,8 +130,8 @@ Never commit `.env.local`. Never put a language-model key in the browser.
 
 ## Routes
 
-**Public (logged out):** `/`, `/login`, `/signup`, `/forgot-password`, and **`/s/[shareId]`** (shared deck snapshot).  
-Logged-in users on the auth landing routes (`/`, `/login`, `/signup`, `/forgot-password`) are sent to a safe `?next=` path when present, otherwise `/decks`, or `/collection` if they own zero cards (`lib/auth-routing.ts`). Logged-in users **stay** on `/s/…` (AuthGate treats share links as public but not as auth landings).
+**Public (logged out):** `/`, `/login`, `/signup`, `/forgot-password`, **`/s/[shareId]`** (shared deck snapshot), and **`/invite/[code]`** (friend invite link). The list lives in `isPublicPath` (`lib/auth-routing.ts`).  
+Logged-in users on the auth landing routes (`/`, `/login`, `/signup`, `/forgot-password`) are sent to a safe `?next=` path when present, otherwise `/decks`, or `/collection` if they own zero cards (`lib/auth-routing.ts`). Logged-in users **stay** on `/s/…` and `/invite/…` (AuthGate treats them as public but not as auth landings). `/invite` is also a safe `?next=` prefix, and the "Sign up" / "Log in" switch links on the auth forms keep a safe `?next=` (`AuthSwitchLink`).
 
 **App (requires login), nav in `AppShell`:** Collection, Wanted, Explore, Decks, Friends, Profile. There is **no solid sidebar, header, or bottom bar** — just floating round icon buttons (no text). Labels show as tooltips on hover / keyboard focus; each link has an `aria-label`. Active page = filled pirate red. The Friends button shows a red badge with the number of pending incoming requests (`9+` cap; count is in the `aria-label`).
 
@@ -154,6 +154,7 @@ Logged-in users on the auth landing routes (`/`, `/login`, `/signup`, `/forgot-p
 | `/friends/[uid]/wanted` | Friend's Wanted board, read-only, with bounty counts. |
 | `/friends/[uid]/decks/[deckId]` | Friend's deck view (all variations, read-only) + **Copy to my decks**. |
 | `/profile` | Display name (Auth + Firestore), email, stats, logout. |
+| `/invite/[code]` | **Public friend invite.** Shows who invited you and one action (Send friend request / Accept / Sign up / Log in, or a status line). Outside `AppShell`; layout mounts `FriendsProvider` only. Not indexed. |
 | `/s/[shareId]` | **Public shared deck.** Snapshot of one variation (name, Leader, card counts + preferred art). No login. Outside `AppShell`. |
 | `/card-art/[file]` | **Image proxy** (not a page). Allowlisted `*.png` under Bandai `cardlist/card/` only. |
 
@@ -185,7 +186,7 @@ The four `useOwner*` hooks (`hooks/`) take `(ownerUid, { enabled })`, keep the "
 ### AuthGate (as built)
 
 - Wraps the whole app. **No** `middleware.ts`.
-- **Public** (render even while Auth is still loading): `/`, `/login`, `/signup`, `/forgot-password`, `/s/…`. This avoids a mobile Safari hang where IndexedDB never resolves and the UI stuck on “Loading…”.
+- **Public** (render even while Auth is still loading): `/`, `/login`, `/signup`, `/forgot-password`, `/s/…`, `/invite/…` (`isPublicPath`). This avoids a mobile Safari hang where IndexedDB never resolves and the UI stuck on “Loading…”.
 - **Protected** app routes wait for Auth. If Auth does not become ready within **8 seconds**, loading ends with `authTimedOut`; the gate shows Retry / Go to log in and does **not** auto-redirect to `/login` (so Retry works).
 - Guests sent to login get `?next=` with the intended app path (safe allowlist in `lib/auth-routing.ts`). After sign-in, AuthGate prefers a safe `next` over the default post-login path.
 - Post-login default (`getPostLoginPath`) races owned-count against a **5s** timeout and falls back to `/decks`.
@@ -213,6 +214,7 @@ usernames/{name}                     uid  (doc id = lowercase username; unique c
 profiles/{uid}                       username, displayName, privacy {decks, collection, wanted}, updatedAt
 friendRequests/{fromUid_toUid}       fromUid, toUid, fromUsername, fromDisplayName, toUsername, createdAt
 friendships/{uidA_uidB}              members [uidA, uidB] (sorted), createdAt
+invites/{code}                       inviterUid, inviterUsername, inviterDisplayName, createdAt, expiresAt (7 days)
 ```
 
 **Friends rules (summary):**
@@ -221,6 +223,7 @@ friendships/{uidA_uidB}              members [uidA, uidB] (sorted), createdAt
 - `profiles/{uid}`: readable by the owner and friends. Owner writes exact keys; the `usernames` doc for the new name must point at the owner after the write. No delete.
 - `friendRequests`: read/delete by sender or recipient. Create checks the id format, the recipient's `usernames` mapping, the sender's profile username, not already friends, and no reverse request. Names are copied onto the request because the recipient cannot read the sender's profile yet.
 - `friendships`: read/delete by either member. Create needs sorted members, the id `m0_m1`, and an existing request from the other person to you. Accept = one batch (create friendship, delete their request, delete yours too if both sent).
+- `invites`: public single-doc **get** (signed-out people see who invited them), **list denied**. Create only as yourself with your current profile username, `createdAt == request.time`, and `expiresAt` within 8 days (7 + clock slack). No update; inviter may delete. Invites grant nothing: the request itself goes through the normal `friendRequests` rules. Expiry is enforced on the landing page.
 - Friend reads: `collection` / `wanted` / `decks` (+ `variations`) are readable by a friend only when `profiles/{owner}.privacy.<area> == true`. A missing profile means deny. `cardPrefs` is readable by any friend (so their art shows).
 
 - Collection document **id** is the card number. Qty 0 **deletes** the doc.
@@ -322,6 +325,8 @@ friendships/{uidA_uidB}              members [uidA, uidB] (sorted), createdAt
 - **Add friend:** exact username only (no search, no directory). Send is disabled until your friend lists load. Messages: "That's you.", "Already friends.", "Request already sent."; if they already asked you, an inline **Accept** appears. Unknown or invalid names get one generic message; a failed send says so separately.
 - **Requests:** Incoming (Accept / Decline) and Sent (Cancel). If both people send, accepting removes both requests. No blocking, messaging, or friend cap.
 - **Friend list:** sorted by display name, links to `/friends/{uid}`, remove with confirm (copied decks stay yours).
+- **Invite link:** button on the username card. Each tap writes a new `invites/{random id}` (7 days, reusable, no list or cancel UI) and opens the share sheet (`navigator.share`); without one it copies the link (toast shows the URL if the clipboard fails).
+- **Invite page (`/invite/[code]`):** writes nothing on open (link previews are harmless). Unknown, expired, or stale (inviter changed username — checked against `usernames/{name}`) → "expired, ask for a new one". Signed out → Sign up / Log in carrying `?next=` back. No username → claim form first. Then: own link, already friends (link to their page), request sent, **Accept** (they already asked you), or **Send friend request** (request from you to the inviter, who accepts as usual).
 - **Privacy:** three switches (Decks, Collection, Wanted), all on by default, stored in `profiles/{uid}.privacy`. Collection labels are visible to friends when Collection is shared. Preferred art (`cardPrefs`) is always visible to friends.
 
 ### Friend pages (`/friends/[uid]/…`)
@@ -414,6 +419,7 @@ hooks/                  useCollectionWrite, useWantedWrite, useOwner{Collection,
 lib/                    firebase, users, profiles, friends, friendIds, usernames, collection, wanted, shares, cardPrefs, cardArt*, cardImageUrl, variations, decks, legality, builder, search, tests
 types/                  catalog, collection, wanted, deck, share, user, friends, cardPref, construction, product
 app/s/[shareId]/         public shared-deck page (+ CatalogProvider layout)
+app/invite/[code]/       public friend-invite page (+ FriendsProvider layout)
 data/                   committed snapshots (~2785 cards; includes OP17)
 scripts/                ingest + product URL/override JSON
 firestore.rules
@@ -445,8 +451,9 @@ Key libraries:
 | `lib/profiles.ts` | `profiles/{uid}` + `usernames/{name}`: claim/change username (transaction), privacy, display-name sync |
 | `lib/friends.ts` | Username lookup, request send/cancel/decline/accept (batch), remove friend, queries + parsers |
 | `lib/friendIds.ts` | Sorted friendship id, request id, relationship helper |
+| `lib/invites.ts` | Invite links: create, read, expiry, stale-username check, URL + share text |
 | `lib/firestoreErrors.ts` | `isPermissionDenied` |
-| `lib/shares.ts` | Public share snapshots: create, parse, SMS URL helpers, clipboard copy |
+| `lib/shares.ts` | Public share snapshots: create, parse, `absoluteAppUrl` (also used by invites), clipboard copy |
 | `lib/labels.ts` | Union-merge labels |
 | `lib/variationDiff.ts` | Compare two count maps |
 | `lib/profileStats.ts` | Profile numbers |
@@ -474,7 +481,7 @@ The blueprint is still the product source of truth for **rules** (color identity
 | Paste-a-list import, match history, LLM, scanner | Not built. See `DECKPOOL_FUTURE_FEATURES.md`. |
 | Compact Legal/Owned on `/decks` is **any** variation | Compact Legal/Owned is the **favorite** variation. Profile still counts every variation. |
 | Wishlist (future-features #5) | Built as **Wanted**: extra copies to buy, top-level `/wanted` route + nav, Explore `wanted=1`, catch into the binder. Not a Collection mode. |
-| No public deck gallery / share network | **Share links** only: owner copies `/s/{id}` for one variation snapshot. Not a browseable gallery. **Friends** can browse each other's decks / collection / Wanted (exact-username add, per-area privacy). Still no public directory. |
+| No public deck gallery / share network | **Share links** only: owner copies `/s/{id}` for one variation snapshot. Not a browseable gallery. **Friends** can browse each other's decks / collection / Wanted (exact-username add or a 7-day invite link, per-area privacy). Still no public directory. |
 
 Do not silently revert Collection to a full-catalog logger, or rip out the filter UI to restore `color:purple` in the box, without the user asking.
 
@@ -490,7 +497,7 @@ Do not silently revert Collection to a full-catalog logger, or rip out the filte
 - Do not auto-add Wanted cards to decks. Caught only touches the binder.
 - Do not add Google/Apple login, dark mode, Don cards, or a browseable public deck gallery in V1. Per-variation **share links** (`/s/{id}`) are allowed.
 - Primary app nav is Collection, Wanted, Explore, Decks, Friends, plus Profile, as floating icon-only buttons with tooltips (left column on desktop, bottom row on mobile). Keep the page gutters (`md:pl-24`, mobile `pb-24`) so floating icons do not cover content.
-- New public routes must be allowlisted in `AuthGate` without treating them as auth landings (logged-in users must not be bounced off `/s/…`). Public routes must render while Auth is still loading. Preserve deep links with safe `?next=` on forced login. Do not auto-redirect to `/login` while `authTimedOut`.
+- New public routes must be added to `isPublicPath` (`lib/auth-routing.ts`, used by `AuthGate`) without treating them as auth landings (logged-in users must not be bounced off `/s/…`). Public routes must render while Auth is still loading. Preserve deep links with safe `?next=` on forced login. Do not auto-redirect to `/login` while `authTimedOut`.
 - Prefer npm. Do not add Yarn.
 - Mobile-first; Builder Edit is art-first (tap results to add, tap deck stacks to remove, info for detail). Do not block the whole app on Auth IndexedDB — keep the public-route bypass and Auth ready timeout.
 

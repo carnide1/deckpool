@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Copy, Pencil } from "lucide-react";
 import toast from "react-hot-toast";
+import { InviteLinkButton } from "@/components/friends/InviteLinkButton";
 import { UsernameClaimForm } from "@/components/friends/UsernameClaimForm";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -40,7 +41,11 @@ export function UsernameCard({ username }: { username: string }) {
           <Pencil className="h-3.5 w-3.5" />
           Change
         </Button>
+        <InviteLinkButton />
       </div>
+      <p className="mt-2 text-xs text-[var(--ink-muted)]">
+        Or text someone an invite link (works for 7 days).
+      </p>
 
       <Modal
         title="Change username"

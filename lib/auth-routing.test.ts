@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   isAuthLandingPath,
+  isPublicPath,
   isSafeNextPath,
 } from "@/lib/auth-routing";
 
@@ -25,6 +26,7 @@ describe("isSafeNextPath", () => {
     assert.equal(isSafeNextPath("/friends"), true);
     assert.equal(isSafeNextPath("/friends/abc"), true);
     assert.equal(isSafeNextPath("/friends/abc/decks/x?variation=y"), true);
+    assert.equal(isSafeNextPath("/invite/abc123"), true);
   });
 
   it("rejects open redirects and auth/share paths", () => {
@@ -37,5 +39,22 @@ describe("isSafeNextPath", () => {
     assert.equal(isSafeNextPath("/"), false);
     assert.equal(isSafeNextPath("/s/abc"), false);
     assert.equal(isSafeNextPath("/api/secret"), false);
+    assert.equal(isSafeNextPath("/invitex"), false);
+  });
+});
+
+describe("isPublicPath", () => {
+  it("includes auth landings, share links, and invite links", () => {
+    assert.equal(isPublicPath("/login"), true);
+    assert.equal(isPublicPath("/"), true);
+    assert.equal(isPublicPath("/s/abc"), true);
+    assert.equal(isPublicPath("/invite/abc"), true);
+  });
+
+  it("excludes app routes and lookalikes", () => {
+    assert.equal(isPublicPath("/decks"), false);
+    assert.equal(isPublicPath("/friends"), false);
+    assert.equal(isPublicPath("/invitex"), false);
+    assert.equal(isPublicPath("/sx"), false);
   });
 });

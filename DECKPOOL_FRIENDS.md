@@ -1,6 +1,6 @@
 # DeckPool — Friends
 
-**Status:** Implemented on the `friends` branch (Phases 1–12), pushed to GitHub, not merged into `main` yet. Rules deployed 2026-10-02. Post-build review fixed the add-friend error messages, a malformed-URL crash on friend pages, and the remove-friend modal text.  
+**Status:** Implemented on the `friends` branch (Phases 1–12), pushed to GitHub, not merged into `main` yet. Rules deployed 2026-10-02. Post-build review fixed the add-friend error messages, a malformed-URL crash on friend pages, and the remove-friend modal text. **Invite links** are built on the same branch (local commit, not pushed); their `invites` rule compiles but is not deployed yet.  
 **Last updated:** 2026-10-02  
 **Product:** Add friends by exact username and view each other's decks, binder, and Wanted board, read-only.
 
@@ -29,7 +29,7 @@ This file records the friends decisions and the build plan. For how the app work
 
 | Topic | Decision |
 |---|---|
-| Discovery | Exact unique username only (Discord model). |
+| Discovery | Exact unique username only (Discord model), plus 7-day **invite links** you send yourself (planned; see Invite links). |
 | Username timing | New accounts pick a username at signup. Existing accounts are asked the first time they open Friends. |
 | Username changes | Allowed. The old name frees up immediately. |
 | Requests | Send by username → recipient accepts or declines. Sender can cancel. Either friend can remove. |
@@ -97,6 +97,237 @@ A hidden area shows "Hidden by {name}" on their page. Toggles apply immediately 
 - The other choice, **All variations**, copies every variation with its name; their favorite comes first and becomes your favorite.
 - The copy is yours and independent; later edits on either side do not sync.
 - The copy's Legal/Owned is computed against **your** binder like any deck. Copying works even if you do not own the Leader (deck shows Unowned), which differs from the normal Create Deck picker that only offers owned Leaders.
+
+## Invite links (implemented)
+
+As built, the plan below was followed with one change: Phase 1.6 uses the click-handler option (`components/auth/AuthSwitchLink.tsx` reads `?next=` at click time), so the login and signup pages did not need a `Suspense` boundary.
+
+Text or send someone a link that invites them to be your friend, so they don't have to type your username.
+
+### Decisions
+
+| Topic | Decision |
+|---|---|
+| What opening the link does | Shows who invited you and a **Send friend request** button. Tapping it sends a normal request from **you to the inviter**; the inviter accepts it from Incoming (badge, as today). No auto-friending. |
+| Link format | Random code: `/invite/{code}` (Firestore auto-id). Not the username, so it survives username changes. |
+| Lifetime | **7 days** from creation. Usable by any number of people until then. |
+| Landing page | Shows the inviter's display name + `@username` and an explicit button. Nothing happens just from opening the link (text-app link previews can't trigger anything). |
+| Managing invites | None. It's just a share link: no list of open invites, no cancel. Each tap of **Invite link** makes a new link. |
+
+### How it works
+
+1. On `/friends`, an **Invite link** button (next to your username) creates `invites/{code}` and opens the phone's share sheet (`navigator.share`) with "Add me as a friend on DeckPool: {url}". Without a share sheet it copies the link (toast shows the URL if the clipboard fails), the same fallback as deck share links.
+2. The person opens `/invite/{code}`:
+   - **Signed out:** sees "{name} invited you to be friends on DeckPool" with **Sign up** and **Log in**. Both carry `?next=/invite/{code}` so they come back to the invite afterwards. Signup already asks for a username, so a brand-new person can go from the text to a sent request in one flow.
+   - **Signed in, no username yet:** pick a username first (requests need one), then the button appears.
+   - **Signed in:** **Send friend request**. Or, depending on the situation: "This is your own invite link", "You're already friends" (link to their page), "Request already sent", or **Accept** if the inviter already sent them a request.
+   - **Expired or unknown code:** "This invite link has expired. Ask them for a new one."
+3. The inviter sees the request in Incoming and accepts like any other.
+
+### Data and rules (planned)
+
+```
+invites/{code}    inviterUid, inviterUsername, inviterDisplayName, createdAt, expiresAt
+```
+
+- **Read:** public single-doc **get** (so a signed-out person sees who invited them, same idea as `shares`); **list denied** (no directory of invites). It exposes only the display name + username, and only to people who have the link.
+- **Create:** signed in, `inviterUid == auth.uid`, exact keys, `inviterUsername` equals your `profiles/{uid}.username`, `createdAt == request.time`, and `expiresAt` is a timestamp after `request.time` and no later than `request.time + 8 days`. (The client sets `expiresAt` from its own clock, which can drift from the server, so the rule allows one day of slack; the app always writes exactly 7 days.) No update. Delete by the inviter (no UI; just allowed).
+- **Sending the request uses the existing `friendRequests` rules unchanged.** The invite only fills in who to send to. It grants nothing beyond what knowing the username already allows, so expiry is checked on the landing page, not in the request rule.
+- **Stale username:** if the inviter changes their username after making the link, the stored `inviterUsername` no longer points at them, and the request rule would refuse the request. The landing page checks this up front (reads `usernames/{inviterUsername}` and compares the uid) and shows the expired message instead of a button that would fail.
+- Old invite docs are not cleaned up by the app. Optionally turn on a Firestore TTL policy on `expiresAt` in the Firebase console.
+
+### Implementation plan (planned)
+
+Phases run in order. Each step says **what** to add or change, **why**, **how**, and **what existing code it reuses**. Rules deploy (Phase 2) must happen before the app ships.
+
+#### Codebase facts this plan relies on (checked 2026-10-02)
+
+- `AuthProvider` and `UserProfileProvider` are mounted at the **root** (`app/layout.tsx` → `Providers`), so any route can use them. `FriendsProvider` only depends on those two, so it can be mounted outside the `(app)` group.
+- `AuthGate` (`components/auth/AuthGate.tsx`) has a private `isPublicRoute(pathname)`: auth landings + `/s/…`. Public routes render while Auth is still loading. Signed-in users on an auth landing (`/login`, `/signup`, …) are redirected to a safe `?next=` if present.
+- `isSafeNextPath` (`lib/auth-routing.ts`) only accepts paths under `SAFE_NEXT_PREFIXES` and explicitly rejects `/s/…`. `/invite` is not in the list yet.
+- `LoginForm`'s "Sign up" link and `SignupForm`'s "Log in" link are plain `/signup` and `/login`. **They drop `?next=`**, so someone who switches forms would lose the invite.
+- `shareAbsoluteUrl(shareId, origin?)` in `lib/shares.ts` builds the texting URL (explicit origin → `NEXT_PUBLIC_APP_URL` → relative path). `copyTextToClipboard` is in the same file. `ShareLinkButton` shows the pattern: copy, toast; if the clipboard fails, a 12-second toast with the URL.
+- `app/s/layout.tsx` is the model for a public page outside `AppShell`: a simple header with the DeckPool wordmark.
+- `useFriends()` exposes `friendUids`, `incoming`, `outgoing`, `loading`, `sendRequest(toUid, toUsername)`, `acceptRequest(fromUid)`. `relationshipWith` (`lib/friendIds.ts`) turns those into `self | friend | incoming | outgoing | none`. `UsernameClaimForm` claims a username and reports via `onDone`.
+
+#### Phase 1 — Types, helpers, tests (no UI, no Firestore yet)
+
+**1.1 Add the `Invite` type** to `types/friends.ts`:
+
+```ts
+export interface Invite {
+  code: string;
+  inviterUid: string;
+  inviterUsername: string;
+  inviterDisplayName: string;
+  createdAtMs: number;
+  expiresAtMs: number;
+}
+```
+
+- **Why:** one shape for the page and helpers; `*Ms` numbers keep it testable without Firestore `Timestamp`s (same convention as `FriendRequest.createdAtMs`).
+
+**1.2 Generalize the URL builder** in `lib/shares.ts`:
+
+- Extract the body of `shareAbsoluteUrl` into `export function absoluteAppUrl(path: string, origin?: string): string` (same order: explicit origin → `NEXT_PUBLIC_APP_URL` → bare path; trims trailing `/`).
+- Make `shareAbsoluteUrl(shareId, origin)` call `absoluteAppUrl(sharePagePath(shareId), origin)`. No behavior change for shares.
+- **Why:** invites need the identical logic; one copy avoids drift (e.g. someone fixes the env fallback in one place only).
+
+**1.3 Create `lib/invites.ts`** (pure helpers first, Firestore functions in Phase 3):
+
+- `export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;`
+- `export function invitePagePath(code: string): string` → `` `/invite/${encodeURIComponent(code)}` `` (mirrors `sharePagePath`).
+- `export function inviteAbsoluteUrl(code: string, origin?: string): string` → `absoluteAppUrl(invitePagePath(code), origin)`.
+- `export function isInviteExpired(invite: Pick<Invite, "expiresAtMs">, nowMs: number): boolean` → `invite.expiresAtMs <= nowMs`. Takes `nowMs` as a parameter so tests don't depend on the clock.
+- `export function parseInvite(code: string, data: Record<string, unknown>): Invite | null` → returns `null` if `inviterUid` or `inviterUsername` is not a non-empty string or `expiresAt` is missing; otherwise strings default to `""` and timestamps go through `timestampToMillis` (from `lib/timestamps`, already used by `lib/friends.ts`).
+- `export function inviteShareText(displayName: string, username: string): string` → `` `Add me as a friend on DeckPool (@${username})` `` (display name is optional context; keep the text short for SMS).
+
+**1.4 Tests** in a new `lib/invites.test.ts` (`node:test` + `node:assert/strict`, like `lib/friendIds.test.ts`):
+
+- `invitePagePath` encodes odd characters; `inviteAbsoluteUrl` with an explicit origin (with and without trailing `/`) and with no origin (relative path when env is unset).
+- `isInviteExpired`: one ms before expiry → false; exactly at expiry → true; after → true.
+- `parseInvite`: valid doc → full object; missing `inviterUid` → `null`; missing `expiresAt` → `null`; wrong types → `null` or defaults as specified.
+
+**1.5 Public route + safe `next`** in `lib/auth-routing.ts`:
+
+- Add `"/invite"` to `SAFE_NEXT_PREFIXES` so `/login?next=/invite/abc` and `/signup?next=/invite/abc` return the person to the invite.
+- Move the public-route check out of `AuthGate` into `lib/auth-routing.ts` as `export function isPublicPath(pathname: string): boolean` returning true for auth landings, `/s`, `/s/…`, `/invite`, `/invite/…`. `AuthGate` imports it in place of its local `isPublicRoute`.
+- **Why move it:** so it can be unit-tested next to `isSafeNextPath` instead of living untested inside a component.
+- **Why public:** a signed-out person must see who invited them before deciding to sign up. **Not** an auth landing: signed-in users must stay on the invite (same treatment as `/s/…`).
+- Tests in `lib/auth-routing.test.ts`: `isSafeNextPath("/invite/abc")` → true; `isPublicPath` true for `/invite/abc`, `/s/x`, `/login`; false for `/decks`, `/friends`, `/invitex`.
+
+**1.6 Keep `?next=` when switching login ⇄ signup:**
+
+- `components/auth/LoginForm.tsx`: the "Sign up" link becomes `/signup` plus the current `?next=` when `isSafeNextPath(next)`.
+- `components/auth/SignupForm.tsx`: same for the "Log in" link.
+- Read `next` with `useSearchParams()`. Neither `app/login` nor `app/signup` has a `Suspense` boundary today, so wrap each form in `<Suspense>` in its page (Next requires one for `useSearchParams` in a statically rendered page and fails the build otherwise — read `node_modules/next/dist/docs` on `useSearchParams` first). Alternative that avoids Suspense: read `window.location.search` in a click handler, the way `AuthGate.readNextParam` does.
+- **Why:** without this, a new person who taps **Log in** on the invite, realizes they have no account, and taps "Sign up" lands in the app instead of back on the invite.
+
+#### Phase 2 — Firestore rules (deploy before the app)
+
+**2.1 Add to `firestore.rules`:**
+
+```
+match /invites/{code} {
+  allow get: if true;
+  allow list: if false;
+  allow create: if request.auth != null
+    && request.resource.data.keys().hasOnly(['inviterUid', 'inviterUsername', 'inviterDisplayName', 'createdAt', 'expiresAt'])
+    && request.resource.data.keys().hasAll(['inviterUid', 'inviterUsername', 'inviterDisplayName', 'createdAt', 'expiresAt'])
+    && request.resource.data.inviterUid == request.auth.uid
+    && validUsername(request.resource.data.inviterUsername)
+    && request.resource.data.inviterUsername == get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.username
+    && request.resource.data.inviterDisplayName is string
+    && request.resource.data.inviterDisplayName.size() <= 80
+    && request.resource.data.createdAt == request.time
+    && request.resource.data.expiresAt is timestamp
+    && request.resource.data.expiresAt > request.time
+    && request.resource.data.expiresAt <= request.time + duration.value(8, 'd');
+  allow update: if false;
+  allow delete: if request.auth != null && resource.data.inviterUid == request.auth.uid;
+}
+```
+
+- **Why each check:** exact keys stop junk fields; `inviterUid`/`inviterUsername` must be yours so nobody can make an invite that names someone else; `createdAt == request.time` forces `serverTimestamp()`; the `expiresAt` window caps lifetime (8 days = 7 + clock slack); `get` public + `list` denied mirrors `shares` (link holders only, no directory).
+- Reuses the existing `validUsername` helper. `friendRequests` rules are **unchanged**.
+
+**2.2 Compile:** `firebase deploy --only firestore:rules --dry-run`.
+
+**2.3 Deploy:** `firebase deploy --only firestore:rules` (ask the user first). Safe to ship before the app: it only adds a new collection.
+
+#### Phase 3 — Data functions
+
+Add to `lib/invites.ts`:
+
+- `inviteRef(code)` → `doc(getFirebaseDb(), "invites", code)`; `invitesRef()` → `collection(...)`.
+- `export async function createInvite(me: PublicProfile): Promise<string>`:
+  - `const ref = doc(invitesRef());` (auto-id = the random code, ~20 chars).
+  - `await setDoc(ref, { inviterUid: me.uid, inviterUsername: me.username, inviterDisplayName: me.displayName.slice(0, 80), createdAt: serverTimestamp(), expiresAt: Timestamp.fromMillis(Date.now() + INVITE_TTL_MS) });`
+  - Returns `ref.id`.
+- `export async function getInvite(code: string): Promise<Invite | null>` → `getDoc`; `null` if missing or `parseInvite` returns `null`. Works signed out (public `get`).
+- `export async function isInviteCurrent(invite: Invite): Promise<boolean>` → reads `usernames/{invite.inviterUsername}` (via `usernameRef` from `lib/profiles.ts`) and returns `snap.exists() && snap.data().uid === invite.inviterUid`. **Signed-in only** (the `usernames` rule needs auth). Catches the stale-username case before showing a button that would fail.
+- **Why no listener:** the invite never changes after creation; one read is enough.
+
+#### Phase 4 — "Invite link" button on Friends
+
+**4.1 New `components/friends/InviteLinkButton.tsx`:**
+
+- Uses `useUserProfile().publicProfile` (renders nothing without a username; the Friends page already only shows `UsernameCard` when you have one).
+- On click (button disabled while busy, label "Creating…"):
+  1. `const code = await createInvite(publicProfile)`.
+  2. `const url = inviteAbsoluteUrl(code, window.location.origin)`.
+  3. If `navigator.share` exists: `await navigator.share({ title: "DeckPool invite", text: inviteShareText(...), url })`. If it throws an `AbortError` (user closed the sheet), do nothing. Any other error → fall through to step 4.
+  4. Otherwise `await copyTextToClipboard(url)` → toast "Invite link copied — paste it in a text. It works for 7 days."; if the clipboard fails → `toast.success(\`Invite link: ${url}\`, { duration: 12000 })` (same fallback as `ShareLinkButton`).
+  - Firestore error → `toast.error(message || "Could not create invite link")`.
+- Icon: `Send` or `Link2` from `lucide-react`; `Button variant="secondary" size="sm"`, matching the Copy button next to it.
+- **Why the share sheet first:** on phones it opens Messages directly, which is the main use. Desktop browsers mostly lack it, so they copy.
+
+**4.2 Put it in `UsernameCard`:** add `<InviteLinkButton />` in the button row after **Change**, and add one line of helper text under the row: "Or send an invite link (works for 7 days)."
+
+#### Phase 5 — The `/invite/[code]` page
+
+**5.1 Route layout `app/invite/layout.tsx`** (server component; outside `(app)`, so no `AppShell`, no binder/deck providers):
+
+- Same shell as `app/s/layout.tsx`: page background + header with the **DeckPool** wordmark linking to `/`. No `CatalogProvider` (no cards on this page).
+- Wraps children in `<FriendsProvider>` so the page can use `useFriends()`. Safe because `FriendsProvider` only needs the root Auth + UserProfile providers, and it stays idle for guests and for accounts without a username.
+
+**5.2 Page `app/invite/[code]/page.tsx`** (client component; `useParams<{ code: string }>()`, wrapped in `Suspense` like `app/(app)/decks/[id]/page.tsx`). It renders an `InviteCard` (`components/friends/InviteCard.tsx`) inside a centered `poster-panel` (max width ~28rem).
+
+**5.3 `InviteCard` state machine** — evaluate top to bottom, render the first match:
+
+| # | Condition | What it shows |
+|---|---|---|
+| 1 | Auth still loading (`useAuth().loading`) **or** invite still loading | "Loading invite…" |
+| 2 | `getInvite` returned `null` (unknown code / bad doc) | **Expired view**: "This invite link has expired or doesn't exist. Ask them for a new one." + link "Go to DeckPool" (`/`) |
+| 3 | `isInviteExpired(invite, Date.now())` | Expired view |
+| 4 | Signed out | "**{name}** (`@{username}`) invited you to be friends on DeckPool." Buttons: **Sign up** → `/signup?next=/invite/{code}`, **Log in** → `/login?next=/invite/{code}` |
+| 5 | Signed in, `publicProfileLoading` | "Loading invite…" |
+| 6 | Signed in, no username (`!publicProfile?.username`) | Invite line + "Pick a username first so they know who you are." + `UsernameClaimForm` (on `onDone`, the provider picks up the new profile and the card moves on) |
+| 7 | `invite.inviterUid === user.uid` | "This is your own invite link. Send it to someone you want to add." + link to `/friends` |
+| 8 | `isInviteCurrent(invite)` resolved `false` | Expired view (stale username) |
+| 9 | `useFriends().loading` or the current-check still pending | "Loading invite…" |
+| 10 | `relationshipWith(...) === "friend"` | "You're already friends with {name}." + **View their page** → `/friends/{inviterUid}` |
+| 11 | `=== "outgoing"` | "Request sent. You'll be friends once {name} accepts." + link to `/friends` |
+| 12 | `=== "incoming"` | "{name} already sent you a request." + **Accept** → `acceptRequest(inviterUid)`; on success show row 10 (the live listener flips it) + toast |
+| 13 | `=== "none"` | Invite line + **Send friend request** → `sendRequest(inviterUid, inviterUsername)`; on success the outgoing listener flips the card to row 11 + toast "Request sent to @{username}" |
+
+- `{name}` = `inviterDisplayName.trim() || "@" + inviterUsername` (same fallback as the friend pages).
+- `relationshipWith(invite.inviterUid, { selfUid, friendUids, incomingFromUids, outgoingToUids })` — build the two sets exactly as `AddFriendForm` does.
+- Button errors (send/accept) → `toast.error(message)`; the button re-enables. A permission-denied on send (rare race: username changed after the current-check) → show the expired view.
+- Loading: one effect fetches `getInvite(code)` on mount (cancelled flag; result stored with the code it belongs to, like the `loadedUid` gate). A second effect runs `isInviteCurrent` once the user is signed in and the invite is loaded. Do the state resets inside `queueMicrotask` (the repo's pattern for `react-hooks/set-state-in-effect`).
+- **Nothing is written on page load.** Only the two buttons write. This is what makes link previews harmless.
+
+**5.4 Metadata:** `export const metadata = { title: "DeckPool invite", robots: { index: false } }` in `app/invite/layout.tsx`, so search engines don't index invite pages and previews show a sensible title. (Check the Next 16 metadata docs in `node_modules/next/dist/docs` before writing it.)
+
+#### Phase 6 — Verify
+
+- `npm test`, `npm run lint`, `npm run build` (the route list should show `ƒ /invite/[code]`).
+- Run the extra manual checks below with two accounts plus one brand-new signup in a private window.
+
+#### Phase 7 — Docs (same commit as the code)
+
+- `DECKPOOL_CODEBASE.md`: add `/invite/[code]` to the public routes line and the route table; add `invites/{code}` to the Firestore tree and the Friends rules summary; note the Invite link button under Friends; mention `isPublicPath` in the AuthGate section; set **Last updated**.
+- This file: mark Invite links as implemented in **Status**, and change the section heading from "(planned, not built)".
+
+#### Suggested commits
+
+1. Phase 1 — helpers, tests, public route + `next` handling (no visible change except login/signup keeping `next`).
+2. Phase 2 — rules (deploy right away).
+3. Phases 3–5 — data functions, Invite link button, `/invite/[code]` page.
+4. Phase 7 — docs (or fold into commit 3).
+
+### Extra manual checks (planned)
+
+1. A makes a link and texts it; B (signed out, new) signs up through it, lands back on the invite, sends the request; A accepts.
+2. Existing signed-in user opens the link → Send works; reopening shows "Request already sent".
+3. A opens their own link → "This is your own invite link".
+4. A link older than 7 days, a made-up code, and a link made before A changed username all show the expired message.
+5. Opening the link alone (and a link preview in a messaging app) never sends a request.
+6. Signed out → **Log in** → switch to "Sign up" → finish signup → you land back on the invite (the `?next=` survives the switch).
+7. Signed in without a username (taken at signup) → invite asks for a username first, then shows **Send friend request**.
+8. B already sent A a request, then opens A's link → **Accept** works and the card shows "already friends".
+9. On a phone, **Invite link** opens the share sheet; closing the sheet shows no error. On desktop it copies and toasts.
+10. Deck share links (`/s/…`) still work exactly as before (the URL helper was generalized).
 
 ---
 
