@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-10-02
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (snapshot includes floating icon nav + wide layouts; prior noted commit `ad26da6`). **Friends** is on the `friends` branch (pushed to GitHub; not merged into `main` yet). Its `firestore.rules` were deployed on 2026-10-02.
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (snapshot includes floating icon nav + wide layouts; prior noted commit `ad26da6`). **Friends** is on the `friends` branch (pushed; not merged into `main` yet). Deck-list sort is `039cac0`. Its `firestore.rules` were deployed on 2026-10-02.
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -277,7 +277,16 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 
 ### Decks (`/decks`)
 
-- Deck cards in a responsive grid (up to 3 per row). A Sort dropdown (same control as Collection) offers last edited, oldest edit, name, name Z–A, Leader, color, newest created, and oldest created. Default is last edited. The last choice is stored in `localStorage` (`deckpool.deckSort`) and shared with a friend's Decks tab. Multiple decks per Leader are allowed.
+- Deck cards in a responsive grid (up to 3 per row). Multiple decks per Leader are allowed.
+- **Sort** sits above the grid (deck count on the left, the same dropdown control as Collection on the right). It is hidden while decks are loading and when there are none. Options, in order:
+  - **Last edited** (default): newest `updatedAt`. A deck with no `updatedAt` uses `createdAt`.
+  - **Oldest edit:** that same timestamp, oldest first.
+  - **Name** and **Name (Z–A).**
+  - **Leader:** the Leader’s catalog name. A Leader missing from the catalog sorts by its card number.
+  - **Color:** Leader colors in the same order as the filter chips (Red, Green, Blue, Purple, Black, Yellow). The color list is compared from the left, so Red comes before Red/Green, which comes before Green. A missing Leader sorts last.
+  - **Newest created** and **Oldest created:** `createdAt` only. A later edit does not count as a later create.
+- Equal rows break the tie by deck name, then deck id. Name (Z–A) still orders equal names by id A–Z.
+- The choice is saved in this browser only (`localStorage` key `deckpool.deckSort`, read and written by `useDeckSort`). It is not a Firestore field and it is not stored per account. Your Decks page and a friend’s Decks tab share that one saved choice. A missing or unknown saved value falls back to last edited.
 - Create: search **owned Leaders only**, name the deck, create variation `Main` empty, pin it as the favorite.
 - Rename / delete with confirm. Delete also deletes variations.
 - Legal / Owned badges on each row come from the **favorite** variation only (not “any variation”).
@@ -333,7 +342,7 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 
 - One layout (`FriendShell`) with back link, name + `@username`, and Decks / Collection / Wanted tabs. A hidden area keeps its tab (eye-off icon) and shows "Hidden by {name}" (also used when rules refuse). Non-friends and unknown uids see "not available".
 - Listeners only start for shared areas; rules enforce the same thing.
-- **Decks:** same grid and sort dropdown as `/decks` (same saved choice). **Legal badge only** (no Owned), no rename/delete, friend's Leader art.
+- **Decks:** same grid, sort options, and saved choice as `/decks` (one `deckpool.deckSort` value for both). **Legal badge only** (no Owned), no rename/delete, friend's Leader art. The dropdown is hidden when they have no decks.
 - **Deck view:** `DeckViewBody` with all variations, a static favorite star (not clickable), Legal only, no Wanted stamps, no Edit/Share. Card details are read-only (no art picker, no owned line).
 - **Copy to my decks** (`CopyDeckModal`): editable name; default **This variation** (saved as one `Main` variation), or **All variations** (names kept, their favorite first and pinned). Works even if you don't own the Leader. Opens your new deck after copying (`createDeckWithVariations`).
 - **Collection:** binder grid with copies, labels (their labels + their deck labels when decks are shared), the same filters/sort/pager as `/collection`, and a Summary toggle. Card details show copies and labels read-only; "In decks" links go to the friend's deck pages.
@@ -341,7 +350,8 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 
 ### Shared building blocks
 
-- `hooks/useCardListBrowser.ts` + `components/cards/CardBrowserFrame.tsx`: filter / sort / 60-per-page state and the grid + sticky filter sidebar layout. Used by Collection, Wanted, and both friend boards.
+- `hooks/useCardListBrowser.ts` + `components/cards/CardBrowserFrame.tsx`: filter / sort / 60-per-page state and the grid + sticky filter sidebar layout. Used by Collection, Wanted, and both friend boards. Card sort labels stay on `SortSelect`; deck lists pass their own labels.
+- `hooks/useDeckSort.ts`: the deck-list sort saved in `localStorage`. Used by `/decks` and a friend's Decks tab.
 - `DeckView` is a thin wrapper (your data, share link, Edit toggle, favorite pin, Wanted) around `components/builder/DeckViewBody.tsx`, which friend decks reuse.
 - Shared components take optional props that default to today's behavior: `DeckRow` (`href`, optional rename/delete, `preferredImages`, `showOwned`), `DeckStatusBadges` (`owned` optional), `VariationTabs` (static star without `onSetFavorite`), `CardDetailModal` (`allowArtPicker`, `deckHref`, `ownedLabel`, read-only wanted/labels), `CardGrid` (read-only Wanted stamp), `CollectionModeToggle` (`baseHref`).
 
