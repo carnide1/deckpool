@@ -134,7 +134,8 @@ Logged-in users on the auth landing routes (`/`, `/login`, `/signup`, `/forgot-p
 **App (requires login), nav in `AppShell`:** Collection, Wanted, Explore, Decks, then a small divider, then Profile. There is **no solid sidebar, header, or bottom bar** — just floating round icon buttons (no text). Labels show as tooltips on hover / keyboard focus; each link has an `aria-label`. Active page = filled pirate red.
 
 - **Desktop (`md+`):** Icons float in a column, vertically centered on the left edge (`fixed`). `main` keeps a left gutter (`md:pl-24`) so content never sits under them.
-- **Mobile (`< md`):** Same icons float in a centered row at the bottom (safe-area aware). `main` has `pb-24`. The nav wrappers are `pointer-events-none` (buttons re-enable) so taps beside the icons reach the page.
+- **Mobile (`< md`):** Same icons float in a centered row at the bottom (safe-area aware). `main` has bottom padding (6rem + safe area).
+- The **document** scrolls (no fixed-height inner scroll box), so content runs under the phone browser toolbar with no background strip, and back/forward restores scroll. Collection/Wanted pagination scrolls the window. The nav wrappers are `pointer-events-none` (buttons re-enable) so taps beside the icons reach the page.
 - No brand title in the shell and no sidebar preference in `localStorage` anymore.
 - **Page widths:** Collection, Wanted, Explore, Decks, deck View/Edit, and Profile cap at `1800px`. Card grids go up to 6 columns at `xl` and 7 at `2xl` (no fixed tile width cap). `/decks` is a grid (1 → 2 at `md` → 3 at `xl`). Profile puts the stats poster left and Account in a 380px column at `lg+`.
 

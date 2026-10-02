@@ -72,8 +72,8 @@ function FloatingNavButton({
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative flex h-dvh max-h-dvh flex-col overflow-hidden bg-[var(--bg-page)]">
-      <main className="min-h-0 flex-1 overflow-y-auto p-4 pb-24 md:p-8 md:pl-24">
+    <div className="relative min-h-dvh">
+      <main className="p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-8 md:pl-24">
         {children}
       </main>
 

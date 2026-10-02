@@ -185,14 +185,10 @@ export function WantedBoard() {
 
   const goToPage = (next: number) => {
     setPage(next);
-    const main = gridTopRef.current?.closest("main");
-    if (!main || !gridTopRef.current) return;
+    if (!gridTopRef.current) return;
     const offset =
-      main.scrollTop +
-      gridTopRef.current.getBoundingClientRect().top -
-      main.getBoundingClientRect().top -
-      8;
-    main.scrollTo({ top: Math.max(0, offset), behavior: "smooth" });
+      window.scrollY + gridTopRef.current.getBoundingClientRect().top - 8;
+    window.scrollTo({ top: Math.max(0, offset), behavior: "smooth" });
   };
 
   const selectedOwned = selectedCard ? ownedMap[selectedCard.id] : undefined;
