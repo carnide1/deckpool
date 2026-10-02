@@ -77,30 +77,52 @@ export function mainDeckFromProductContents(
   return cards;
 }
 
+/**
+ * Write a deck and its variations in one batch. The first variation is pinned
+ * as the favorite. Does not check Leader ownership.
+ */
+export async function createDeckWithVariations(
+  uid: string,
+  name: string,
+  leaderId: string,
+  variations: { name: string; cards: Record<string, number> }[],
+): Promise<string> {
+  if (variations.length === 0) {
+    throw new Error("A deck needs at least one variation.");
+  }
+  const db = getFirebaseDb();
+  const deckRef = doc(userDecksRef(uid));
+  const variationRefs = variations.map(() =>
+    doc(deckVariationsRef(uid, deckRef.id)),
+  );
+  const batch = writeBatch(db);
+  batch.set(deckRef, {
+    name: name.trim().slice(0, 120) || "Untitled deck",
+    leaderId,
+    favoriteVariationId: variationRefs[0].id,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  variations.forEach((variation, index) => {
+    batch.set(variationRefs[index], {
+      name: variation.name.trim().slice(0, 80) || "Main",
+      cards: cleanCardsMap(variation.cards),
+      updatedAt: serverTimestamp(),
+    });
+  });
+  await batch.commit();
+  return deckRef.id;
+}
+
 export async function createDeckFromStarter(
   uid: string,
   product: ProductIndexEntry,
   contents: ProductContents,
   cardsById: Map<string, DeckPoolCard>,
 ): Promise<string> {
-  const db = getFirebaseDb();
-  const deckRef = doc(userDecksRef(uid));
-  const variationRef = doc(deckVariationsRef(uid, deckRef.id));
-  const batch = writeBatch(db);
-  batch.set(deckRef, {
-    name: product.name,
-    leaderId: product.leaderId,
-    favoriteVariationId: variationRef.id,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-  batch.set(variationRef, {
-    name: "Main",
-    cards: mainDeckFromProductContents(contents, cardsById),
-    updatedAt: serverTimestamp(),
-  });
-  await batch.commit();
-  return deckRef.id;
+  return createDeckWithVariations(uid, product.name, product.leaderId, [
+    { name: "Main", cards: mainDeckFromProductContents(contents, cardsById) },
+  ]);
 }
 
 export async function createDeck(
@@ -108,24 +130,9 @@ export async function createDeck(
   name: string,
   leaderId: string,
 ): Promise<string> {
-  const db = getFirebaseDb();
-  const deckRef = doc(userDecksRef(uid));
-  const variationRef = doc(deckVariationsRef(uid, deckRef.id));
-  const batch = writeBatch(db);
-  batch.set(deckRef, {
-    name: name.trim() || "Untitled deck",
-    leaderId,
-    favoriteVariationId: variationRef.id,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-  batch.set(variationRef, {
-    name: "Main",
-    cards: {},
-    updatedAt: serverTimestamp(),
-  });
-  await batch.commit();
-  return deckRef.id;
+  return createDeckWithVariations(uid, name, leaderId, [
+    { name: "Main", cards: {} },
+  ]);
 }
 
 export async function renameDeck(

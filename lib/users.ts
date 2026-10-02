@@ -27,6 +27,7 @@ function normalizeProfile(
         : fallback.displayName,
     email: typeof data.email === "string" ? data.email : fallback.email,
     createdAt: data.createdAt ?? null,
+    username: null,
   };
 }
 
@@ -67,7 +68,7 @@ export async function ensureUserDoc(user: User): Promise<UserProfile> {
     const snap = await tx.get(ref);
     if (!snap.exists()) {
       tx.set(ref, { ...fallback, createdAt: serverTimestamp() });
-      return { ...fallback, createdAt: null };
+      return { ...fallback, createdAt: null, username: null };
     }
     return normalizeProfile(snap.data() as Record<string, unknown>, fallback);
   });

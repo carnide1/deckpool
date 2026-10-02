@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { TextInput } from "@/components/ui/TextInput";
+import { normalizeUsername, validateUsername } from "@/lib/usernames";
 
 const schema = z
   .object({
@@ -16,6 +17,13 @@ const schema = z
       .trim()
       .min(2, "Display name must be at least 2 characters")
       .max(40, "Display name is too long"),
+    username: z
+      .string()
+      .transform(normalizeUsername)
+      .superRefine((value, ctx) => {
+        const message = validateUsername(value);
+        if (message) ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+      }),
     email: z.string().email("Enter a valid email"),
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string(),
@@ -25,7 +33,8 @@ const schema = z
     path: ["confirmPassword"],
   });
 
-type FormValues = z.infer<typeof schema>;
+type FormInput = z.input<typeof schema>;
+type FormValues = z.output<typeof schema>;
 
 export function SignupForm() {
   const { signup } = useAuth();
@@ -33,16 +42,24 @@ export function SignupForm() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) });
+  } = useForm<FormInput, unknown, FormValues>({ resolver: zodResolver(schema) });
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      await signup(
+      const { usernameError } = await signup(
         values.email.trim(),
         values.password,
         values.displayName.trim(),
+        values.username,
       );
-      toast.success("Account created");
+      if (usernameError) {
+        toast.success(
+          `Account created. ${usernameError} Pick a username on Friends.`,
+          { duration: 6000 },
+        );
+      } else {
+        toast.success("Account created");
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Sign up failed");
     }
@@ -55,6 +72,15 @@ export function SignupForm() {
         autoComplete="name"
         error={errors.displayName?.message}
         {...register("displayName")}
+      />
+      <TextInput
+        label="Username"
+        autoComplete="username"
+        autoCapitalize="none"
+        spellCheck={false}
+        placeholder="e.g. strawhat_luffy"
+        error={errors.username?.message}
+        {...register("username")}
       />
       <TextInput
         label="Email"
