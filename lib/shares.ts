@@ -28,7 +28,11 @@ export function sharePagePath(shareId: string): string {
 
 /** Absolute URL for texting. Prefers an explicit origin, then env, then relative path. */
 export function shareAbsoluteUrl(shareId: string, origin?: string): string {
-  const path = sharePagePath(shareId);
+  return absoluteAppUrl(sharePagePath(shareId), origin);
+}
+
+/** Absolute app URL for `path`. Prefers an explicit origin, then env, then the bare path. */
+export function absoluteAppUrl(path: string, origin?: string): string {
   const fromArg = origin?.trim().replace(/\/$/, "") ?? "";
   if (fromArg) return `${fromArg}${path}`;
 

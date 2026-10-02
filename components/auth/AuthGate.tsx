@@ -7,16 +7,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   getPostLoginPath,
   isAuthLandingPath,
+  isPublicPath,
   isSafeNextPath,
 } from "@/lib/auth-routing";
 import { Button } from "@/components/ui/Button";
-
-/** Guests may open these without logging in; signed-in users stay on the page. */
-function isPublicRoute(pathname: string): boolean {
-  if (isAuthLandingPath(pathname)) return true;
-  if (pathname === "/s" || pathname.startsWith("/s/")) return true;
-  return false;
-}
 
 function currentReturnPath(pathname: string): string {
   if (typeof window === "undefined") return pathname;
@@ -33,7 +27,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const publicRoute = isPublicRoute(pathname);
+  const publicRoute = isPublicPath(pathname);
   const authLanding = isAuthLandingPath(pathname);
 
   useEffect(() => {

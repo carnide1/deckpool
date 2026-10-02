@@ -16,6 +16,7 @@ const SAFE_NEXT_PREFIXES = [
   "/decks",
   "/profile",
   "/friends",
+  "/invite",
 ] as const;
 
 /** Give up on owned-count and send the user into the app. */
@@ -23,6 +24,19 @@ const POST_LOGIN_PATH_TIMEOUT_MS = 5_000;
 
 export function isAuthLandingPath(pathname: string): boolean {
   return AUTH_LANDING_ROUTES.has(pathname);
+}
+
+function isUnder(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+/** Guests may open these without logging in; signed-in users stay on share and invite pages. */
+export function isPublicPath(pathname: string): boolean {
+  return (
+    isAuthLandingPath(pathname) ||
+    isUnder(pathname, "/s") ||
+    isUnder(pathname, "/invite")
+  );
 }
 
 /**

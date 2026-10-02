@@ -258,6 +258,42 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // 7-day invite links (/invite/{code}). get is public so a signed-out person
+    // sees who invited them; list is denied (no directory). Opening one only
+    // prefills a normal friend request; expiry is enforced by the landing page.
+    // expiresAt comes from the client clock, so allow one day of slack.
+    match /invites/{code} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly([
+          'inviterUid',
+          'inviterUsername',
+          'inviterDisplayName',
+          'createdAt',
+          'expiresAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'inviterUid',
+          'inviterUsername',
+          'inviterDisplayName',
+          'createdAt',
+          'expiresAt'
+        ])
+        && request.resource.data.inviterUid == request.auth.uid
+        && validUsername(request.resource.data.inviterUsername)
+        && request.resource.data.inviterUsername == get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.username
+        && request.resource.data.inviterDisplayName is string
+        && request.resource.data.inviterDisplayName.size() <= 80
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt > request.time
+        && request.resource.data.expiresAt <= request.time + duration.value(8, 'd');
+      allow update: if false;
+      allow delete: if request.auth != null
+        && resource.data.inviterUid == request.auth.uid;
+    }
+
     // Public read-only deck list snapshots for SMS share links (/s/{id}).
     // Owner decks under users/{uid}/decks stay private.
     // get (single doc) is public; list is denied so shares are not a browsable gallery.

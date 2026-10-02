@@ -26,4 +26,14 @@ export interface Friendship {
   createdAtMs: number;
 }
 
+/** invites/{code}: a 7-day link that leads to a friend request to the inviter. */
+export interface Invite {
+  code: string;
+  inviterUid: string;
+  inviterUsername: string;
+  inviterDisplayName: string;
+  createdAtMs: number;
+  expiresAtMs: number;
+}
+
 export type Relationship = "self" | "friend" | "incoming" | "outgoing" | "none";
