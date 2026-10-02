@@ -1,6 +1,6 @@
 # DeckPool — Friends
 
-**Status:** Implemented on the local `friends` branch (Phases 1–12). Rules compile but are **not deployed yet**; run the Phase 11 manual checklist after deploying them.  
+**Status:** Implemented on the local `friends` branch (Phases 1–12). Rules deployed 2026-10-02; next step is the Phase 11 manual two-account checklist.  
 **Last updated:** 2026-10-02  
 **Product:** Add friends by exact username and view each other's decks, binder, and Wanted board, read-only.
 
