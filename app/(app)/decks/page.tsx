@@ -6,13 +6,19 @@ import { CreateDeckModal } from "@/components/decks/CreateDeckModal";
 import { DeleteDeckModal } from "@/components/decks/DeleteDeckModal";
 import { DeckRow } from "@/components/decks/DeckRow";
 import { RenameDeckModal } from "@/components/decks/RenameDeckModal";
+import { SortSelect } from "@/components/search/SortSelect";
 import { Button } from "@/components/ui/Button";
 import { useCatalog } from "@/contexts/CatalogContext";
 import { useCollection } from "@/contexts/CollectionContext";
 import { useDecks } from "@/contexts/DecksContext";
+import { useDeckSort } from "@/hooks/useDeckSort";
 import { getConstructionRules } from "@/lib/construction";
 import { summarizeDeck } from "@/lib/legality";
-import { timestampToMillis } from "@/lib/timestamps";
+import {
+  DECK_SORT_LABELS,
+  DECK_SORTS,
+  sortDecks,
+} from "@/lib/sortDecks";
 import type { Deck } from "@/types/deck";
 
 export default function DecksPage() {
@@ -23,6 +29,7 @@ export default function DecksPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [renameDeck, setRenameDeck] = useState<Deck | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Deck | null>(null);
+  const [sort, setSort] = useDeckSort();
 
   const constructionRules = useMemo(() => getConstructionRules(), []);
 
@@ -43,14 +50,10 @@ export default function DecksPage() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [cards, ownedMap]);
 
-  const sortedDecks = useMemo(() => {
-    return [...decks].sort((a, b) => {
-      const bm = timestampToMillis(b.updatedAt ?? b.createdAt);
-      const am = timestampToMillis(a.updatedAt ?? a.createdAt);
-      if (bm !== am) return bm - am;
-      return a.name.localeCompare(b.name);
-    });
-  }, [decks]);
+  const sortedDecks = useMemo(
+    () => sortDecks(decks, sort, cardsById),
+    [decks, sort, cardsById],
+  );
 
   const summariesByDeckId = useMemo(() => {
     const map: Record<string, ReturnType<typeof summarizeDeck>> = {};
@@ -81,7 +84,7 @@ export default function DecksPage() {
             Decks
           </h1>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            Wanted-poster rows for every brew. Newest edits first.
+            Wanted-poster rows for every brew.
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)} className="shrink-0">
@@ -106,26 +109,40 @@ export default function DecksPage() {
           </Button>
         </div>
       ) : (
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {sortedDecks.map((deck) => {
-            const leader = cardsById.get(deck.leaderId) ?? null;
-            const summary = summariesByDeckId[deck.id] ?? {
-              variationCount: 0,
-              legal: false,
-              owned: false,
-            };
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-[var(--ink-muted)]">
+              {sortedDecks.length.toLocaleString()}{" "}
+              {sortedDecks.length === 1 ? "deck" : "decks"}
+            </p>
+            <SortSelect
+              value={sort}
+              onChange={setSort}
+              options={DECK_SORTS}
+              labels={DECK_SORT_LABELS}
+            />
+          </div>
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {sortedDecks.map((deck) => {
+              const leader = cardsById.get(deck.leaderId) ?? null;
+              const summary = summariesByDeckId[deck.id] ?? {
+                variationCount: 0,
+                legal: false,
+                owned: false,
+              };
 
-            return (
-              <DeckRow
-                key={deck.id}
-                deck={deck}
-                leader={leader}
-                summary={summary}
-                onRename={() => setRenameDeck(deck)}
-                onDelete={() => setDeleteTarget(deck)}
-              />
-            );
-          })}
+              return (
+                <DeckRow
+                  key={deck.id}
+                  deck={deck}
+                  leader={leader}
+                  summary={summary}
+                  onRename={() => setRenameDeck(deck)}
+                  onDelete={() => setDeleteTarget(deck)}
+                />
+              );
+            })}
+          </div>
         </div>
       )}
 

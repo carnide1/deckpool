@@ -2,15 +2,29 @@
 
 import { SORT_LABELS, type SortKey } from "@/lib/search/sortCards";
 
-export function SortSelect({
+function optionLabel<T extends string>(
+  key: T,
+  labels?: Record<T, string>,
+): string {
+  if (labels) return labels[key];
+  if (Object.prototype.hasOwnProperty.call(SORT_LABELS, key)) {
+    return SORT_LABELS[key as SortKey];
+  }
+  return key;
+}
+
+export function SortSelect<T extends string>({
   value,
   onChange,
   options,
+  labels,
   compact = false,
 }: {
-  value: SortKey;
-  onChange: (next: SortKey) => void;
-  options: SortKey[];
+  value: T;
+  onChange: (next: T) => void;
+  options: readonly T[];
+  /** Deck lists pass their own labels. Card lists keep `SORT_LABELS`. */
+  labels?: Record<T, string>;
   compact?: boolean;
 }) {
   return (
@@ -27,7 +41,7 @@ export function SortSelect({
       )}
       <select
         value={value}
-        onChange={(event) => onChange(event.target.value as SortKey)}
+        onChange={(event) => onChange(event.target.value as T)}
         aria-label="Sort"
         className={[
           "rounded-lg border border-[var(--bg-inset)] bg-[var(--bg-panel)] font-medium text-[var(--ink-primary)] focus:border-[var(--accent-ocean)] focus:outline-none",
@@ -36,7 +50,7 @@ export function SortSelect({
       >
         {options.map((key) => (
           <option key={key} value={key}>
-            {SORT_LABELS[key]}
+            {optionLabel(key, labels)}
           </option>
         ))}
       </select>
