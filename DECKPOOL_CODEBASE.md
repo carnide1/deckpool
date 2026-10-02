@@ -268,7 +268,7 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 
 - Full English catalog (no Don). Nav label **Explore**. `components/cards/` is still card tiles/modals.
 - Filters sync to the URL (`lib/search/filters.ts`) via `window.history.replaceState` (no router navigation), debounced 350ms. Sort / Owned / Wanted are read straight from the URL. URL changes from elsewhere (links, back/forward) re-seed the filters; the page's own writes never overwrite in-progress typing. Show-more resets whenever the result set changes. Owned toggle: `owned=1`. Wanted toggle: `wanted=1`. Both can be on. Deck membership filter (`deck=`). Description mode: `in=text`. Timing facet: `timing=on-play|on-ko` (AND). Old `/cards` redirects here and keeps the query string.
-- Search bar Name | Text: Name matches name or card id; Text matches `effect` + `trigger` substring. Switching modes keeps the query. Clearing filters resets to Name.
+- Search bar Name | Text: Name matches name or card id; Text matches `effect` + `trigger` substring. Text folds the printed minus (`−`), en dash, and fullwidth hyphen to `-`, and ignores apostrophes, then does the substring check. Switching modes keeps the query. Clearing filters resets to Name.
 - Sort: newest / oldest / serial / name / category / cost. Newest = latest set family.
 - Page size 48, load-more style.
 - Modal: qty (can create), bounty, user labels, art picker, decks that use the card, outside Previous/Next controls through the currently loaded results, and click-to-zoom full-screen art. Card tiles show current user labels plus derived deck labels.
@@ -351,7 +351,7 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 
 **What the UI uses:** `lib/search/filters.ts` + `NameSearchBar` + `FilterPanel`.
 
-- Text has two modes on Collection, Wanted, Explore, and Builder. **Name** matches name or card id substring. **Description** (`in=text` on Explore) matches effect or trigger text only (not name/id). Switching modes keeps the typed query. Clearing filters resets to Name.
+- Text has two modes on Collection, Wanted, Explore, and Builder. **Name** matches name or card id substring. **Description** (`in=text` on Explore) matches effect or trigger text only (not name/id). Text folds the printed minus (`−`), en dash, and fullwidth hyphen to `-`, and ignores apostrophes, then does the substring check. Switching modes keeps the typed query. Clearing filters resets to Name.
 - Facets: color, category, cost, rarity, type, attribute, set, has (keywords), **timing**, label, deck (Collection, Wanted, and Explore). Timing values are compiled printed windows (`on-play`, `activate-main`, …) and **AND** when several are selected. Keywords stay on `card.has` (blocker, rush, searcher, …).
 - Explore URL stores those filters plus `owned=1`, `wanted=1`, optional `in=text`, and `timing=`. Builder / Collection / Wanted keep filters in component state.
 
