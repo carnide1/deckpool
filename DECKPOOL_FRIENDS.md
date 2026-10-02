@@ -1,6 +1,6 @@
 # DeckPool — Friends
 
-**Status:** Implemented on the `friends` branch (Phases 1–12), pushed to GitHub, not merged into `main` yet. Rules deployed 2026-10-02. Post-build review fixed the add-friend error messages, a malformed-URL crash on friend pages, and the remove-friend modal text. **Invite links** are built on the same branch (local commit, not pushed); their `invites` rule compiles but is not deployed yet.  
+**Status:** Implemented on the `friends` branch (Phases 1–12), pushed to GitHub, not merged into `main` yet. Rules deployed 2026-10-02. Post-build review fixed the add-friend error messages, a malformed-URL crash on friend pages, and the remove-friend modal text. **Invite links** are built on the same branch (pushed); their `invites` rule was deployed 2026-10-02.  
 **Last updated:** 2026-10-02  
 **Product:** Add friends by exact username and view each other's decks, binder, and Wanted board, read-only.
 
