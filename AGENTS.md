@@ -11,7 +11,7 @@ Other docs:
 - `DECKPOOL_V1_IMPLEMENTATION_GUIDE.md` — human Firebase/Vercel setup.
 - `DECKPOOL_BATTLE_SIM.md` / `DECKPOOL_BATTLE_SIM_ENGINE_PLAN.md` — battle sim product + procedure (do not implement unless asked).
 - `DECKPOOL_BATTLE_SIM_AGENTS.md` — multi-agent waves + STATUS handoff when executing the battle sim engine plan.
-- `DECKPOOL_FRIENDS.md` — friends feature decisions + planned design (do not implement unless asked).
+- `DECKPOOL_FRIENDS.md` — friends feature decisions, design, and manual two-account test checklist (implemented; see the snapshot for as-built behavior).
 
 If the snapshot and the blueprint disagree about **how the app works today**, trust the snapshot.
 

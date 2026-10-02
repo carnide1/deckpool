@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-10-02
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (snapshot includes floating icon nav + wide layouts; prior noted commit `ad26da6`)
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (snapshot includes floating icon nav + wide layouts; prior noted commit `ad26da6`). **Friends** is on the local `friends` branch (not pushed; its `firestore.rules` must be deployed before the app ships).
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -54,6 +54,8 @@ The point of the app:
 4. Two independent tags: **Legal / Illegal** (construction rules) and **Owned / Unowned** (whether the binder can sleeve the list).
 5. **Wanted** is a shopping board of extra copies to buy. It is separate from unowned copies already sitting in a deck.
 
+6. **Friends**: add another account by exact username, then browse their decks, collection, and Wanted read-only (each area can be hidden), and copy their decks into your own.
+
 It is **not** a scanner, price tracker, public deck site, tournament browser, or playable game. Those are later ideas; see `DECKPOOL_FUTURE_FEATURES.md`.
 
 V1 cost rules still in force in code: no paid search service, no language-model API, no separate Express server, no `/api` routes.
@@ -70,7 +72,7 @@ V1 cost rules still in force in code: no paid search service, no language-model 
 | Fonts (as built) | **Nunito** (body) + **Cinzel** (display). Blueprint mentioned Fredoka; the app uses Cinzel. |
 | Theme | Bright only. Parchment cream, pirate red, ocean blue. No dark mode. |
 | Auth | Firebase Auth, **email/password only**. Client `AuthGate`. No `middleware.ts`. Public routes render while Auth is still resolving (avoids mobile “Loading…” freeze). Auth init falls back IndexedDB → localStorage → memory, with an 8s ready timeout + Retry. |
-| Data | Cloud Firestore, nested under `users/{uid}/…`. Client SDK writes. |
+| Data | Cloud Firestore, nested under `users/{uid}/…`, plus top-level `usernames`, `profiles`, `friendRequests`, `friendships` for Friends. Client SDK writes. |
 | Catalog | Static JSON in `data/`, loaded in the browser. ~**2785** English cards. Don cards stripped at ingest. |
 | Images | Same-origin `/card-art/{file}.png` proxy for Bandai (avoids Chrome **CORP** and Vercel `/_next/image` **402**). Strict filename allowlist, upstream timeout, ETag/304, in-flight coalesce, long cache. Optional CDN mirror first via `NEXT_PUBLIC_CARD_IMAGE_ORIGIN`. Retries + **Retry** UI. |
 | Hosting (intended) | Vercel Hobby. No `vercel.json` in the repo. `.vercel/` is gitignored. Redirects (e.g. `/collection?view=wanted` → `/wanted`, `/cards` → `/explore`) live in `next.config.ts`. |
@@ -92,7 +94,7 @@ From `C:\DeckPool`:
 | `npm run lint` | ESLint |
 | `npm run ingest-catalog -- --input <punk-records english folder>` | Rebuild `data/cards.json`, packs, construction rules, has-flags, timing-flags |
 | `npm run ingest-products` | Rebuild `data/products/` (ST01–ST36) from One Piece Player pages |
-| `firebase deploy --only firestore:rules` | Publish `firestore.rules` to project `deckpool-64459`. The tightened rules were deployed after the audit on 2026-08-27. |
+| `firebase deploy --only firestore:rules` | Publish `firestore.rules` to project `deckpool-64459`. The tightened rules were deployed after the audit on 2026-08-27. The Friends rules (on the `friends` branch) compile (`--dry-run`) but are **not deployed yet**; deploy them before shipping the Friends app code. |
 
 Ingest is a **local** maintainer task. Vercel must not scrape Bandai or One Piece Player at runtime. Commit the generated JSON.
 
@@ -131,10 +133,10 @@ Never commit `.env.local`. Never put a language-model key in the browser.
 **Public (logged out):** `/`, `/login`, `/signup`, `/forgot-password`, and **`/s/[shareId]`** (shared deck snapshot).  
 Logged-in users on the auth landing routes (`/`, `/login`, `/signup`, `/forgot-password`) are sent to a safe `?next=` path when present, otherwise `/decks`, or `/collection` if they own zero cards (`lib/auth-routing.ts`). Logged-in users **stay** on `/s/…` (AuthGate treats share links as public but not as auth landings).
 
-**App (requires login), nav in `AppShell`:** Collection, Wanted, Explore, Decks, Profile. There is **no solid sidebar, header, or bottom bar** — just floating round icon buttons (no text). Labels show as tooltips on hover / keyboard focus; each link has an `aria-label`. Active page = filled pirate red.
+**App (requires login), nav in `AppShell`:** Collection, Wanted, Explore, Decks, Friends, Profile. There is **no solid sidebar, header, or bottom bar** — just floating round icon buttons (no text). Labels show as tooltips on hover / keyboard focus; each link has an `aria-label`. Active page = filled pirate red. The Friends button shows a red badge with the number of pending incoming requests (`9+` cap; count is in the `aria-label`).
 
 - **Desktop (`md+`):** Icons float in a column, vertically centered on the left edge (`fixed`). `main` keeps a left gutter (`md:pl-24`) so content never sits under them.
-- **Mobile (`< md`):** Same icons float in a centered row at the bottom (safe-area aware). `main` has bottom padding (6rem + safe area).
+- **Mobile (`< md`):** Same six icons float in a centered row at the bottom (safe-area aware; gap tightens below 380px). `main` has bottom padding (6rem + safe area).
 - The **document** scrolls (no fixed-height inner scroll box), so content runs under the phone browser toolbar with no background strip, and back/forward restores scroll. Collection/Wanted pagination scrolls the window. The nav wrappers are `pointer-events-none` (buttons re-enable) so taps beside the icons reach the page.
 - No brand title in the shell and no sidebar preference in `localStorage` anymore.
 - **Page widths:** Collection, Wanted, Explore, Decks, deck View/Edit, and Profile cap at `1800px`. Card grids go up to 6 columns at `xl` and 7 at `2xl` (no fixed tile width cap). `/decks` is a grid (1 → 2 at `md` → 3 at `xl`). Profile puts the stats poster left and Account in a 380px column at `lg+`.
@@ -144,8 +146,13 @@ Logged-in users on the auth landing routes (`/`, `/login`, `/signup`, `/forgot-p
 | `/collection` | **Owned binder** by default. Modes: Binder, Summary (`?view=summary`). Binder cannot create new card numbers (`useCollectionWrite(false)`). |
 | `/wanted` | **Wanted** shopping board — extra copies to buy. **Caught** can create binder rows. Old `/collection?view=wanted` redirects here. |
 | `/explore` | **Full catalog.** Name/text search + filters, URL-synced. `owned=1` limits to owned. `wanted=1` limits to posters. `in=text` searches rules text. `timing=` is printed ability windows (AND). Click a card to set qty (this **can** create new collection rows), bounty, labels, preferred art. Starter-deck add lives here too. Old `/cards` redirects here. |
-| `/decks` | List decks, grouped by Leader. Create / rename / delete. |
+| `/decks` | Deck grid, newest edits first. Create / rename / delete. |
 | `/decks/[id]` | **View** by default (`DeckView`). **Edit** at `?mode=edit` (`BuilderView`). |
+| `/friends` | Your username (copy / change), add a friend by exact username, incoming + sent requests, friend list (remove), privacy toggles. Accounts without a username see only a "pick a username" form. |
+| `/friends/[uid]` | A friend's **Decks** (default tab). Shared layout with header + Decks / Collection / Wanted tabs. Non-friends see "not available". |
+| `/friends/[uid]/collection` | Friend's binder (read-only grid + filters); Summary at `?view=summary`. |
+| `/friends/[uid]/wanted` | Friend's Wanted board, read-only, with bounty counts. |
+| `/friends/[uid]/decks/[deckId]` | Friend's deck view (all variations, read-only) + **Copy to my decks**. |
 | `/profile` | Display name (Auth + Firestore), email, stats, logout. |
 | `/s/[shareId]` | **Public shared deck.** Snapshot of one variation (name, Leader, card counts + preferred art). No login. Outside `AppShell`. |
 | `/card-art/[file]` | **Image proxy** (not a page). Allowlisted `*.png` under Bandai `cardlist/card/` only. |
@@ -158,16 +165,22 @@ There is **no** `/api/*` folder. Card art uses App Router `GET /card-art/[file]`
 
 Root (`app/layout.tsx`): `Providers` (`AuthProvider` → `UserProfileProvider` + sibling `Toaster`) → `AuthGate`
 
-Authenticated shell (`app/(app)/layout.tsx`): `CatalogProvider` → `CollectionProvider` → `WantedProvider` → `CardPrefsProvider` → `DecksProvider` → `AppShell`
+Authenticated shell (`app/(app)/layout.tsx` → `AppDataProviders`): `CatalogProvider` → `CollectionProvider` → `WantedProvider` → `CardPrefsProvider` → `DecksProvider` → `FriendsProvider` → `AppShell`
+
+Friend pages add `FriendDataProvider` (in `app/(app)/friends/[uid]/layout.tsx` via `FriendShell`). It does **not** nest a second set of Collection/Decks providers (that would shadow your own data); it uses the owner-scoped hooks instead.
 
 | Context | Source |
 |---|---|
 | Catalog | Dynamic import of `data/cards.json` into memory; `compileTimings` fills `timings` if ingest has not persisted them |
-| Collection | Firestore snapshot `users/{uid}/collection` |
-| Wanted | Firestore snapshot `users/{uid}/wanted` |
-| Card prefs | Firestore snapshot `users/{uid}/cardPrefs` |
-| Decks | Firestore snapshot `users/{uid}/decks` plus each deck’s `variations` |
-| User profile | `ensureUserDoc` for `users/{uid}`; gated like other providers so prior-account data is hidden until the current uid loads |
+| Collection | `useOwnerCollection(uid)` → snapshot `users/{uid}/collection` |
+| Wanted | `useOwnerWanted(uid)` → snapshot `users/{uid}/wanted` |
+| Card prefs | `useOwnerCardPrefs(uid)` → snapshot `users/{uid}/cardPrefs` |
+| Decks | `useOwnerDecks(uid)` → snapshot `users/{uid}/decks` plus each deck’s `variations` |
+| User profile | `ensureUserDoc` for `users/{uid}`, plus a live `profiles/{uid}` listener (username + privacy). Exposes `claimUsername` and `setPrivacy`. Display-name saves also sync to `profiles/{uid}`. Gated like other providers so prior-account data is hidden until the current uid loads |
+| Friends | Idle until you have a username. Live `friendships` (array-contains you), incoming and outgoing `friendRequests`, and one `profiles/{friendUid}` listener per friend. Exposes send / cancel / accept / decline / remove |
+| Friend data | One friend's profile (from Friends) + the owner hooks above for **their** uid, each enabled only when that area is shared. `access` is loading / unavailable / ready |
+
+The four `useOwner*` hooks (`hooks/`) take `(ownerUid, { enabled })`, keep the "hide previous uid's data" gate, and report `failed` / `denied` (permission-denied). Your own providers are thin wrappers that pass your uid.
 
 ### AuthGate (as built)
 
@@ -184,10 +197,10 @@ Authenticated shell (`app/(app)/layout.tsx`): `CatalogProvider` → `CollectionP
 
 ## Firestore
 
-Owner-only. Rules file: `firestore.rules`.
+Owner-only for writes. Friends get **read** access to some subcollections (below). Rules file: `firestore.rules`.
 
 ```
-users/{uid}                          displayName, email, createdAt (field-allowlisted in rules)
+users/{uid}                          displayName, email, createdAt (field-allowlisted in rules; owner-only, friends never read it)
   collection/{cardId}                quantity, labels[], updatedAt
   wanted/{cardId}                    quantity (extra copies to buy), updatedAt
   cardPrefs/{cardId}                 preferredImageUrl
@@ -196,7 +209,19 @@ users/{uid}                          displayName, email, createdAt (field-allowl
 shares/{shareId}                     public snapshot: ownerUid, deckId, variationId,
                                      deckName, leaderId, variationName, cards,
                                      preferredImages, createdAt, updatedAt
+usernames/{name}                     uid  (doc id = lowercase username; unique claim)
+profiles/{uid}                       username, displayName, privacy {decks, collection, wanted}, updatedAt
+friendRequests/{fromUid_toUid}       fromUid, toUid, fromUsername, fromDisplayName, toUsername, createdAt
+friendships/{uidA_uidB}              members [uidA, uidB] (sorted), createdAt
 ```
+
+**Friends rules (summary):**
+
+- `usernames`: any signed-in user can **get** one name (exact lookup); **list denied** (no directory). Create only for yourself with a valid name (3–20 chars, `[a-z0-9_.]`, starts with a letter/digit, not reserved); delete your own; no update. Changing a username deletes the old doc and creates the new one in one transaction, so the old name frees up immediately.
+- `profiles/{uid}`: readable by the owner and friends. Owner writes exact keys; the `usernames` doc for the new name must point at the owner after the write. No delete.
+- `friendRequests`: read/delete by sender or recipient. Create checks the id format, the recipient's `usernames` mapping, the sender's profile username, not already friends, and no reverse request. Names are copied onto the request because the recipient cannot read the sender's profile yet.
+- `friendships`: read/delete by either member. Create needs sorted members, the id `m0_m1`, and an existing request from the other person to you. Accept = one batch (create friendship, delete their request, delete yours too if both sent).
+- Friend reads: `collection` / `wanted` / `decks` (+ `variations`) are readable by a friend only when `profiles/{owner}.privacy.<area> == true`. A missing profile means deny. `cardPrefs` is readable by any friend (so their art shows).
 
 - Collection document **id** is the card number. Qty 0 **deletes** the doc.
 - Wanted document **id** is the same card number. Qty is extra copies to buy, not a total target. Qty 0 **deletes** the doc.
@@ -289,6 +314,31 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 ### Profile
 
 - Stats computed client-side: unique owned ids, total copies, deck count, variation count, Legal vs Illegal, Owned vs Unowned.
+- Username and privacy are **not** on Profile; they live on Friends.
+
+### Friends (`/friends`)
+
+- **Usernames:** 3–20 chars, lowercase `a-z 0-9 _ .`, starting with a letter or digit, not reserved (`lib/usernames.ts`). Picked at **signup** (field on the signup form). If the name is taken at signup, the account is still created and a toast says to pick one on Friends. Accounts without a username see only a claim form on `/friends`. Usernames can be changed (Change modal); the old name frees up right away.
+- **Add friend:** exact username only (no search, no directory). Messages: "That's you.", "Already friends.", "Request already sent."; if they already asked you, an inline **Accept** appears. Unknown names get one generic message.
+- **Requests:** Incoming (Accept / Decline) and Sent (Cancel). If both people send, accepting removes both requests. No blocking, messaging, or friend cap.
+- **Friend list:** sorted by display name, links to `/friends/{uid}`, remove with confirm (copied decks stay yours).
+- **Privacy:** three switches (Decks, Collection, Wanted), all on by default, stored in `profiles/{uid}.privacy`. Collection labels are visible to friends when Collection is shared. Preferred art (`cardPrefs`) is always visible to friends.
+
+### Friend pages (`/friends/[uid]/…`)
+
+- One layout (`FriendShell`) with back link, name + `@username`, and Decks / Collection / Wanted tabs. A hidden area keeps its tab (eye-off icon) and shows "Hidden by {name}" (also used when rules refuse). Non-friends and unknown uids see "not available".
+- Listeners only start for shared areas; rules enforce the same thing.
+- **Decks:** same grid as `/decks`, newest edits first, **Legal badge only** (no Owned), no rename/delete, friend's Leader art.
+- **Deck view:** `DeckViewBody` with all variations, a static favorite star (not clickable), Legal only, no Wanted stamps, no Edit/Share. Card details are read-only (no art picker, no owned line).
+- **Copy to my decks** (`CopyDeckModal`): editable name; default **This variation** (saved as one `Main` variation), or **All variations** (names kept, their favorite first and pinned). Works even if you don't own the Leader. Opens your new deck after copying (`createDeckWithVariations`).
+- **Collection:** binder grid with copies, labels (their labels + their deck labels when decks are shared), the same filters/sort/pager as `/collection`, and a Summary toggle. Card details show copies and labels read-only; "In decks" links go to the friend's deck pages.
+- **Wanted:** read-only board with `×N` bounty stamps (not clickable) and the same filters/sort/pager. Shows their owned count on tiles if their collection is shared.
+
+### Shared building blocks
+
+- `hooks/useCardListBrowser.ts` + `components/cards/CardBrowserFrame.tsx`: filter / sort / 60-per-page state and the grid + sticky filter sidebar layout. Used by Collection, Wanted, and both friend boards.
+- `DeckView` is a thin wrapper (your data, share link, Edit toggle, favorite pin, Wanted) around `components/builder/DeckViewBody.tsx`, which friend decks reuse.
+- Shared components take optional props that default to today's behavior: `DeckRow` (`href`, optional rename/delete, `preferredImages`, `showOwned`), `DeckStatusBadges` (`owned` optional), `VariationTabs` (static star without `onSetFavorite`), `CardDetailModal` (`allowArtPicker`, `deckHref`, `ownedLabel`, read-only wanted/labels), `CardGrid` (read-only Wanted stamp), `CollectionModeToggle` (`baseHref`).
 
 ---
 
@@ -357,11 +407,12 @@ When a new set releases: pull punk-records, run both ingest scripts, commit `dat
 app/                    routes + layouts + globals.css + card-art/[file] proxy
 app/(app)/explore/      Full-catalog Explore page (authenticated)
 app/(app)/wanted/       Wanted board page (authenticated)
-components/             UI by area: auth, builder (DeckBoard/CardStack/CardResults), cards, collection, decks, profile, search, share, ui, wanted
-contexts/               Auth, UserProfile, Catalog, Collection, Wanted, CardPrefs, Decks
-hooks/                  useCollectionWrite, useWantedWrite
-lib/                    firebase, users, collection, wanted, shares, cardPrefs, cardArt*, cardImageUrl, variations, decks, legality, builder, search, tests
-types/                  catalog, collection, wanted, deck, share, user, cardPref, construction, product
+app/(app)/friends/      Friends page + [uid] layout and friend Decks / Collection / Wanted / deck pages
+components/             UI by area: auth, builder (DeckBoard/CardStack/CardResults/DeckViewBody), cards, collection, decks, friends, profile, search, share, ui, wanted
+contexts/               Auth, UserProfile, Catalog, Collection, Wanted, CardPrefs, Decks, Friends, FriendData
+hooks/                  useCollectionWrite, useWantedWrite, useOwner{Collection,Wanted,CardPrefs,Decks}, useCardListBrowser
+lib/                    firebase, users, profiles, friends, friendIds, usernames, collection, wanted, shares, cardPrefs, cardArt*, cardImageUrl, variations, decks, legality, builder, search, tests
+types/                  catalog, collection, wanted, deck, share, user, friends, cardPref, construction, product
 app/s/[shareId]/         public shared-deck page (+ CatalogProvider layout)
 data/                   committed snapshots (~2785 cards; includes OP17)
 scripts/                ingest + product URL/override JSON
@@ -389,12 +440,17 @@ Key libraries:
 | `lib/variations.ts` | Favorite resolve + tab order (resolved favorite first, then recency) |
 | `lib/variationStats.ts` | Average cost/power, category and keyword counts for a list |
 | `lib/builderDeckStacks.ts` | Edit visual deck: stack sort + visible-face cap (4) |
-| `lib/decks.ts` | Deck/variation CRUD, favorite pin, starter→deck, change Leader, delete cascade |
+| `lib/decks.ts` | Deck/variation CRUD, favorite pin, starter→deck, change Leader, delete cascade. `createDeckWithVariations` (one batch, first variation = favorite) backs create, starter→deck, and friend copy |
+| `lib/usernames.ts` | Username format, reserved list, normalize + validate |
+| `lib/profiles.ts` | `profiles/{uid}` + `usernames/{name}`: claim/change username (transaction), privacy, display-name sync |
+| `lib/friends.ts` | Username lookup, request send/cancel/decline/accept (batch), remove friend, queries + parsers |
+| `lib/friendIds.ts` | Sorted friendship id, request id, relationship helper |
+| `lib/firestoreErrors.ts` | `isPermissionDenied` |
 | `lib/shares.ts` | Public share snapshots: create, parse, SMS URL helpers, clipboard copy |
 | `lib/labels.ts` | Union-merge labels |
 | `lib/variationDiff.ts` | Compare two count maps |
 | `lib/profileStats.ts` | Profile numbers |
-| `lib/pagination.ts` | Page math for Collection |
+| `lib/pagination.ts` | Page math for Collection / Wanted (via `useCardListBrowser`) |
 | `lib/deckMembership.ts` | Which decks contain a card |
 | `lib/collectionBreakdown.ts` | Summary view |
 
@@ -418,7 +474,7 @@ The blueprint is still the product source of truth for **rules** (color identity
 | Paste-a-list import, match history, LLM, scanner | Not built. See `DECKPOOL_FUTURE_FEATURES.md`. |
 | Compact Legal/Owned on `/decks` is **any** variation | Compact Legal/Owned is the **favorite** variation. Profile still counts every variation. |
 | Wishlist (future-features #5) | Built as **Wanted**: extra copies to buy, top-level `/wanted` route + nav, Explore `wanted=1`, catch into the binder. Not a Collection mode. |
-| No public deck gallery / share network | **Share links** only: owner copies `/s/{id}` for one variation snapshot. Not a browseable gallery. |
+| No public deck gallery / share network | **Share links** only: owner copies `/s/{id}` for one variation snapshot. Not a browseable gallery. **Friends** can browse each other's decks / collection / Wanted (exact-username add, per-area privacy). Still no public directory. |
 
 Do not silently revert Collection to a full-catalog logger, or rip out the filter UI to restore `color:purple` in the box, without the user asking.
 
@@ -427,12 +483,13 @@ Do not silently revert Collection to a full-catalog logger, or rip out the filte
 ## Conventions for new work
 
 - Client components for anything that uses Firebase or hooks. Keep legality/search as pure functions with tests.
-- Firestore writes: owner tree only. New subcollections need a matching `firestore.rules` change **and a deploy**.
+- Firestore writes: owner tree only (plus the Friends top-level collections, each rule-checked). New subcollections need a matching `firestore.rules` change **and a deploy**. Friends never read `users/{uid}` (email stays private); public bits go in `profiles/{uid}`.
+- Data for "someone's" collection/decks/Wanted/art goes through the `useOwner*` hooks; do not nest a second set of providers.
 - Collection qty 0 = delete the document. Wanted qty 0 = delete the document. Label edits must not rewrite quantity (`setCollectionLabels`).
 - One favorite variation per deck (`favoriteVariationId`). `/decks` Legal/Owned uses that list. View/Edit badges follow the open tab. Never delete the last variation (`deleteVariation` throws).
 - Do not auto-add Wanted cards to decks. Caught only touches the binder.
 - Do not add Google/Apple login, dark mode, Don cards, or a browseable public deck gallery in V1. Per-variation **share links** (`/s/{id}`) are allowed.
-- Primary app nav is Collection, Wanted, Explore, Decks, plus Profile, as floating icon-only buttons with tooltips (left column on desktop, bottom row on mobile). Keep the page gutters (`md:pl-24`, mobile `pb-24`) so floating icons do not cover content.
+- Primary app nav is Collection, Wanted, Explore, Decks, Friends, plus Profile, as floating icon-only buttons with tooltips (left column on desktop, bottom row on mobile). Keep the page gutters (`md:pl-24`, mobile `pb-24`) so floating icons do not cover content.
 - New public routes must be allowlisted in `AuthGate` without treating them as auth landings (logged-in users must not be bounced off `/s/…`). Public routes must render while Auth is still loading. Preserve deep links with safe `?next=` on forced login. Do not auto-redirect to `/login` while `authTimedOut`.
 - Prefer npm. Do not add Yarn.
 - Mobile-first; Builder Edit is art-first (tap results to add, tap deck stacks to remove, info for detail). Do not block the whole app on Auth IndexedDB — keep the public-route bypass and Auth ready timeout.
@@ -447,6 +504,7 @@ Do not silently revert Collection to a full-catalog logger, or rip out the filte
 | `DECKPOOL_V1_BLUEPRINT.md` | Locked V1 product rules |
 | `DECKPOOL_V1_IMPLEMENTATION_GUIDE.md` | Human setup (Firebase console, Vercel clicks) |
 | `DECKPOOL_FUTURE_FEATURES.md` | Post-V1 ideas and decisions (wishlist, import, sim, and so on) |
+| `DECKPOOL_FRIENDS.md` | Friends decisions, data model, implementation plan, manual two-account test checklist |
 
 ---
 
