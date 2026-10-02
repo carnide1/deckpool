@@ -155,6 +155,14 @@ export function VariationTabs({
               fill={activeIsFavorite ? "currentColor" : "none"}
             />
           </button>
+        ) : activeIsFavorite ? (
+          <span
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[var(--accent-gold)]/40 text-[var(--accent-gold)]"
+            aria-label={`${active?.name ?? "Variation"} is the favorite`}
+            title="Favorite variation"
+          >
+            <Star className="h-3.5 w-3.5" fill="currentColor" aria-hidden />
+          </span>
         ) : null}
       </div>
 

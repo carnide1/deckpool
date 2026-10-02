@@ -25,16 +25,24 @@ export function DeckRow({
   summary,
   onRename,
   onDelete,
+  href,
+  preferredImages,
+  showOwned = true,
 }: {
   deck: Deck;
   leader: DeckPoolCard | null;
   summary: { legal: boolean; owned: boolean; variationCount: number };
-  onRename: () => void;
-  onDelete: () => void;
+  onRename?: () => void;
+  onDelete?: () => void;
+  href?: string;
+  /** Overrides the signed-in user's art picks (e.g. a friend's). */
+  preferredImages?: Record<string, string>;
+  showOwned?: boolean;
 }) {
   const { preferredByCardId } = useCardPrefs();
+  const deckHref = href ?? `/decks/${deck.id}`;
   const [leaderImage, ...leaderFallbacks] = leader
-    ? imageCandidates(leader, preferredByCardId)
+    ? imageCandidates(leader, preferredImages ?? preferredByCardId)
     : [];
   const borderClass =
     leader?.colors[0] && COLOR_BORDER[leader.colors[0]]
@@ -46,7 +54,7 @@ export function DeckRow({
       <div className="absolute top-0 right-0 left-0 h-1 bg-[var(--accent-pirate-red)]" />
       <div className="flex gap-4 p-4 pt-5">
         <Link
-          href={`/decks/${deck.id}`}
+          href={deckHref}
           className={[
             "shrink-0 overflow-hidden rounded-md border-2 bg-[var(--bg-inset)]",
             borderClass,
@@ -68,7 +76,7 @@ export function DeckRow({
         </Link>
 
         <div className="min-w-0 flex-1">
-          <Link href={`/decks/${deck.id}`} className="group block">
+          <Link href={deckHref} className="group block">
             <h3 className="truncate font-display text-lg font-bold text-[var(--ink-primary)] group-hover:text-[var(--accent-ocean)]">
               {deck.name}
             </h3>
@@ -88,29 +96,35 @@ export function DeckRow({
           <div className="mt-3">
             <DeckStatusBadges
               legal={summary.legal}
-              owned={summary.owned}
+              owned={showOwned ? summary.owned : undefined}
             />
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-1">
-          <button
-            type="button"
-            onClick={onRename}
-            className="rounded-lg p-2 text-[var(--ink-muted)] hover:bg-[var(--bg-inset)] hover:text-[var(--ink-primary)]"
-            aria-label={`Rename ${deck.name}`}
-          >
-            <Pencil className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="rounded-lg p-2 text-[var(--ink-muted)] hover:bg-[var(--bg-inset)] hover:text-[var(--accent-pirate-red)]"
-            aria-label={`Delete ${deck.name}`}
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
+        {onRename || onDelete ? (
+          <div className="flex shrink-0 flex-col gap-1">
+            {onRename ? (
+              <button
+                type="button"
+                onClick={onRename}
+                className="rounded-lg p-2 text-[var(--ink-muted)] hover:bg-[var(--bg-inset)] hover:text-[var(--ink-primary)]"
+                aria-label={`Rename ${deck.name}`}
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            ) : null}
+            {onDelete ? (
+              <button
+                type="button"
+                onClick={onDelete}
+                className="rounded-lg p-2 text-[var(--ink-muted)] hover:bg-[var(--bg-inset)] hover:text-[var(--accent-pirate-red)]"
+                aria-label={`Delete ${deck.name}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </article>
   );

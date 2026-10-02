@@ -31,6 +31,11 @@ export function CardDetailModal({
   onWantedDelta,
   selectionCards,
   onSelectCard,
+  allowArtPicker = true,
+  deckHref = (deckId: string) => `/decks/${deckId}`,
+  ownedLabel = "Owned",
+  showReadOnlyWanted = false,
+  showReadOnlyLabels = false,
 }: {
   card: DeckPoolCard | null;
   open: boolean;
@@ -48,6 +53,15 @@ export function CardDetailModal({
   onWantedDelta?: (delta: number) => void;
   selectionCards?: DeckPoolCard[];
   onSelectCard?: (card: DeckPoolCard) => void;
+  /** False hides the picker (it saves to the signed-in user's prefs). */
+  allowArtPicker?: boolean;
+  deckHref?: (deckId: string) => string;
+  /** Null hides the read-only owned line. */
+  ownedLabel?: string | null;
+  /** Show "Bounty: N" when there is no bounty stepper. */
+  showReadOnlyWanted?: boolean;
+  /** Show labels as chips when there is no label editor. */
+  showReadOnlyLabels?: boolean;
 }) {
   const { user } = useAuth();
   const [preferredSelection, setPreferredSelection] = useState<{
@@ -158,14 +172,14 @@ export function CardDetailModal({
               </span>
               <QuantityStepper value={ownedQty} onDelta={onQuantityDelta} />
             </div>
-          ) : (
+          ) : ownedLabel !== null ? (
             <p className="text-sm text-[var(--ink-muted)]">
-              Owned:{" "}
+              {ownedLabel}:{" "}
               <span className="font-semibold tabular-nums text-[var(--ink-primary)]">
                 {ownedQty}
               </span>
             </p>
-          )}
+          ) : null}
 
           {onWantedDelta ? (
             <div className="flex items-center justify-between gap-3 rounded-xl bg-[var(--bg-inset)] px-3 py-2">
@@ -178,6 +192,31 @@ export function CardDetailModal({
                 </p>
               </div>
               <QuantityStepper value={wantedQty} onDelta={onWantedDelta} />
+            </div>
+          ) : showReadOnlyWanted && wantedQty > 0 ? (
+            <p className="text-sm text-[var(--ink-muted)]">
+              Bounty:{" "}
+              <span className="font-semibold tabular-nums text-[var(--ink-primary)]">
+                {wantedQty}
+              </span>
+            </p>
+          ) : null}
+
+          {showReadOnlyLabels && !onLabelsChange && labels.length > 0 ? (
+            <div>
+              <p className="mb-2 text-sm font-medium text-[var(--ink-primary)]">
+                Labels
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {labels.map((label) => (
+                  <span
+                    key={label}
+                    className="rounded-full bg-[var(--bg-inset)] px-2 py-0.5 text-xs font-medium text-[var(--ink-primary)]"
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
             </div>
           ) : null}
 
@@ -203,7 +242,7 @@ export function CardDetailModal({
                 {inDecks.map((deck) => (
                   <Link
                     key={deck.id}
-                    href={`/decks/${deck.id}`}
+                    href={deckHref(deck.id)}
                     className="rounded-full bg-[var(--bg-inset)] px-2 py-0.5 text-xs font-medium text-[var(--ink-primary)] hover:text-[var(--accent-ocean)]"
                   >
                     {deck.name}
@@ -253,7 +292,7 @@ export function CardDetailModal({
             </div>
           ) : null}
 
-          {card.images.length > 1 ? (
+          {allowArtPicker && card.images.length > 1 ? (
             <div>
               <p className="mb-2 text-sm font-medium text-[var(--ink-primary)]">
                 Art picker
