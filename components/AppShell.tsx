@@ -73,7 +73,7 @@ function FloatingNavButton({
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative min-h-dvh">
-      <main className="p-4 pr-[max(1rem,env(safe-area-inset-right))] pb-[calc(6rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] md:p-8 md:pl-24">
+      <main className="p-4 pr-[max(1rem,env(safe-area-inset-right))] pb-[calc(9rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] md:p-8 md:pl-24">
         {children}
       </main>
 
@@ -90,7 +90,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <nav
         aria-label="Primary"
-        className="pointer-events-none fixed inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 flex items-center justify-center gap-3 md:hidden"
+        className="pointer-events-none fixed inset-x-0 bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-40 flex items-center justify-center gap-3 md:hidden"
       >
         {PRIMARY_NAV.map((item) => (
           <FloatingNavButton key={item.href} tooltipSide="top" {...item} />
