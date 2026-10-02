@@ -15,6 +15,7 @@ const SAFE_NEXT_PREFIXES = [
   "/explore",
   "/decks",
   "/profile",
+  "/friends",
 ] as const;
 
 /** Give up on owned-count and send the user into the app. */

@@ -22,6 +22,9 @@ describe("isSafeNextPath", () => {
     assert.equal(isSafeNextPath("/cards?owned=1"), true);
     assert.equal(isSafeNextPath("/explore?owned=1"), true);
     assert.equal(isSafeNextPath("/profile"), true);
+    assert.equal(isSafeNextPath("/friends"), true);
+    assert.equal(isSafeNextPath("/friends/abc"), true);
+    assert.equal(isSafeNextPath("/friends/abc/decks/x?variation=y"), true);
   });
 
   it("rejects open redirects and auth/share paths", () => {

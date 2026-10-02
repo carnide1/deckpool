@@ -19,6 +19,7 @@ import {
   type User,
 } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
+import { claimUsername } from "@/lib/profiles";
 import { createUserDocOnSignup } from "@/lib/users";
 
 /** If IndexedDB/Auth never resolves (seen on some mobile Safari builds), unblock the UI. */
@@ -30,11 +31,13 @@ type AuthContextValue = {
   /** True when we gave up waiting for Firebase Auth. */
   authTimedOut: boolean;
   login: (email: string, password: string) => Promise<void>;
+  /** Resolves with a username error when the account was created but the name could not be claimed. */
   signup: (
     email: string,
     password: string,
     displayName: string,
-  ) => Promise<void>;
+    username: string,
+  ) => Promise<{ usernameError: string | null }>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateDisplayName: (displayName: string) => Promise<void>;
@@ -146,11 +149,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signup = useCallback(
-    async (email: string, password: string, displayName: string) => {
+    async (
+      email: string,
+      password: string,
+      displayName: string,
+      username: string,
+    ) => {
       const trimmed = displayName.trim();
       if (!trimmed) {
         throw new Error("Display name is required.");
       }
+      let usernameError: string | null = null;
       try {
         const cred = await createUserWithEmailAndPassword(
           getFirebaseAuth(),
@@ -158,7 +167,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           password,
         );
         // Auth user already exists past this point — keep signup successful even
-        // if profile/Firestore writes fail; ensureUserDoc heals the doc later.
+        // if profile/Firestore writes fail; ensureUserDoc heals the doc later,
+        // and /friends asks for a username if the claim below fails.
         try {
           await updateProfile(cred.user, { displayName: trimmed });
         } catch (error) {
@@ -169,10 +179,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (error) {
           console.error(error);
         }
+        try {
+          await claimUsername(cred.user.uid, username, trimmed);
+        } catch (error) {
+          console.error(error);
+          usernameError =
+            error instanceof Error ? error.message : "Could not save username.";
+        }
         setUser(getFirebaseAuth().currentUser);
       } catch (error) {
         throw new Error(mapAuthError(error));
       }
+      return { usernameError };
     },
     [],
   );

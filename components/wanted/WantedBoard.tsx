@@ -1,25 +1,16 @@
 "use client";
 
-import {
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { SlidersHorizontal } from "lucide-react";
+import { useMemo, useState } from "react";
+import { CardBrowserFrame } from "@/components/cards/CardBrowserFrame";
 import { CardDetailModal } from "@/components/cards/CardDetailModal";
 import { CardGrid } from "@/components/cards/CardGrid";
-import { FilterPanel } from "@/components/search/FilterPanel";
-import { NameSearchBar } from "@/components/search/NameSearchBar";
-import { SortSelect } from "@/components/search/SortSelect";
-import { Pagination } from "@/components/ui/Pagination";
 import { WantedCatchControls } from "@/components/wanted/WantedCatchControls";
 import { useCardPrefs } from "@/contexts/CardPrefsContext";
 import { useCatalog } from "@/contexts/CatalogContext";
 import { useCollection } from "@/contexts/CollectionContext";
 import { useDecks } from "@/contexts/DecksContext";
 import { useWanted } from "@/contexts/WantedContext";
+import { useCardListBrowser } from "@/hooks/useCardListBrowser";
 import { useCollectionWrite } from "@/hooks/useCollectionWrite";
 import { useWantedWrite } from "@/hooks/useWantedWrite";
 import { imageForCard } from "@/lib/cardPrefs";
@@ -28,25 +19,7 @@ import {
   deckIdsByCardIdFromIndex,
   indexDeckMembership,
 } from "@/lib/deckMembership";
-import { clampPage, pageCountFor } from "@/lib/pagination";
-import {
-  EMPTY_FILTERS,
-  applySearchFilters,
-  type SearchFilters,
-} from "@/lib/search/filters";
-import { sortCards, type SortKey } from "@/lib/search/sortCards";
 import type { DeckPoolCard } from "@/types/catalog";
-
-const WANTED_SORTS: SortKey[] = [
-  "recent",
-  "newest",
-  "oldest",
-  "serial",
-  "name",
-  "category",
-  "cost",
-];
-const PAGE_SIZE = 60;
 
 export function WantedBoard() {
   const { cards, loading: catalogLoading } = useCatalog();
@@ -64,13 +37,7 @@ export function WantedBoard() {
     catchCopies,
   } = useWantedWrite();
 
-  const [filters, setFilters] = useState<SearchFilters>(EMPTY_FILTERS);
-  const [sort, setSort] = useState<SortKey>("recent");
-  const [page, setPage] = useState(1);
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<DeckPoolCard | null>(null);
-  const gridTopRef = useRef<HTMLDivElement>(null);
-  const deferredFilters = useDeferredValue(filters);
   const saving = collectionSaving || wantedSaving;
 
   const wantedCards = useMemo(() => {
@@ -150,46 +117,16 @@ export function WantedBoard() {
     [decks],
   );
 
-  const results = useMemo(() => {
-    const filtered = applySearchFilters(wantedCards, deferredFilters, {
-      wantedOnly: true,
-      wantedIds,
-      labelsByCardId,
-      deckIdsByCardId,
-    });
-    return sortCards(filtered, sort, { updatedAtById });
-  }, [
-    wantedCards,
-    deferredFilters,
-    wantedIds,
-    labelsByCardId,
-    deckIdsByCardId,
-    sort,
-    updatedAtById,
-  ]);
-
-  const totalPages = pageCountFor(results.length, PAGE_SIZE);
-  const currentPage = clampPage(page, totalPages);
-  const pagedResults = results.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
+  const filterContext = useMemo(
+    () => ({ wantedOnly: true, wantedIds, labelsByCardId, deckIdsByCardId }),
+    [wantedIds, labelsByCardId, deckIdsByCardId],
   );
-
-  useEffect(() => {
-    setPage(1);
-  }, [deferredFilters, sort]);
-
-  useEffect(() => {
-    setPage((current) => clampPage(current, totalPages));
-  }, [totalPages]);
-
-  const goToPage = (next: number) => {
-    setPage(next);
-    if (!gridTopRef.current) return;
-    const offset =
-      window.scrollY + gridTopRef.current.getBoundingClientRect().top - 8;
-    window.scrollTo({ top: Math.max(0, offset), behavior: "smooth" });
-  };
+  const { browser, gridTopRef } = useCardListBrowser({
+    cards: wantedCards,
+    filterContext,
+    updatedAtById,
+  });
+  const { results, pagedResults } = browser;
 
   const selectedOwned = selectedCard ? ownedMap[selectedCard.id] : undefined;
   const selectedWanted = selectedCard ? wantedMap[selectedCard.id] : undefined;
@@ -197,45 +134,33 @@ export function WantedBoard() {
     ? membership.decksByCardId[selectedCard.id] ?? []
     : [];
 
+  const loading = catalogLoading || wantedLoading;
+
   return (
     <>
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-      <div className="order-2 min-w-0 flex-1 lg:order-1">
-        <div
-          ref={gridTopRef}
-          className="mb-3 flex flex-wrap items-center justify-between gap-2"
-        >
-          <p className="text-sm text-[var(--ink-muted)]">
-            {wantedError
-              ? wantedError
-              : catalogLoading || wantedLoading
-                ? "Loading posters…"
-                : `${results.length.toLocaleString()} shown · ${wantedCardCount} ${
-                    wantedCardCount === 1 ? "poster" : "posters"
-                  }`}
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setFiltersOpen((open) => !open)}
-              aria-expanded={filtersOpen}
-              aria-controls="wanted-filters"
-              className="inline-flex items-center gap-2 rounded-lg border border-[var(--bg-inset)] bg-[var(--bg-panel)] px-3 py-2 text-sm font-semibold lg:hidden"
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              Filters
-            </button>
-            <SortSelect
-              value={sort}
-              onChange={setSort}
-              options={WANTED_SORTS}
-            />
-          </div>
-        </div>
-
+      <CardBrowserFrame
+        browser={browser}
+        gridTopRef={gridTopRef}
+        filtersId="wanted-filters"
+        showFiltersToggle
+        statusText={
+          wantedError
+            ? wantedError
+            : loading
+              ? "Loading posters…"
+              : `${results.length.toLocaleString()} shown · ${wantedCardCount} ${
+                  wantedCardCount === 1 ? "poster" : "posters"
+                }`
+        }
+        showPagination={!wantedError && !loading && wantedCards.length > 0}
+        searchPlaceholder="Search Wanted"
+        filterCards={wantedCards}
+        labelOptions={allLabels}
+        deckOptions={deckOptions}
+      >
         {wantedError ? (
           <p className="text-sm text-[var(--accent-pirate-red)]">{wantedError}</p>
-        ) : catalogLoading || wantedLoading ? (
+        ) : loading ? (
           <p className="text-sm text-[var(--ink-muted)]">Loading posters…</p>
         ) : wantedCards.length === 0 ? (
           <div className="poster-panel p-6 text-center">
@@ -246,64 +171,27 @@ export function WantedBoard() {
             </p>
           </div>
         ) : (
-          <>
-            <CardGrid
-              cards={pagedResults}
-              quantityById={quantityById}
-              preferredImages={preferredByCardId}
-              onSelect={setSelectedCard}
-              wantedQtyById={wantedQtyById}
-              onToggleWanted={(card) => void togglePosted(card.id)}
-              showWantedCount
-              wantedSaving={saving}
-              labelsByCardId={cardLabelsById}
-              tileFooter={(card) => (
-                <WantedCatchControls
-                  remaining={wantedQtyById[card.id] ?? 0}
-                  disabled={saving}
-                  onCatchOne={() => void catchCopies(card.id, 1)}
-                  onCatchAll={() => void catchCopies(card.id, "all")}
-                />
-              )}
-            />
-            <Pagination
-              page={currentPage}
-              total={results.length}
-              pageSize={PAGE_SIZE}
-              onPageChange={goToPage}
-            />
-          </>
+          <CardGrid
+            cards={pagedResults}
+            quantityById={quantityById}
+            preferredImages={preferredByCardId}
+            onSelect={setSelectedCard}
+            wantedQtyById={wantedQtyById}
+            onToggleWanted={(card) => void togglePosted(card.id)}
+            showWantedCount
+            wantedSaving={saving}
+            labelsByCardId={cardLabelsById}
+            tileFooter={(card) => (
+              <WantedCatchControls
+                remaining={wantedQtyById[card.id] ?? 0}
+                disabled={saving}
+                onCatchOne={() => void catchCopies(card.id, 1)}
+                onCatchAll={() => void catchCopies(card.id, "all")}
+              />
+            )}
+          />
         )}
-      </div>
-
-      <aside
-        id="wanted-filters"
-        className={[
-          "order-1 shrink-0 lg:sticky lg:top-4 lg:order-2 lg:w-64",
-          filtersOpen ? "block" : "hidden lg:block",
-        ].join(" ")}
-      >
-        <div className="poster-panel flex flex-col gap-4 p-4">
-          <NameSearchBar
-            value={filters.text}
-            onChange={(text) => setFilters((prev) => ({ ...prev, text }))}
-            placeholder="Search Wanted"
-            textField={filters.textField}
-            onTextFieldChange={(textField) =>
-              setFilters((prev) => ({ ...prev, textField }))
-            }
-          />
-          <FilterPanel
-            layout="sidebar"
-            filters={filters}
-            onChange={setFilters}
-            cards={wantedCards}
-            labelOptions={allLabels}
-            deckOptions={deckOptions}
-          />
-        </div>
-      </aside>
-      </div>
+      </CardBrowserFrame>
 
       <CardDetailModal
         card={selectedCard}

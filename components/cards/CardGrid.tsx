@@ -113,6 +113,15 @@ export function CardGrid({
                     onClick={() => onToggleWanted(card)}
                   />
                 </div>
+              ) : showWantedCount && wantedQtyById && wantedQty > 0 ? (
+                <div className="absolute right-1 bottom-1 z-10">
+                  <WantedStamp
+                    posted
+                    count={wantedQty}
+                    showCount
+                    readOnly
+                  />
+                </div>
               ) : null}
             </div>
             <button

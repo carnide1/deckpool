@@ -1,24 +1,20 @@
 "use client";
 
-import {
-  Suspense,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { SlidersHorizontal } from "lucide-react";
+import {
+  CardBrowserFrame,
+  FiltersToggleButton,
+} from "@/components/cards/CardBrowserFrame";
 import { CardDetailModal } from "@/components/cards/CardDetailModal";
 import { CardGrid } from "@/components/cards/CardGrid";
-import { CollectionModeToggle, type CollectionView } from "@/components/collection/CollectionModeToggle";
+import {
+  CollectionModeToggle,
+  parseCollectionView,
+} from "@/components/collection/CollectionModeToggle";
 import { CollectionSummary } from "@/components/collection/CollectionSummary";
-import { FilterPanel } from "@/components/search/FilterPanel";
-import { NameSearchBar } from "@/components/search/NameSearchBar";
-import { SortSelect } from "@/components/search/SortSelect";
-import { Pagination } from "@/components/ui/Pagination";
+import { useCardListBrowser } from "@/hooks/useCardListBrowser";
 import { useCardPrefs } from "@/contexts/CardPrefsContext";
 import { useCatalog } from "@/contexts/CatalogContext";
 import { useCollection } from "@/contexts/CollectionContext";
@@ -33,30 +29,7 @@ import {
   deckIdsByCardIdFromIndex,
   indexDeckMembership,
 } from "@/lib/deckMembership";
-import { clampPage, pageCountFor } from "@/lib/pagination";
-import {
-  EMPTY_FILTERS,
-  applySearchFilters,
-  type SearchFilters,
-} from "@/lib/search/filters";
-import { sortCards, type SortKey } from "@/lib/search/sortCards";
 import type { DeckPoolCard } from "@/types/catalog";
-
-const COLLECTION_SORTS: SortKey[] = [
-  "recent",
-  "newest",
-  "oldest",
-  "serial",
-  "name",
-  "category",
-  "cost",
-];
-const PAGE_SIZE = 60;
-
-function parseCollectionView(raw: string | null): CollectionView {
-  if (raw === "summary") return "summary";
-  return "binder";
-}
 
 /** Belt-and-suspenders if next.config redirect is skipped (e.g. client nav). */
 function WantedLegacyRedirect() {
@@ -90,14 +63,7 @@ function CollectionPageMain() {
   const { saving: wantedSaving, togglePosted, adjustQuantity: adjustWanted } =
     useWantedWrite();
 
-  const [filters, setFilters] = useState<SearchFilters>(EMPTY_FILTERS);
-  const [sort, setSort] = useState<SortKey>("recent");
-  const [page, setPage] = useState(1);
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<DeckPoolCard | null>(null);
-  const gridTopRef = useRef<HTMLDivElement>(null);
-
-  const deferredFilters = useDeferredValue(filters);
 
   const ownedCards = useMemo(() => {
     return cards.filter((card) => (ownedMap[card.id]?.quantity ?? 0) > 0);
@@ -175,46 +141,16 @@ function CollectionPageMain() {
     [decks],
   );
 
-  const results = useMemo(() => {
-    const filtered = applySearchFilters(ownedCards, deferredFilters, {
-      ownedOnly: true,
-      ownedIds,
-      labelsByCardId,
-      deckIdsByCardId,
-    });
-    return sortCards(filtered, sort, { updatedAtById });
-  }, [
-    ownedCards,
-    deferredFilters,
-    ownedIds,
-    labelsByCardId,
-    deckIdsByCardId,
-    sort,
-    updatedAtById,
-  ]);
-
-  const totalPages = pageCountFor(results.length, PAGE_SIZE);
-  const currentPage = clampPage(page, totalPages);
-  const pagedResults = results.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
+  const filterContext = useMemo(
+    () => ({ ownedOnly: true, ownedIds, labelsByCardId, deckIdsByCardId }),
+    [ownedIds, labelsByCardId, deckIdsByCardId],
   );
-
-  useEffect(() => {
-    setPage(1);
-  }, [deferredFilters, sort]);
-
-  useEffect(() => {
-    setPage((current) => clampPage(current, totalPages));
-  }, [totalPages]);
-
-  const goToPage = (next: number) => {
-    setPage(next);
-    if (!gridTopRef.current) return;
-    const offset =
-      window.scrollY + gridTopRef.current.getBoundingClientRect().top - 8;
-    window.scrollTo({ top: Math.max(0, offset), behavior: "smooth" });
-  };
+  const { browser, gridTopRef } = useCardListBrowser({
+    cards: ownedCards,
+    filterContext,
+    updatedAtById,
+  });
+  const { results, pagedResults } = browser;
 
   const breakdown = useMemo(
     () => computeCollectionBreakdown(quantityById, cardsById),
@@ -256,16 +192,10 @@ function CollectionPageMain() {
         <div className="flex flex-wrap items-center gap-2">
           <CollectionModeToggle mode={view} />
           {view === "binder" ? (
-            <button
-              type="button"
-              onClick={() => setFiltersOpen((open) => !open)}
-              aria-expanded={filtersOpen}
-              aria-controls="collection-filters"
-              className="inline-flex items-center gap-2 rounded-lg border border-[var(--bg-inset)] bg-[var(--bg-panel)] px-3 py-2 text-sm font-semibold lg:hidden"
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              Filters
-            </button>
+            <FiltersToggleButton
+              browser={browser}
+              controlsId="collection-filters"
+            />
           ) : null}
         </div>
       </div>
@@ -277,24 +207,23 @@ function CollectionPageMain() {
           <CollectionSummary breakdown={breakdown} />
         )
       ) : (
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-          <div className="order-2 min-w-0 flex-1 lg:order-1">
-            <div
-              ref={gridTopRef}
-              className="mb-3 flex flex-wrap items-center justify-between gap-2"
-            >
-              <p className="text-sm text-[var(--ink-muted)]">
-                {catalogLoading || collectionLoading
-                  ? "Loading binder…"
-                  : `${results.length.toLocaleString()} shown`}
-              </p>
-              <SortSelect
-                value={sort}
-                onChange={setSort}
-                options={COLLECTION_SORTS}
-              />
-            </div>
-
+        <CardBrowserFrame
+          browser={browser}
+          gridTopRef={gridTopRef}
+          filtersId="collection-filters"
+          statusText={
+            catalogLoading || collectionLoading
+              ? "Loading binder…"
+              : `${results.length.toLocaleString()} shown`
+          }
+          showPagination={
+            !catalogLoading && !collectionLoading && ownedCards.length > 0
+          }
+          searchPlaceholder="Search your binder"
+          filterCards={ownedCards}
+          labelOptions={allLabels}
+          deckOptions={deckOptions}
+        >
             {catalogLoading || collectionLoading ? (
               <p className="text-sm text-[var(--ink-muted)]">Loading binder…</p>
             ) : ownedCards.length === 0 ? (
@@ -312,64 +241,27 @@ function CollectionPageMain() {
                 </Link>
               </div>
             ) : (
-              <>
-                <CardGrid
-                  cards={pagedResults}
-                  quantityById={quantityById}
-                  preferredImages={preferredByCardId}
-                  onSelect={setSelectedCard}
-                  onQuantityDelta={(card, delta) => {
-                    void adjustQuantity(card.id, delta);
-                    const next = (quantityById[card.id] ?? 0) + delta;
-                    if (next <= 0 && selectedCard?.id === card.id) {
-                      setSelectedCard(null);
-                    }
-                  }}
-                  showStepper
-                  quantitySaving={saving}
-                  wantedQtyById={wantedQtyById}
-                  onToggleWanted={(card) => void togglePosted(card.id)}
-                  wantedSaving={wantedSaving}
-                  labelsByCardId={cardLabelsById}
-                />
-                <Pagination
-                  page={currentPage}
-                  total={results.length}
-                  pageSize={PAGE_SIZE}
-                  onPageChange={goToPage}
-                />
-              </>
+              <CardGrid
+                cards={pagedResults}
+                quantityById={quantityById}
+                preferredImages={preferredByCardId}
+                onSelect={setSelectedCard}
+                onQuantityDelta={(card, delta) => {
+                  void adjustQuantity(card.id, delta);
+                  const next = (quantityById[card.id] ?? 0) + delta;
+                  if (next <= 0 && selectedCard?.id === card.id) {
+                    setSelectedCard(null);
+                  }
+                }}
+                showStepper
+                quantitySaving={saving}
+                wantedQtyById={wantedQtyById}
+                onToggleWanted={(card) => void togglePosted(card.id)}
+                wantedSaving={wantedSaving}
+                labelsByCardId={cardLabelsById}
+              />
             )}
-          </div>
-
-          <aside
-            id="collection-filters"
-            className={[
-              "order-1 shrink-0 lg:sticky lg:top-4 lg:order-2 lg:w-64",
-              filtersOpen ? "block" : "hidden lg:block",
-            ].join(" ")}
-          >
-            <div className="poster-panel flex flex-col gap-4 p-4">
-              <NameSearchBar
-                value={filters.text}
-                onChange={(text) => setFilters((prev) => ({ ...prev, text }))}
-                placeholder="Search your binder"
-                textField={filters.textField}
-                onTextFieldChange={(textField) =>
-                  setFilters((prev) => ({ ...prev, textField }))
-                }
-              />
-              <FilterPanel
-                layout="sidebar"
-                filters={filters}
-                onChange={setFilters}
-                cards={ownedCards}
-                labelOptions={allLabels}
-                deckOptions={deckOptions}
-              />
-            </div>
-          </aside>
-        </div>
+        </CardBrowserFrame>
       )}
 
       {view === "binder" ? (
