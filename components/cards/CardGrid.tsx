@@ -63,7 +63,7 @@ export function CardGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
       {cards.map((card) => {
         const qty = quantityById[card.id] ?? 0;
         const wantedQty = wantedQtyById?.[card.id] ?? 0;
@@ -76,7 +76,7 @@ export function CardGrid({
               borderClass(card),
             ].join(" ")}
           >
-            <div className="relative mx-auto w-full max-w-[160px]">
+            <div className="relative mx-auto w-full">
               {image ? (
                 <CardImage
                   src={image}

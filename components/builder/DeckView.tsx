@@ -183,7 +183,7 @@ export function DeckView({ deck }: { deck: Deck }) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/decks"

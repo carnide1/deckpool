@@ -53,7 +53,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-6">
       <div>
         <h1 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
           Profile
@@ -67,40 +67,42 @@ export default function ProfilePage() {
         <p className="text-sm text-[var(--accent-pirate-red)]">{profileError}</p>
       ) : null}
 
-      <ProfileStatsPoster
-        displayName={displayName}
-        stats={stats}
-        loading={profileLoading || statsLoading}
-      />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+        <ProfileStatsPoster
+          displayName={displayName}
+          stats={stats}
+          loading={profileLoading || statsLoading}
+        />
 
-      <section className="poster-panel p-5">
-        <h2 className="font-display text-lg font-bold text-[var(--ink-primary)]">
-          Account
-        </h2>
-        {profileLoading ? (
-          <p className="mt-3 text-sm text-[var(--ink-muted)]">
-            Loading account…
-          </p>
-        ) : (
-          <div className="mt-4 flex flex-col gap-5">
-            <EditDisplayNameForm />
+        <section className="poster-panel p-5">
+          <h2 className="font-display text-lg font-bold text-[var(--ink-primary)]">
+            Account
+          </h2>
+          {profileLoading ? (
+            <p className="mt-3 text-sm text-[var(--ink-muted)]">
+              Loading account…
+            </p>
+          ) : (
+            <div className="mt-4 flex flex-col gap-5">
+              <EditDisplayNameForm />
 
-            <div>
-              <p className="text-sm font-medium text-[var(--ink-primary)]">
-                Email
-              </p>
-              <p className="mt-1 text-sm text-[var(--ink-muted)]">
-                {profile?.email || user?.email || "—"}
-              </p>
+              <div>
+                <p className="text-sm font-medium text-[var(--ink-primary)]">
+                  Email
+                </p>
+                <p className="mt-1 text-sm text-[var(--ink-muted)]">
+                  {profile?.email || user?.email || "—"}
+                </p>
+              </div>
+
+              <Button variant="secondary" onClick={() => void handleLogout()}>
+                <LogOut className="h-4 w-4" />
+                Log out
+              </Button>
             </div>
-
-            <Button variant="secondary" onClick={() => void handleLogout()}>
-              <LogOut className="h-4 w-4" />
-              Log out
-            </Button>
-          </div>
-        )}
-      </section>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

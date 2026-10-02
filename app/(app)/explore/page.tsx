@@ -209,7 +209,7 @@ function ExplorePageContent() {
     : [];
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-[var(--ink-primary)]">

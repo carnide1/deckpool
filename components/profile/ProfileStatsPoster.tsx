@@ -67,7 +67,7 @@ export function ProfileStatsPoster({
             Loading stats…
           </p>
         ) : (
-          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
             <StatFigure
               value={stats.uniqueOwnedIds}
               label="Unique cards owned"

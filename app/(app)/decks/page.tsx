@@ -74,7 +74,7 @@ export default function DecksPage() {
   ]);
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
@@ -106,7 +106,7 @@ export default function DecksPage() {
           </Button>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {sortedDecks.map((deck) => {
             const leader = cardsById.get(deck.leaderId) ?? null;
             const summary = summariesByDeckId[deck.id] ?? {

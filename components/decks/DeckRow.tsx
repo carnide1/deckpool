@@ -44,7 +44,7 @@ export function DeckRow({
   return (
     <article className="poster-panel relative overflow-hidden">
       <div className="absolute top-0 right-0 left-0 h-1 bg-[var(--accent-pirate-red)]" />
-      <div className="flex gap-3 p-3">
+      <div className="flex gap-4 p-4 pt-5">
         <Link
           href={`/decks/${deck.id}`}
           className={[
@@ -57,11 +57,11 @@ export function DeckRow({
               src={leaderImage}
               fallbackSrcs={leaderFallbacks}
               alt={leader?.name ?? deck.name}
-              width={72}
-              height={100}
+              width={96}
+              height={134}
             />
           ) : (
-            <div className="flex h-[100px] w-[72px] items-center justify-center text-xs text-[var(--ink-muted)]">
+            <div className="flex h-[134px] w-[96px] items-center justify-center text-xs text-[var(--ink-muted)]">
               ?
             </div>
           )}
@@ -77,7 +77,7 @@ export function DeckRow({
             </p>
           </Link>
 
-          <div className="mt-2 flex flex-wrap items-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             {leader ? <ColorPills colors={leader.colors} /> : null}
             <span className="text-xs tabular-nums text-[var(--ink-muted)]">
               {summary.variationCount}{" "}
@@ -85,7 +85,7 @@ export function DeckRow({
             </span>
           </div>
 
-          <div className="mt-2">
+          <div className="mt-3">
             <DeckStatusBadges
               legal={summary.legal}
               owned={summary.owned}

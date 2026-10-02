@@ -4,7 +4,7 @@ import { WantedBoard } from "@/components/wanted/WantedBoard";
 
 export default function WantedPage() {
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-4">
       <div>
         <h1 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
           Wanted

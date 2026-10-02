@@ -1,8 +1,8 @@
 # DeckPool — Codebase snapshot
 
 **Status:** Living summary of the **as-built** app  
-**Last updated:** 2026-09-21
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (snapshot includes Edit visual-deck rework; prior noted commit `21d1b33`)
+**Last updated:** 2026-10-02
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (snapshot includes floating icon nav + wide layouts; prior noted commit `ad26da6`)
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -131,10 +131,12 @@ Never commit `.env.local`. Never put a language-model key in the browser.
 **Public (logged out):** `/`, `/login`, `/signup`, `/forgot-password`, and **`/s/[shareId]`** (shared deck snapshot).  
 Logged-in users on the auth landing routes (`/`, `/login`, `/signup`, `/forgot-password`) are sent to a safe `?next=` path when present, otherwise `/decks`, or `/collection` if they own zero cards (`lib/auth-routing.ts`). Logged-in users **stay** on `/s/…` (AuthGate treats share links as public but not as auth landings).
 
-**App (requires login), nav in `AppShell`:** Collection, Wanted, Explore, Decks as primary; Profile separate.
+**App (requires login), nav in `AppShell`:** Collection, Wanted, Explore, Decks, then a small divider, then Profile. There is **no solid sidebar, header, or bottom bar** — just floating round icon buttons (no text). Labels show as tooltips on hover / keyboard focus; each link has an `aria-label`. Active page = filled pirate red.
 
-- **Desktop (`md+`):** Collapsible sidebar that **resizes** the main column (no overlay). Expanded header: “DeckPool” + `PanelLeftClose` collapse control on the right. Collapsed header shows “DP”. **Collapse** is button-only. **Expand** is click empty rail chrome (nav links still navigate). Preference in `localStorage` `deckpool.sidebarExpanded`. Profile pinned at the bottom of the rail.
-- **Mobile (`< md`):** No sidebar. Top header = DeckPool + Profile. Bottom bar = Collection, Wanted, Explore, Decks (safe-area padding).
+- **Desktop (`md+`):** Icons float in a column, vertically centered on the left edge (`fixed`). `main` keeps a left gutter (`md:pl-24`) so content never sits under them.
+- **Mobile (`< md`):** Same icons float in a centered row at the bottom (safe-area aware). `main` has `pb-24`. The nav wrappers are `pointer-events-none` (buttons re-enable) so taps beside the icons reach the page.
+- No brand title in the shell and no sidebar preference in `localStorage` anymore.
+- **Page widths:** Collection, Wanted, Explore, Decks, deck View/Edit, and Profile cap at `1800px`. Card grids go up to 6 columns at `xl` and 7 at `2xl` (no fixed tile width cap). `/decks` is a grid (1 → 2 at `md` → 3 at `xl`). Profile puts the stats poster left and Account in a 380px column at `lg+`.
 
 | Route | Job |
 |---|---|
@@ -246,7 +248,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 
 ### Decks (`/decks`)
 
-- Grouped by Leader. Multiple decks per Leader are allowed.
+- Deck cards in a responsive grid (up to 3 per row), newest edits first. Multiple decks per Leader are allowed.
 - Create: search **owned Leaders only**, name the deck, create variation `Main` empty, pin it as the favorite.
 - Rename / delete with confirm. Delete also deletes variations.
 - Legal / Owned badges on each row come from the **favorite** variation only (not “any variation”).
@@ -429,7 +431,7 @@ Do not silently revert Collection to a full-catalog logger, or rip out the filte
 - One favorite variation per deck (`favoriteVariationId`). `/decks` Legal/Owned uses that list. View/Edit badges follow the open tab. Never delete the last variation (`deleteVariation` throws).
 - Do not auto-add Wanted cards to decks. Caught only touches the binder.
 - Do not add Google/Apple login, dark mode, Don cards, or a browseable public deck gallery in V1. Per-variation **share links** (`/s/{id}`) are allowed.
-- Primary app nav is Collection, Wanted, Explore, Decks. Profile stays separate (sidebar bottom / mobile header), not in the mobile bottom bar. Desktop sidebar resizes main content; collapse via header button, expand via click on collapsed rail chrome. Mobile uses header + bottom nav only.
+- Primary app nav is Collection, Wanted, Explore, Decks, plus Profile after a divider, as floating icon-only buttons with tooltips (left column on desktop, bottom row on mobile). Keep the page gutters (`md:pl-24`, mobile `pb-24`) so floating icons do not cover content.
 - New public routes must be allowlisted in `AuthGate` without treating them as auth landings (logged-in users must not be bounced off `/s/…`). Public routes must render while Auth is still loading. Preserve deep links with safe `?next=` on forced login. Do not auto-redirect to `/login` while `authTimedOut`.
 - Prefer npm. Do not add Yarn.
 - Mobile-first; Builder Edit is art-first (tap results to add, tap deck stacks to remove, info for detail). Do not block the whole app on Auth IndexedDB — keep the public-route bypass and Auth ready timeout.

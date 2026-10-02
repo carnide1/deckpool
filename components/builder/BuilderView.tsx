@@ -378,7 +378,7 @@ export function BuilderView({ deck }: { deck: Deck }) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/decks"
@@ -399,7 +399,7 @@ export function BuilderView({ deck }: { deck: Deck }) {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
         <section className="flex min-w-0 flex-col gap-4">
           <div className="poster-panel p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
