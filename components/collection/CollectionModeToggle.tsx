@@ -4,15 +4,22 @@ import Link from "next/link";
 
 export type CollectionView = "binder" | "summary";
 
+export function parseCollectionView(raw: string | null): CollectionView {
+  if (raw === "summary") return "summary";
+  return "binder";
+}
+
 export function CollectionModeToggle({
   mode,
+  baseHref = "/collection",
 }: {
   mode: CollectionView;
+  baseHref?: string;
 }) {
   return (
     <div className="inline-flex rounded-lg border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-0.5 text-sm font-semibold">
       <Link
-        href="/collection"
+        href={baseHref}
         className={[
           "rounded-md px-3 py-1.5",
           mode === "binder"
@@ -23,7 +30,7 @@ export function CollectionModeToggle({
         Binder
       </Link>
       <Link
-        href="/collection?view=summary"
+        href={`${baseHref}?view=summary`}
         className={[
           "rounded-md px-3 py-1.5",
           mode === "summary"
