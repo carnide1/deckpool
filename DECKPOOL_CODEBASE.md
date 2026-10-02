@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-10-02
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (snapshot includes floating icon nav + wide layouts; prior noted commit `ad26da6`). **Friends** is on the local `friends` branch (not pushed). Its `firestore.rules` were deployed on 2026-10-02.
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (snapshot includes floating icon nav + wide layouts; prior noted commit `ad26da6`). **Friends** is on the `friends` branch (pushed to GitHub; not merged into `main` yet). Its `firestore.rules` were deployed on 2026-10-02.
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -319,7 +319,7 @@ friendships/{uidA_uidB}              members [uidA, uidB] (sorted), createdAt
 ### Friends (`/friends`)
 
 - **Usernames:** 3–20 chars, lowercase `a-z 0-9 _ .`, starting with a letter or digit, not reserved (`lib/usernames.ts`). Picked at **signup** (field on the signup form). If the name is taken at signup, the account is still created and a toast says to pick one on Friends. Accounts without a username see only a claim form on `/friends`. Usernames can be changed (Change modal); the old name frees up right away.
-- **Add friend:** exact username only (no search, no directory). Messages: "That's you.", "Already friends.", "Request already sent."; if they already asked you, an inline **Accept** appears. Unknown names get one generic message.
+- **Add friend:** exact username only (no search, no directory). Send is disabled until your friend lists load. Messages: "That's you.", "Already friends.", "Request already sent."; if they already asked you, an inline **Accept** appears. Unknown or invalid names get one generic message; a failed send says so separately.
 - **Requests:** Incoming (Accept / Decline) and Sent (Cancel). If both people send, accepting removes both requests. No blocking, messaging, or friend cap.
 - **Friend list:** sorted by display name, links to `/friends/{uid}`, remove with confirm (copied decks stay yours).
 - **Privacy:** three switches (Decks, Collection, Wanted), all on by default, stored in `profiles/{uid}.privacy`. Collection labels are visible to friends when Collection is shared. Preferred art (`cardPrefs`) is always visible to friends.

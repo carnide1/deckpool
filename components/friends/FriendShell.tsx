@@ -16,9 +16,17 @@ const TABS: { area: PrivacyArea; label: string; suffix: string }[] = [
   { area: "wanted", label: "Wanted", suffix: "/wanted" },
 ];
 
+function safeDecode(raw: string): string {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
 export function FriendShell({ children }: { children: ReactNode }) {
   const params = useParams<{ uid: string }>();
-  const uid = decodeURIComponent(params.uid);
+  const uid = safeDecode(params.uid);
   return (
     <FriendDataProvider uid={uid}>
       <FriendShellBody>{children}</FriendShellBody>

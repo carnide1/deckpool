@@ -12,8 +12,14 @@ import { normalizeUsername, validateUsername } from "@/lib/usernames";
 
 export function AddFriendForm() {
   const { user } = useAuth();
-  const { friendUids, incoming, outgoing, sendRequest, acceptRequest } =
-    useFriends();
+  const {
+    friendUids,
+    incoming,
+    outgoing,
+    loading: friendsLoading,
+    sendRequest,
+    acceptRequest,
+  } = useFriends();
   const [value, setValue] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [pendingAccept, setPendingAccept] = useState<{
@@ -37,7 +43,13 @@ export function AddFriendForm() {
 
     setBusy(true);
     try {
-      const targetUid = await lookupUsername(name);
+      let targetUid: string | null;
+      try {
+        targetUid = await lookupUsername(name);
+      } catch (error) {
+        console.error(error);
+        targetUid = null;
+      }
       if (!targetUid) {
         setMessage(UNKNOWN_USERNAME_MESSAGE);
         return;
@@ -69,7 +81,7 @@ export function AddFriendForm() {
       }
     } catch (error) {
       console.error(error);
-      setMessage(UNKNOWN_USERNAME_MESSAGE);
+      setMessage("Could not send the request. Try again.");
     } finally {
       setBusy(false);
     }
@@ -119,7 +131,10 @@ export function AddFriendForm() {
             }}
           />
         </div>
-        <Button type="submit" disabled={busy || !value.trim()}>
+        <Button
+          type="submit"
+          disabled={busy || friendsLoading || !value.trim()}
+        >
           {busy ? "Working…" : "Send"}
         </Button>
       </form>

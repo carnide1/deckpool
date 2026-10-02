@@ -17,6 +17,9 @@ export function RemoveFriendModal({
 }) {
   const { remove } = useFriends();
   const [submitting, setSubmitting] = useState(false);
+  // Keep the name on screen while the modal animates closed.
+  const [shown, setShown] = useState(friend);
+  if (friend && friend !== shown) setShown(friend);
 
   const handleConfirm = async () => {
     if (!friend) return;
@@ -49,7 +52,7 @@ export function RemoveFriendModal({
       }
     >
       <p className="text-sm text-[var(--ink-primary)]">
-        Remove <span className="font-semibold">@{friend?.username}</span>? You
+        Remove <span className="font-semibold">@{shown?.username}</span>? You
         will stop seeing each other&apos;s decks, collection, and Wanted. Decks
         you already copied stay yours.
       </p>
