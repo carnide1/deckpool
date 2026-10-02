@@ -1,11 +1,10 @@
 import {
   collection,
   doc,
-  getDoc,
   getDocs,
   query,
+  runTransaction,
   serverTimestamp,
-  setDoc,
   updateDoc,
   where,
 } from "firebase/firestore";
@@ -31,39 +30,47 @@ function normalizeProfile(
   };
 }
 
-/** Write users/{uid} on signup (Auth profile + Firestore in sync). */
+/**
+ * Write users/{uid} on signup. Runs in a transaction because `ensureUserDoc`
+ * races it on a brand-new account; rules reject a second create (createdAt
+ * would change), so whichever runs second must update displayName only.
+ */
 export async function createUserDocOnSignup(
   user: User,
   displayName: string,
 ): Promise<void> {
+  const ref = userRef(user.uid);
   const trimmed = displayName.trim();
-  await setDoc(userRef(user.uid), {
-    displayName: trimmed,
-    email: user.email ?? "",
-    createdAt: serverTimestamp(),
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(ref);
+    if (snap.exists()) {
+      tx.update(ref, { displayName: trimmed });
+    } else {
+      tx.set(ref, {
+        displayName: trimmed,
+        email: user.email ?? "",
+        createdAt: serverTimestamp(),
+      });
+    }
   });
 }
 
 /** Create users/{uid} on first session if missing; return the profile. */
 export async function ensureUserDoc(user: User): Promise<UserProfile> {
   const ref = userRef(user.uid);
-  const snap = await getDoc(ref);
   const fallback = {
     displayName: user.displayName?.trim() || "",
     email: user.email || "",
   };
 
-  if (!snap.exists()) {
-    const payload = {
-      displayName: fallback.displayName,
-      email: fallback.email,
-      createdAt: serverTimestamp(),
-    };
-    await setDoc(ref, payload);
-    return { ...fallback, createdAt: null };
-  }
-
-  return normalizeProfile(snap.data() as Record<string, unknown>, fallback);
+  return runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) {
+      tx.set(ref, { ...fallback, createdAt: serverTimestamp() });
+      return { ...fallback, createdAt: null };
+    }
+    return normalizeProfile(snap.data() as Record<string, unknown>, fallback);
+  });
 }
 
 export async function updateUserDisplayName(

@@ -112,14 +112,15 @@ export function BuilderView({ deck }: { deck: Deck }) {
     "results",
   );
   const [saving, setSaving] = useState(false);
-  const [localCards, setLocalCards] = useState<Record<string, number> | null>(
-    null,
+  const [localCards, setLocalCards] = useState<{
+    variationId: string;
+    cards: Record<string, number>;
+  } | null>(null);
+  /** Latest list sent per variation; cleared once that variation has no write in flight. */
+  const pendingCardsByVariation = useRef(
+    new Map<string, { cards: Record<string, number>; count: number }>(),
   );
-  const cardsRef = useRef<Record<string, number>>({});
-  const writeChain = useRef(Promise.resolve());
   const pendingWrites = useRef(0);
-  const activeVariationIdRef = useRef(activeVariationId);
-  activeVariationIdRef.current = activeVariationId;
 
   const deferredFilters = useDeferredValue(filters);
 
@@ -147,17 +148,12 @@ export function BuilderView({ deck }: { deck: Deck }) {
   const activeVariation =
     variations.find((row) => row.id === activeVariationId) ?? null;
   const variationCards = useMemo(
-    () => localCards ?? activeVariation?.cards ?? {},
-    [activeVariation, localCards],
+    () =>
+      localCards && localCards.variationId === activeVariationId
+        ? localCards.cards
+        : (activeVariation?.cards ?? {}),
+    [activeVariation, activeVariationId, localCards],
   );
-
-  useEffect(() => {
-    const variation = variations.find((row) => row.id === activeVariationId);
-    if (variation) cardsRef.current = variation.cards;
-    setLocalCards(null);
-    // Reset the in-memory list only when switching tabs, not on snapshot echoes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeVariationId]);
 
   const ownedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -275,30 +271,43 @@ export function BuilderView({ deck }: { deck: Deck }) {
   );
   const unownedGapCount = Object.keys(unownedGaps).length;
 
+  /**
+   * List to build the next edit from. While writes are in flight it is the last
+   * list sent (rapid taps can outrun re-renders); otherwise the Firestore
+   * snapshot, so Change Leader and other devices' edits are never overwritten.
+   */
+  const currentCardsFor = (variation: { id: string; cards: Record<string, number> }) =>
+    pendingCardsByVariation.current.get(variation.id)?.cards ?? variation.cards;
+
   const persistCards = (nextCards: Record<string, number>) => {
     if (!user || !activeVariation) return;
     const variationId = activeVariation.id;
-    // Capture the payload now — cardsRef may point at another tab before the write runs.
-    const payload = nextCards;
-    cardsRef.current = payload;
-    setLocalCards(payload);
+    const pending = pendingCardsByVariation.current;
+    pending.set(variationId, {
+      cards: nextCards,
+      count: (pending.get(variationId)?.count ?? 0) + 1,
+    });
+    setLocalCards({ variationId, cards: nextCards });
     pendingWrites.current += 1;
     setSaving(true);
-    writeChain.current = writeChain.current
-      .then(() => setVariationCards(user.uid, deck.id, variationId, payload))
+    // Issued immediately (not chained): Firestore applies one client's writes in
+    // order and reflects them in snapshots right away, including offline.
+    void setVariationCards(user.uid, deck.id, variationId, nextCards)
       .catch((error) => {
         toast.error(
           error instanceof Error ? error.message : "Could not save deck list",
         );
-        // Only roll back when no newer write is still pending for this tab.
-        if (
-          activeVariationIdRef.current === variationId &&
-          pendingWrites.current <= 1
-        ) {
-          setLocalCards(null);
-        }
       })
       .finally(() => {
+        const entry = pending.get(variationId);
+        if (entry && entry.count > 1) {
+          entry.count -= 1;
+        } else {
+          pending.delete(variationId);
+          setLocalCards((prev) =>
+            prev?.variationId === variationId ? null : prev,
+          );
+        }
         pendingWrites.current = Math.max(0, pendingWrites.current - 1);
         if (pendingWrites.current === 0) setSaving(false);
       });
@@ -306,7 +315,8 @@ export function BuilderView({ deck }: { deck: Deck }) {
 
   const handleAdd = (card: DeckPoolCard) => {
     if (!activeVariation) return;
-    const current = cardsRef.current[card.id] ?? 0;
+    const currentCards = currentCardsFor(activeVariation);
+    const current = currentCards[card.id] ?? 0;
     if (
       !canAddToDeck(
         card.id,
@@ -314,22 +324,23 @@ export function BuilderView({ deck }: { deck: Deck }) {
         ownedQtyById[card.id] ?? 0,
         ownedOnly,
         constructionRules,
-        mainDeckCount(cardsRef.current),
+        mainDeckCount(currentCards),
       )
     ) {
       return;
     }
     persistCards({
-      ...cardsRef.current,
+      ...currentCards,
       [card.id]: current + 1,
     });
   };
 
   const handleRemove = (cardId: string) => {
     if (!activeVariation) return;
-    const current = cardsRef.current[cardId] ?? 0;
+    const currentCards = currentCardsFor(activeVariation);
+    const current = currentCards[cardId] ?? 0;
     if (current <= 0) return;
-    const next = { ...cardsRef.current };
+    const next = { ...currentCards };
     if (current === 1) delete next[cardId];
     else next[cardId] = current - 1;
     persistCards(next);
@@ -447,7 +458,9 @@ export function BuilderView({ deck }: { deck: Deck }) {
               <button
                 type="button"
                 onClick={() => setChangeLeaderOpen(true)}
-                className="inline-flex items-center gap-1 rounded-lg border border-[var(--bg-inset)] px-3 py-2 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-inset)]"
+                disabled={saving}
+                title={saving ? "Wait for the deck to finish saving" : undefined}
+                className="inline-flex items-center gap-1 rounded-lg border border-[var(--bg-inset)] px-3 py-2 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-inset)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 Change Leader

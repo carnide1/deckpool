@@ -2,12 +2,13 @@
 
 import {
   Suspense,
+  useCallback,
   useDeferredValue,
   useEffect,
   useMemo,
   useState,
 } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { PackagePlus } from "lucide-react";
 import { AddStarterDeckModal } from "@/components/collection/AddStarterDeckModal";
 import { CardDetailModal } from "@/components/cards/CardDetailModal";
@@ -55,7 +56,6 @@ function parseSort(raw: string | null): SortKey {
 }
 
 function ExplorePageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { cards, loading: catalogLoading, error: catalogError } = useCatalog();
   const { ownedMap, allLabels } = useCollection();
@@ -73,27 +73,44 @@ function ExplorePageContent() {
   );
   const ownedOnly = searchParams.get("owned") === "1";
   const wantedOnly = searchParams.get("wanted") === "1";
-  const urlSort = parseSort(searchParams.get("sort"));
+  const sort = parseSort(searchParams.get("sort"));
 
   const [filters, setFilters] = useState<SearchFilters>(urlFilters);
-  const [sort, setSort] = useState<SortKey>(urlSort);
   const [selectedCard, setSelectedCard] = useState<DeckPoolCard | null>(null);
   const [starterOpen, setStarterOpen] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [syncedUrlKey, setSyncedUrlKey] = useState(urlKey);
+  const [writtenUrlKey, setWrittenUrlKey] = useState<string | null>(null);
 
-  useEffect(() => {
-    setFilters((prev) => (filtersEqual(prev, urlFilters) ? prev : urlFilters));
-  }, [urlFilters]);
+  // Adopt URL changes made elsewhere (nav links, back/forward) during render.
+  // Skip the URL this page just wrote so a late echo never clobbers typing.
+  if (urlKey !== syncedUrlKey) {
+    setSyncedUrlKey(urlKey);
+    if (urlKey === writtenUrlKey) {
+      setWrittenUrlKey(null);
+    } else if (!filtersEqual(filters, urlFilters)) {
+      setFilters(urlFilters);
+    }
+  }
 
-  useEffect(() => {
-    setSort(urlSort);
-  }, [urlSort]);
+  const replaceUrl = useCallback((search: string) => {
+    setWrittenUrlKey(search);
+    window.history.replaceState(
+      null,
+      "",
+      search ? `/explore?${search}` : "/explore",
+    );
+  }, []);
 
   const deferredFilters = useDeferredValue(filters);
 
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [deferredFilters, ownedOnly, wantedOnly, sort]);
+  const resultsKey = cardsSearchString(
+    deferredFilters,
+    ownedOnly,
+    sort,
+    wantedOnly,
+  );
+  const [paging, setPaging] = useState({ key: resultsKey, count: PAGE_SIZE });
+  const visibleCount = paging.key === resultsKey ? paging.count : PAGE_SIZE;
 
   const ownedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -197,11 +214,10 @@ function ExplorePageContent() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const search = cardsSearchString(filters, ownedOnly, sort, wantedOnly);
-      if (search === urlKey) return;
-      router.replace(search ? `/explore?${search}` : "/explore", { scroll: false });
+      if (search !== urlKey) replaceUrl(search);
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [filters, ownedOnly, wantedOnly, sort, urlKey, router]);
+  }, [filters, ownedOnly, wantedOnly, sort, urlKey, replaceUrl]);
 
   const selectedOwned = selectedCard ? ownedMap[selectedCard.id] : undefined;
   const selectedDecks = selectedCard
@@ -224,17 +240,16 @@ function ExplorePageContent() {
             <input
               type="checkbox"
               checked={ownedOnly}
-              onChange={(event) => {
-                const search = cardsSearchString(
-                  filters,
-                  event.target.checked,
-                  sort,
-                  wantedOnly,
-                );
-                router.replace(search ? `/explore?${search}` : "/explore", {
-                  scroll: false,
-                });
-              }}
+              onChange={(event) =>
+                replaceUrl(
+                  cardsSearchString(
+                    filters,
+                    event.target.checked,
+                    sort,
+                    wantedOnly,
+                  ),
+                )
+              }
               className="rounded border-[var(--bg-inset)]"
             />
             Owned only
@@ -243,17 +258,16 @@ function ExplorePageContent() {
             <input
               type="checkbox"
               checked={wantedOnly}
-              onChange={(event) => {
-                const search = cardsSearchString(
-                  filters,
-                  ownedOnly,
-                  sort,
-                  event.target.checked,
-                );
-                router.replace(search ? `/explore?${search}` : "/explore", {
-                  scroll: false,
-                });
-              }}
+              onChange={(event) =>
+                replaceUrl(
+                  cardsSearchString(
+                    filters,
+                    ownedOnly,
+                    sort,
+                    event.target.checked,
+                  ),
+                )
+              }
               className="rounded border-[var(--bg-inset)]"
             />
             Wanted
@@ -293,7 +307,13 @@ function ExplorePageContent() {
             </span>
           ) : null}
         </p>
-        <SortSelect value={sort} onChange={setSort} options={CARDS_SORTS} />
+        <SortSelect
+          value={sort}
+          onChange={(next) =>
+            replaceUrl(cardsSearchString(filters, ownedOnly, next, wantedOnly))
+          }
+          options={CARDS_SORTS}
+        />
       </div>
 
       <CardGrid
@@ -314,7 +334,9 @@ function ExplorePageContent() {
         <div className="flex justify-center">
           <Button
             variant="secondary"
-            onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+            onClick={() =>
+              setPaging({ key: resultsKey, count: visibleCount + PAGE_SIZE })
+            }
           >
             Show more
           </Button>

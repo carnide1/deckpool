@@ -238,7 +238,7 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 ### Explore (`/explore`)
 
 - Full English catalog (no Don). Nav label **Explore**. `components/cards/` is still card tiles/modals.
-- Filters sync to the URL (`lib/search/filters.ts`). Owned toggle: `owned=1`. Wanted toggle: `wanted=1`. Both can be on. Deck membership filter (`deck=`). Description mode: `in=text`. Timing facet: `timing=on-play|on-ko` (AND). Old `/cards` redirects here and keeps the query string.
+- Filters sync to the URL (`lib/search/filters.ts`) via `window.history.replaceState` (no router navigation), debounced 350ms. Sort / Owned / Wanted are read straight from the URL. URL changes from elsewhere (links, back/forward) re-seed the filters; the page's own writes never overwrite in-progress typing. Show-more resets whenever the result set changes. Owned toggle: `owned=1`. Wanted toggle: `wanted=1`. Both can be on. Deck membership filter (`deck=`). Description mode: `in=text`. Timing facet: `timing=on-play|on-ko` (AND). Old `/cards` redirects here and keeps the query string.
 - Search bar Name | Text: Name matches name or card id; Text matches `effect` + `trigger` substring. Switching modes keeps the query. Clearing filters resets to Name.
 - Sort: newest / oldest / serial / name / category / cost. Newest = latest set family.
 - Page size 48, load-more style.
@@ -267,8 +267,8 @@ shares/{shareId}                     public snapshot: ownerUid, deckId, variatio
 - Status: plain **Legal · Owned** text (not pill buttons); reason notes collapse behind **“N notes”** with max-height scroll so long Unowned lists do not push List Summary.
 - View ↔ Edit keeps the open variation via `?variation=` on the mode toggle (does not jump back to the favorite).
 - Variations: **custom dropdown** picks the active list (matching panel borders; chevron rotates open/closed); star button pins favorite. Clone, rename, delete (cannot delete the last). Compare shows count diffs. Clone/Rename disable overlay-click dismiss and focus the name field (not the X).
-- Change Leader: warning, then strip illegal cards from **every** variation of that deck.
-- Writes go to Firestore through a queued `setVariationCards` so rapid clicks do not race. On write failure, optimistic local cards clear so the UI falls back to the Firestore snapshot.
+- Change Leader: warning, then strip illegal cards from **every** variation of that deck. The button is disabled while a list save is in flight.
+- Each tap issues `setVariationCards` immediately (Firestore keeps one client's writes in order and shows them in snapshots right away, including offline). The builder tracks pending writes **per variation**: while any are in flight, the next edit builds on the last list sent (so rapid taps never drop cards, even across tab switches); once none are pending it builds on the live Firestore snapshot, so Change Leader strips and other devices' edits are not overwritten. A failed write shows a toast and the view falls back to the snapshot.
 - There is **no** text Manifest in Edit anymore (`BuilderManifest` removed).
 
 ### Deck view (`/decks/[id]` without `mode=edit`)
@@ -375,7 +375,7 @@ Key libraries:
 | Module | Role |
 |---|---|
 | `lib/firebase.ts` | Init from env; Auth persistence IndexedDB → localStorage → memory |
-| `lib/users.ts` | Signup doc, `ensureUserDoc`, display name, owned-count for routing |
+| `lib/users.ts` | Signup doc + `ensureUserDoc` (both create-if-missing in a transaction, since they race on a new account), display name, owned-count for routing |
 | `lib/auth-routing.ts` | Post-login path, safe `?next=` allowlist, auth landing helpers |
 | `lib/collection.ts` | Qty set/adjust, label-only updates, label merge, batch starter add |
 | `lib/wanted.ts` | Bounty qty, catch transaction, raise gaps from a variation |
