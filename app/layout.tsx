@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cinzel, Nunito } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import { AuthGate } from "@/components/auth/AuthGate";
@@ -20,6 +20,14 @@ const cinzel = Cinzel({
 export const metadata: Metadata = {
   title: "DeckPool",
   description: "Personal One Piece TCG deckbuilder — brew from the cards you own.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Lets page content draw behind iOS Safari's floating toolbar / home indicator.
+  viewportFit: "cover",
+  themeColor: "#faf3e6",
 };
 
 export default function RootLayout({

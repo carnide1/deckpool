@@ -73,7 +73,7 @@ function FloatingNavButton({
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative min-h-dvh">
-      <main className="p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-8 md:pl-24">
+      <main className="p-4 pr-[max(1rem,env(safe-area-inset-right))] pb-[calc(6rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] md:p-8 md:pl-24">
         {children}
       </main>
 

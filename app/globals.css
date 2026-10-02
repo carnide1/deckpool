@@ -58,6 +58,10 @@
   --color-ink-muted: var(--ink-muted);
 }
 
+html {
+  background: var(--bg-page);
+}
+
 body {
   background: var(--bg-page);
   color: var(--ink-primary);
