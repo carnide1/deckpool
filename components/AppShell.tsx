@@ -84,7 +84,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {PRIMARY_NAV.map((item) => (
           <FloatingNavButton key={item.href} tooltipSide="right" {...item} />
         ))}
-        <span className="mx-auto h-px w-6 bg-[var(--ink-muted)]/30" aria-hidden />
         <FloatingNavButton tooltipSide="right" {...PROFILE_NAV} />
       </nav>
 
@@ -95,7 +94,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {PRIMARY_NAV.map((item) => (
           <FloatingNavButton key={item.href} tooltipSide="top" {...item} />
         ))}
-        <span className="h-6 w-px bg-[var(--ink-muted)]/30" aria-hidden />
         <FloatingNavButton tooltipSide="top" {...PROFILE_NAV} />
       </nav>
     </div>
