@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-10-03
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (snapshot includes deck View import/export, floating icon nav + wide layouts; prior noted commit `ad26da6`). **Friends** is on `main` (merged). Deck-list sort is `039cac0`. Its `firestore.rules` were deployed on 2026-10-02.
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (snapshot includes deck View import/export at `5d5e872`; prior noted commit `ad26da6`). **Friends** is on `main` (merged). Deck-list sort is `039cac0`. Its `firestore.rules` were deployed on 2026-10-02.
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
