@@ -59,6 +59,7 @@ export function DeckViewBody({
   showOwned = true,
   onSetFavorite,
   onActiveVariationChange,
+  focusVariationId,
   wanted,
   emptyMessage = "This variation is empty. Switch to Edit to add cards.",
   cardDetailProps,
@@ -74,6 +75,8 @@ export function DeckViewBody({
   showOwned?: boolean;
   onSetFavorite?: (variationId: string) => void;
   onActiveVariationChange?: (variation: Variation | null) => void;
+  /** Select this variation once it is in `variations` (after an import). */
+  focusVariationId?: string | null;
   wanted?: DeckViewWanted;
   emptyMessage?: string;
   cardDetailProps?: DeckViewCardDetailOptions;
@@ -93,9 +96,29 @@ export function DeckViewBody({
   const constructionRules = useMemo(() => getConstructionRules(), []);
 
   const [pickedVariationId, setActiveVariationId] = useState("");
+  const [appliedFocusId, setAppliedFocusId] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<DeckPoolCard | null>(null);
+  const [seenDeckId, setSeenDeckId] = useState(deck.id);
+  if (deck.id !== seenDeckId) {
+    setSeenDeckId(deck.id);
+    setActiveVariationId("");
+    setAppliedFocusId(null);
+    setSelectedCard(null);
+  }
 
-  const activeVariationId = variations.some(
+  const focusHit =
+    focusVariationId && variations.some((row) => row.id === focusVariationId)
+      ? focusVariationId
+      : null;
+  const pendingFocus = focusHit && focusHit !== appliedFocusId ? focusHit : null;
+  if (pendingFocus) {
+    setAppliedFocusId(pendingFocus);
+    setActiveVariationId(pendingFocus);
+  }
+
+  const activeVariationId = pendingFocus
+    ? pendingFocus
+    : variations.some(
     (row) => row.id === pickedVariationId,
   )
     ? pickedVariationId

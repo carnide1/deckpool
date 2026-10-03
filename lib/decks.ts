@@ -162,6 +162,10 @@ export function variationDocRef(
   );
 }
 
+/** Matches `validVariation` in firestore.rules. */
+export const VARIATION_NAME_MAX = 80;
+export const VARIATION_UNIQUE_CARD_MAX = 60;
+
 export function cleanCardsMap(cards: Record<string, number>): Record<string, number> {
   const next: Record<string, number> = {};
   for (const [cardId, qty] of Object.entries(cards)) {
@@ -191,18 +195,34 @@ export async function setVariationCards(
   await batch.commit();
 }
 
-export async function cloneVariation(
+export async function createVariation(
   uid: string,
   deckId: string,
-  source: Variation,
   name: string,
+  cards: Record<string, number>,
 ): Promise<string> {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    throw new Error("Name the variation.");
+  }
+  if (trimmed.length > VARIATION_NAME_MAX) {
+    throw new Error(
+      `Variation name must be ${VARIATION_NAME_MAX} characters or fewer.`,
+    );
+  }
+  const cleaned = cleanCardsMap(cards);
+  if (Object.keys(cleaned).length > VARIATION_UNIQUE_CARD_MAX) {
+    throw new Error(
+      `A variation can hold ${VARIATION_UNIQUE_CARD_MAX} different cards.`,
+    );
+  }
+
   const db = getFirebaseDb();
   const variationRef = doc(deckVariationsRef(uid, deckId));
   const batch = writeBatch(db);
   batch.set(variationRef, {
-    name: name.trim() || `${source.name} copy`,
-    cards: cleanCardsMap(source.cards),
+    name: trimmed,
+    cards: cleaned,
     updatedAt: serverTimestamp(),
   });
   batch.update(deckDocRef(uid, deckId), {
@@ -210,6 +230,17 @@ export async function cloneVariation(
   });
   await batch.commit();
   return variationRef.id;
+}
+
+export async function cloneVariation(
+  uid: string,
+  deckId: string,
+  source: Variation,
+  name: string,
+): Promise<string> {
+  const trimmed = name.trim();
+  const nextName = trimmed || `${source.name} copy`.slice(0, VARIATION_NAME_MAX);
+  return createVariation(uid, deckId, nextName, source.cards);
 }
 
 export async function renameVariation(

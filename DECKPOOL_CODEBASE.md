@@ -1,8 +1,8 @@
 # DeckPool — Codebase snapshot
 
 **Status:** Living summary of the **as-built** app  
-**Last updated:** 2026-10-02
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (snapshot includes floating icon nav + wide layouts; prior noted commit `ad26da6`). **Friends** is on the `friends` branch (pushed; not merged into `main` yet). Deck-list sort is `039cac0`. Its `firestore.rules` were deployed on 2026-10-02.
+**Last updated:** 2026-10-03
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (snapshot includes deck View import/export, floating icon nav + wide layouts; prior noted commit `ad26da6`). **Friends** is on `main` (merged). Deck-list sort is `039cac0`. Its `firestore.rules` were deployed on 2026-10-02.
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -315,6 +315,8 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 - Same variation dropdown (favorite ★), star-to-pin, and list summary as Edit. Legal/Owned follow the list you are looking at.
 - Leader portrait uses preferred art. WANTED stamp and bounty stepper still work from this page.
 - **Copy share link** creates a public `shares/{id}` snapshot of the **active** variation (deck name, Leader, variation name, card counts, preferred art URLs), copies `{origin}/s/{id}` to the clipboard for texting. Empty lists cannot be shared (client + rules). The link is a frozen snapshot — later edits do not change old links. If clipboard fails, the toast shows the URL for manual copy.
+- **Import List** pastes text into a **new** variation on this deck (name required, max 80). The Leader in the paste must be this deck’s Leader; a different Leader, no Leader, no cards, or more than 60 different cards does not save. Lines need a printed card number (`1xOP01-016`, `4 Nami (OP01-016)`, promo `P-029`, and the same shapes). The count is the one on that card’s line (`4x`, a trailing `x4`, or the first number, as in `4 Nami`). A later `DON!! x1` on the same line is not the count. Don lines, names with no number, unknown numbers, and numbers with no count are shown and left out. A short or illegal list still saves; Legal / Owned update after. The binder does not change. After save, the view switches to the new variation (`?variation=`).
+- **Copy to Clipboard** copies the open variation as OPTCGSim text (Leader first, then `4xOP01-016` lines, ids A–Z). Empty lists are refused. An illegal list still exports. Clipboard failure asks the user to allow clipboard access. Friend deck pages do not get these buttons.
 
 ### Shared deck (`/s/[shareId]`)
 
@@ -426,7 +428,7 @@ app/(app)/friends/      Friends page + [uid] layout and friend Decks / Collectio
 components/             UI by area: auth, builder (DeckBoard/CardStack/CardResults/DeckViewBody), cards, collection, decks, friends, profile, search, share, ui, wanted
 contexts/               Auth, UserProfile, Catalog, Collection, Wanted, CardPrefs, Decks, Friends, FriendData
 hooks/                  useCollectionWrite, useWantedWrite, useOwner{Collection,Wanted,CardPrefs,Decks}, useCardListBrowser, useDeckSort
-lib/                    firebase, users, profiles, friends, friendIds, usernames, collection, wanted, shares, cardPrefs, cardArt*, cardImageUrl, variations, decks, sortDecks, legality, builder, search, tests
+lib/                    firebase, users, profiles, friends, friendIds, usernames, collection, wanted, shares, cardPrefs, cardArt*, cardImageUrl, variations, decks, deckList, sortDecks, legality, builder, search, tests
 types/                  catalog, collection, wanted, deck, share, user, friends, cardPref, construction, product
 app/s/[shareId]/         public shared-deck page (+ CatalogProvider layout)
 app/invite/[code]/       public friend-invite page (+ FriendsProvider layout)
@@ -456,7 +458,8 @@ Key libraries:
 | `lib/variations.ts` | Favorite resolve + tab order (resolved favorite first, then recency) |
 | `lib/variationStats.ts` | Average cost/power, category and keyword counts for a list |
 | `lib/builderDeckStacks.ts` | Edit visual deck: stack sort + visible-face cap (4) |
-| `lib/decks.ts` | Deck/variation CRUD, favorite pin, starter→deck, change Leader, delete cascade. `createDeckWithVariations` (one batch, first variation = favorite) backs create, starter→deck, and friend copy |
+| `lib/decks.ts` | Deck/variation CRUD, favorite pin, starter→deck, change Leader, delete cascade. `createDeckWithVariations` (one batch, first variation = favorite) backs create, starter→deck, and friend copy. `createVariation` adds one list to an existing deck (clone and import) |
+| `lib/deckList.ts` | Paste parser and OPTCGSim export text for deck View import/export |
 | `lib/sortDecks.ts` | Deck-list sort (edited, name, Leader, color, created) plus the saved `localStorage` key. Used by `/decks` and a friend's Decks tab |
 | `lib/usernames.ts` | Username format, reserved list, normalize + validate |
 | `lib/profiles.ts` | `profiles/{uid}` + `usernames/{name}`: claim/change username (transaction), privacy, display-name sync |
@@ -489,7 +492,7 @@ The blueprint is still the product source of truth for **rules** (color identity
 | Builder manifest as text lines + Add on results | Edit uses a **visual stacked deck** (tap remove) and art-first results (tap add + info). |
 | Display font Fredoka | Cinzel |
 | Builder search state may stay in the component | True. View vs Edit is `?mode=edit`. |
-| Paste-a-list import, match history, LLM, scanner | Not built. See `DECKPOOL_FUTURE_FEATURES.md`. |
+| Paste-a-list import, match history, LLM, scanner | **Deck View** import (new variation on the open deck) and OPTCGSim export are built. Binder import, match history, LLM, and scanner are not. See `DECKPOOL_FUTURE_FEATURES.md`. |
 | Compact Legal/Owned on `/decks` is **any** variation | Compact Legal/Owned is the **favorite** variation. Profile still counts every variation. |
 | Wishlist (future-features #5) | Built as **Wanted**: extra copies to buy, top-level `/wanted` route + nav, Explore `wanted=1`, catch into the binder. Not a Collection mode. |
 | No public deck gallery / share network | **Share links** only: owner copies `/s/{id}` for one variation snapshot. Not a browseable gallery. **Friends** can browse each other's decks / collection / Wanted (exact-username add or a 7-day invite link, per-area privacy). Still no public directory. |

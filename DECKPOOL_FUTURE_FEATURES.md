@@ -1,7 +1,7 @@
 # DeckPool — Future features (post-V1)
 
 **Status:** Planning notes, not V1 work  
-**Last updated:** 2026-08-18  
+**Last updated:** 2026-10-03  
 **Use this file as:** the decision record for six feature ideas that came up after V1 was locked.
 
 V1 is still defined by `DECKPOOL_V1_BLUEPRINT.md`. Do not treat this file as permission to add scanners, AI, or a game simulator before V1 ships.
@@ -107,7 +107,7 @@ Empty-state copy on Collection should say, in plain words: scan in Haki or Logia
 1. Support our own simple format: `cardId,quantity` and optional labels. Also parse Limitless lines and `4x OP01-016` lines.
 2. Collection page: Import modal. Preview first (new cards vs adding to existing counts vs unknown ids). Then write to Firestore using the existing quantity helpers.
 3. Default action is **add to current counts**, not replace the whole binder. Offer an explicit “set to these counts” option so a bad file cannot wipe the collection by accident.
-4. Also add **export** of a variation as Limitless / OPTCGSim text, so people can take a DeckPool list elsewhere to play.
+4. Binder import is still not built. **Deck View import/export shipped 2026-10-03:** paste a list into a new variation of the deck you have open (Leader must match; illegal lists still save), and copy the open variation as OPTCGSim text (`1xOP12-001`). Limitless-style lines import. Limitless export is not built. This does not add cards to the binder.
 5. Optional later: a camera that looks at **one** card, reads the printed code, matches it to `data/cards.json`, and asks before adding 1. Skip art-variant matching.
 
 ---

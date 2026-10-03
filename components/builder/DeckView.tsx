@@ -1,9 +1,13 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { DeckModeToggle } from "@/components/builder/DeckModeToggle";
 import { DeckViewBody } from "@/components/builder/DeckViewBody";
+import { ExportSimButton } from "@/components/decks/ExportSimButton";
+import { ImportVariationModal } from "@/components/decks/ImportVariationModal";
+import { Button } from "@/components/ui/Button";
 import { ShareLinkButton } from "@/components/share/ShareLinkButton";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCardPrefs } from "@/contexts/CardPrefsContext";
@@ -22,9 +26,19 @@ export function DeckView({ deck }: { deck: Deck }) {
   const { variationsByDeckId } = useDecks();
   const { saving: wantedSaving, togglePosted, adjustQuantity: adjustWanted } =
     useWantedWrite();
+  const router = useRouter();
   const [activeVariation, setActiveVariation] = useState<Variation | null>(
     null,
   );
+  const [importOpen, setImportOpen] = useState(false);
+  const [focusVariationId, setFocusVariationId] = useState<string | null>(null);
+  const [seenDeckId, setSeenDeckId] = useState(deck.id);
+  if (deck.id !== seenDeckId) {
+    setSeenDeckId(deck.id);
+    setImportOpen(false);
+    setFocusVariationId(null);
+    setActiveVariation(null);
+  }
 
   const variations = useMemo(
     () => variationsByDeckId[deck.id] ?? [],
@@ -47,6 +61,16 @@ export function DeckView({ deck }: { deck: Deck }) {
     return map;
   }, [wantedMap]);
 
+  const handleImported = useCallback(
+    (variationId: string) => {
+      setFocusVariationId(variationId);
+      router.replace(
+        `/decks/${deck.id}?variation=${encodeURIComponent(variationId)}`,
+      );
+    },
+    [deck.id, router],
+  );
+
   const handleSetFavorite = useCallback(
     (variationId: string) => {
       if (!user || variationId === deck.favoriteVariationId) return;
@@ -64,6 +88,7 @@ export function DeckView({ deck }: { deck: Deck }) {
   );
 
   return (
+    <>
     <DeckViewBody
       deck={deck}
       variations={variations}
@@ -71,8 +96,24 @@ export function DeckView({ deck }: { deck: Deck }) {
       backHref="/decks"
       backLabel="Back to decks"
       onActiveVariationChange={setActiveVariation}
+      focusVariationId={focusVariationId}
       headerActions={
         <>
+          {user ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setImportOpen(true)}
+              aria-label="Import List"
+            >
+              Import List
+            </Button>
+          ) : null}
+          <ExportSimButton
+            leaderId={deck.leaderId}
+            variation={activeVariation}
+          />
           {user ? (
             <ShareLinkButton
               uid={user.uid}
@@ -97,5 +138,14 @@ export function DeckView({ deck }: { deck: Deck }) {
         saving: wantedSaving,
       }}
     />
+    {importOpen && user ? (
+      <ImportVariationModal
+        deck={deck}
+        ownedQtyById={ownedQtyById}
+        onClose={() => setImportOpen(false)}
+        onImported={handleImported}
+      />
+    ) : null}
+    </>
   );
 }
