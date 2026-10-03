@@ -197,6 +197,79 @@ describe("applySearchFilters", () => {
     );
   });
 
+  it("matches a typed hyphen against the printed minus", () => {
+    const withPower = [
+      {
+        ...perona,
+        effect:
+          "Give up to 1 of your opponent's Characters \u22122000 power during this turn.",
+      },
+    ];
+    const results = applySearchFilters(
+      withPower,
+      filters({ text: "-2000", textField: "description" }),
+    );
+    assert.deepEqual(
+      results.map((card) => card.id),
+      ["OP03-114"],
+    );
+  });
+
+  it("matches opponents against opponent's", () => {
+    const withPower = [
+      {
+        ...perona,
+        effect: "Give up to 1 of your opponent's Characters \u22122000 power.",
+      },
+    ];
+    const results = applySearchFilters(
+      withPower,
+      filters({ text: "opponents", textField: "description" }),
+    );
+    assert.deepEqual(
+      results.map((card) => card.id),
+      ["OP03-114"],
+    );
+  });
+
+  it("matches the printed debuff line on trigger text", () => {
+    const withPower = [
+      {
+        ...perona,
+        trigger:
+          "Give up to 1 of your opponent's Characters \u22122000 power during this turn.",
+      },
+    ];
+    const results = applySearchFilters(
+      withPower,
+      filters({
+        text: "give up to 1 of your opponents characters -2000 power",
+        textField: "description",
+      }),
+    );
+    assert.deepEqual(
+      results.map((card) => card.id),
+      ["OP03-114"],
+    );
+  });
+
+  it("does not fold punctuation in name mode", () => {
+    const withPower = [
+      {
+        ...perona,
+        effect: "Characters \u22122000 power",
+      },
+    ];
+    const results = applySearchFilters(
+      withPower,
+      filters({ text: "-2000", textField: "name" }),
+    );
+    assert.deepEqual(
+      results.map((card) => card.id),
+      [],
+    );
+  });
+
   it("ANDs selected timings", () => {
     const timed = [
       { ...perona, timings: ["on-play", "when-attacking"] },

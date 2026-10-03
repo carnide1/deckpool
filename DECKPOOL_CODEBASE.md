@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-10-02
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (snapshot includes floating icon nav + wide layouts; prior noted commit `ad26da6`). **Friends** is on the `friends` branch (pushed to GitHub; not merged into `main` yet). Its `firestore.rules` were deployed on 2026-10-02.
+**Git:** `main` at `https://github.com/carnide1/deckpool.git` (snapshot includes floating icon nav + wide layouts; prior noted commit `ad26da6`). **Friends** is on the `friends` branch (pushed; not merged into `main` yet). Deck-list sort is `039cac0`. Its `firestore.rules` were deployed on 2026-10-02.
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -146,7 +146,7 @@ Logged-in users on the auth landing routes (`/`, `/login`, `/signup`, `/forgot-p
 | `/collection` | **Owned binder** by default. Modes: Binder, Summary (`?view=summary`). Binder cannot create new card numbers (`useCollectionWrite(false)`). |
 | `/wanted` | **Wanted** shopping board — extra copies to buy. **Caught** can create binder rows. Old `/collection?view=wanted` redirects here. |
 | `/explore` | **Full catalog.** Name/text search + filters, URL-synced. `owned=1` limits to owned. `wanted=1` limits to posters. `in=text` searches rules text. `timing=` is printed ability windows (AND). Click a card to set qty (this **can** create new collection rows), bounty, labels, preferred art. Starter-deck add lives here too. Old `/cards` redirects here. |
-| `/decks` | Deck grid, newest edits first. Create / rename / delete. |
+| `/decks` | Deck grid with a sort dropdown (default newest edits). Create / rename / delete. The last choice is saved in this browser. |
 | `/decks/[id]` | **View** by default (`DeckView`). **Edit** at `?mode=edit` (`BuilderView`). |
 | `/friends` | Your username (copy / change), add a friend by exact username, incoming + sent requests, friend list (remove), privacy toggles. Accounts without a username see only a "pick a username" form. |
 | `/friends/[uid]` | A friend's **Decks** (default tab). Shared layout with header + Decks / Collection / Wanted tabs. Non-friends see "not available". |
@@ -268,7 +268,7 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 
 - Full English catalog (no Don). Nav label **Explore**. `components/cards/` is still card tiles/modals.
 - Filters sync to the URL (`lib/search/filters.ts`) via `window.history.replaceState` (no router navigation), debounced 350ms. Sort / Owned / Wanted are read straight from the URL. URL changes from elsewhere (links, back/forward) re-seed the filters; the page's own writes never overwrite in-progress typing. Show-more resets whenever the result set changes. Owned toggle: `owned=1`. Wanted toggle: `wanted=1`. Both can be on. Deck membership filter (`deck=`). Description mode: `in=text`. Timing facet: `timing=on-play|on-ko` (AND). Old `/cards` redirects here and keeps the query string.
-- Search bar Name | Text: Name matches name or card id; Text matches `effect` + `trigger` substring. Switching modes keeps the query. Clearing filters resets to Name.
+- Search bar Name | Text: Name matches name or card id; Text matches `effect` + `trigger` substring. Text folds the printed minus (`−`), en dash, and fullwidth hyphen to `-`, and ignores apostrophes, then does the substring check. Switching modes keeps the query. Clearing filters resets to Name.
 - Sort: newest / oldest / serial / name / category / cost. Newest = latest set family.
 - Page size 48, load-more style.
 - Modal: qty (can create), bounty, user labels, art picker, decks that use the card, outside Previous/Next controls through the currently loaded results, and click-to-zoom full-screen art. Card tiles show current user labels plus derived deck labels.
@@ -277,7 +277,16 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 
 ### Decks (`/decks`)
 
-- Deck cards in a responsive grid (up to 3 per row), newest edits first. Multiple decks per Leader are allowed.
+- Deck cards in a responsive grid (up to 3 per row). Multiple decks per Leader are allowed.
+- **Sort** sits above the grid (deck count on the left, the same dropdown control as Collection on the right). It is hidden while decks are loading and when there are none. Options, in order:
+  - **Last edited** (default): newest `updatedAt`. A deck with no `updatedAt` uses `createdAt`.
+  - **Oldest edit:** that same timestamp, oldest first.
+  - **Name** and **Name (Z–A).**
+  - **Leader:** the Leader’s catalog name. A Leader missing from the catalog sorts by its card number.
+  - **Color:** Leader colors in the same order as the filter chips (Red, Green, Blue, Purple, Black, Yellow). The color list is compared from the left, so Red comes before Red/Green, which comes before Green. A missing Leader sorts last.
+  - **Newest created** and **Oldest created:** `createdAt` only. A later edit does not count as a later create.
+- Equal rows break the tie by deck name, then deck id. Name (Z–A) still orders equal names by id A–Z.
+- The choice is saved in this browser only (`localStorage` key `deckpool.deckSort`, read and written by `useDeckSort`). It is not a Firestore field and it is not stored per account. Your Decks page and a friend’s Decks tab share that one saved choice. A missing or unknown saved value falls back to last edited.
 - Create: search **owned Leaders only**, name the deck, create variation `Main` empty, pin it as the favorite.
 - Rename / delete with confirm. Delete also deletes variations.
 - Legal / Owned badges on each row come from the **favorite** variation only (not “any variation”).
@@ -333,7 +342,7 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 
 - One layout (`FriendShell`) with back link, name + `@username`, and Decks / Collection / Wanted tabs. A hidden area keeps its tab (eye-off icon) and shows "Hidden by {name}" (also used when rules refuse). Non-friends and unknown uids see "not available".
 - Listeners only start for shared areas; rules enforce the same thing.
-- **Decks:** same grid as `/decks`, newest edits first, **Legal badge only** (no Owned), no rename/delete, friend's Leader art.
+- **Decks:** same grid, sort options, and saved choice as `/decks` (one `deckpool.deckSort` value for both). **Legal badge only** (no Owned), no rename/delete, friend's Leader art. The dropdown is hidden when they have no decks.
 - **Deck view:** `DeckViewBody` with all variations, a static favorite star (not clickable), Legal only, no Wanted stamps, no Edit/Share. Card details are read-only (no art picker, no owned line).
 - **Copy to my decks** (`CopyDeckModal`): editable name; default **This variation** (saved as one `Main` variation), or **All variations** (names kept, their favorite first and pinned). Works even if you don't own the Leader. Opens your new deck after copying (`createDeckWithVariations`).
 - **Collection:** binder grid with copies, labels (their labels + their deck labels when decks are shared), the same filters/sort/pager as `/collection`, and a Summary toggle. Card details show copies and labels read-only; "In decks" links go to the friend's deck pages.
@@ -341,7 +350,8 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 
 ### Shared building blocks
 
-- `hooks/useCardListBrowser.ts` + `components/cards/CardBrowserFrame.tsx`: filter / sort / 60-per-page state and the grid + sticky filter sidebar layout. Used by Collection, Wanted, and both friend boards.
+- `hooks/useCardListBrowser.ts` + `components/cards/CardBrowserFrame.tsx`: filter / sort / 60-per-page state and the grid + sticky filter sidebar layout. Used by Collection, Wanted, and both friend boards. Card sort labels stay on `SortSelect`; deck lists pass their own labels.
+- `hooks/useDeckSort.ts`: the deck-list sort saved in `localStorage`. Used by `/decks` and a friend's Decks tab.
 - `DeckView` is a thin wrapper (your data, share link, Edit toggle, favorite pin, Wanted) around `components/builder/DeckViewBody.tsx`, which friend decks reuse.
 - Shared components take optional props that default to today's behavior: `DeckRow` (`href`, optional rename/delete, `preferredImages`, `showOwned`), `DeckStatusBadges` (`owned` optional), `VariationTabs` (static star without `onSetFavorite`), `CardDetailModal` (`allowArtPicker`, `deckHref`, `ownedLabel`, read-only wanted/labels), `CardGrid` (read-only Wanted stamp), `CollectionModeToggle` (`baseHref`).
 
@@ -351,7 +361,7 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 
 **What the UI uses:** `lib/search/filters.ts` + `NameSearchBar` + `FilterPanel`.
 
-- Text has two modes on Collection, Wanted, Explore, and Builder. **Name** matches name or card id substring. **Description** (`in=text` on Explore) matches effect or trigger text only (not name/id). Switching modes keeps the typed query. Clearing filters resets to Name.
+- Text has two modes on Collection, Wanted, Explore, and Builder. **Name** matches name or card id substring. **Description** (`in=text` on Explore) matches effect or trigger text only (not name/id). Text folds the printed minus (`−`), en dash, and fullwidth hyphen to `-`, and ignores apostrophes, then does the substring check. Switching modes keeps the typed query. Clearing filters resets to Name.
 - Facets: color, category, cost, rarity, type, attribute, set, has (keywords), **timing**, label, deck (Collection, Wanted, and Explore). Timing values are compiled printed windows (`on-play`, `activate-main`, …) and **AND** when several are selected. Keywords stay on `card.has` (blocker, rush, searcher, …).
 - Explore URL stores those filters plus `owned=1`, `wanted=1`, optional `in=text`, and `timing=`. Builder / Collection / Wanted keep filters in component state.
 
@@ -415,8 +425,8 @@ app/(app)/wanted/       Wanted board page (authenticated)
 app/(app)/friends/      Friends page + [uid] layout and friend Decks / Collection / Wanted / deck pages
 components/             UI by area: auth, builder (DeckBoard/CardStack/CardResults/DeckViewBody), cards, collection, decks, friends, profile, search, share, ui, wanted
 contexts/               Auth, UserProfile, Catalog, Collection, Wanted, CardPrefs, Decks, Friends, FriendData
-hooks/                  useCollectionWrite, useWantedWrite, useOwner{Collection,Wanted,CardPrefs,Decks}, useCardListBrowser
-lib/                    firebase, users, profiles, friends, friendIds, usernames, collection, wanted, shares, cardPrefs, cardArt*, cardImageUrl, variations, decks, legality, builder, search, tests
+hooks/                  useCollectionWrite, useWantedWrite, useOwner{Collection,Wanted,CardPrefs,Decks}, useCardListBrowser, useDeckSort
+lib/                    firebase, users, profiles, friends, friendIds, usernames, collection, wanted, shares, cardPrefs, cardArt*, cardImageUrl, variations, decks, sortDecks, legality, builder, search, tests
 types/                  catalog, collection, wanted, deck, share, user, friends, cardPref, construction, product
 app/s/[shareId]/         public shared-deck page (+ CatalogProvider layout)
 app/invite/[code]/       public friend-invite page (+ FriendsProvider layout)
@@ -447,6 +457,7 @@ Key libraries:
 | `lib/variationStats.ts` | Average cost/power, category and keyword counts for a list |
 | `lib/builderDeckStacks.ts` | Edit visual deck: stack sort + visible-face cap (4) |
 | `lib/decks.ts` | Deck/variation CRUD, favorite pin, starter→deck, change Leader, delete cascade. `createDeckWithVariations` (one batch, first variation = favorite) backs create, starter→deck, and friend copy |
+| `lib/sortDecks.ts` | Deck-list sort (edited, name, Leader, color, created) plus the saved `localStorage` key. Used by `/decks` and a friend's Decks tab |
 | `lib/usernames.ts` | Username format, reserved list, normalize + validate |
 | `lib/profiles.ts` | `profiles/{uid}` + `usernames/{name}`: claim/change username (transaction), privacy, display-name sync |
 | `lib/friends.ts` | Username lookup, request send/cancel/decline/accept (batch), remove friend, queries + parsers |

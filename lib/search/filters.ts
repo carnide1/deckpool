@@ -134,18 +134,28 @@ export function uniqueFilterOptions(cards: DeckPoolCard[]): FilterOptions {
   };
 }
 
+function normalizeDescriptionText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[\u2212\u2013\uFF0D]/g, "-")
+    .replace(/[\u2019']/g, "");
+}
+
 function matchesText(
   card: DeckPoolCard,
   raw: string,
   textField: SearchTextField = "name",
 ): boolean {
-  const q = raw.trim().toLowerCase();
-  if (!q) return true;
+  const trimmed = raw.trim();
+  if (!trimmed) return true;
   if (textField === "description") {
-    if ((card.effect ?? "").toLowerCase().includes(q)) return true;
-    if ((card.trigger ?? "").toLowerCase().includes(q)) return true;
+    const q = normalizeDescriptionText(trimmed);
+    if (!q) return true;
+    if (normalizeDescriptionText(card.effect ?? "").includes(q)) return true;
+    if (normalizeDescriptionText(card.trigger ?? "").includes(q)) return true;
     return false;
   }
+  const q = trimmed.toLowerCase();
   if (card.name.toLowerCase().includes(q)) return true;
   if (card.id.toLowerCase().includes(q)) return true;
   return false;
