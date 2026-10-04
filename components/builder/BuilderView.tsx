@@ -506,7 +506,7 @@ export function BuilderView({ deck }: { deck: Deck }) {
                 role="switch"
                 aria-checked={ownedOnly}
                 onClick={() => setOwnedOnly((prev) => !prev)}
-                className="ml-auto inline-flex shrink-0 items-center gap-2 text-xs font-medium text-[var(--ink-primary)]"
+                className="inline-flex shrink-0 items-center gap-2 text-xs font-medium text-[var(--ink-primary)]"
               >
                 <span
                   className={[

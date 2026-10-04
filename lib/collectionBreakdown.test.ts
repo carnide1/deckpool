@@ -20,6 +20,7 @@ function card(
     images: [],
     has: [],
     timings: [],
+    block: "2",
     ...partial,
   };
 }

@@ -30,6 +30,7 @@ const linlin: DeckPoolCard = {
   images: [],
   has: ["effect"],
   timings: [],
+  block: "2",
 };
 
 const anana: DeckPoolCard = {
@@ -51,6 +52,7 @@ const anana: DeckPoolCard = {
   images: [],
   has: ["counter"],
   timings: [],
+  block: "2",
 };
 
 const katakuri: DeckPoolCard = {
@@ -72,6 +74,7 @@ const katakuri: DeckPoolCard = {
   images: [],
   has: ["effect"],
   timings: [],
+  block: "2",
 };
 
 const perona: DeckPoolCard = {
@@ -93,6 +96,7 @@ const perona: DeckPoolCard = {
   images: [],
   has: ["effect"],
   timings: [],
+  block: "2",
 };
 
 const cards = [linlin, anana, katakuri, perona];
@@ -319,6 +323,49 @@ describe("filter URL params", () => {
     assert.equal(parsed.textField, "description");
     assert.equal(params.get("in"), "text");
     assert.deepEqual(parsed.timings, ["on-play", "on-ko"]);
+  });
+
+  it("filters by block and by Standard", () => {
+    const rotated = { ...perona, id: "TEST-001", block: "1" as const };
+    const current = { ...anana, id: "TEST-002", block: "2" as const };
+    const evergreen = { ...katakuri, id: "TEST-003", block: "X" as const };
+    const banned = { ...perona, id: "OP06-116", name: "Reject", block: "2" as const };
+    const pool = [rotated, current, evergreen, banned];
+
+    const block1 = applySearchFilters(pool, filters({ blocks: ["1"] }));
+    assert.deepEqual(
+      block1.map((card) => card.id),
+      ["TEST-001"],
+    );
+
+    const standard = applySearchFilters(pool, filters({ standardOnly: true }));
+    assert.deepEqual(
+      standard.map((card) => card.id),
+      ["TEST-002", "TEST-003"],
+    );
+
+    const both = applySearchFilters(
+      pool,
+      filters({ blocks: ["1"], standardOnly: true }),
+    );
+    assert.deepEqual(both, []);
+  });
+
+  it("round-trips block and Standard", () => {
+    const original = filters({ blocks: ["1", "X"], standardOnly: true });
+    const params = new URLSearchParams();
+    writeFiltersToSearchParams(params, original);
+    const parsed = filtersFromSearchParams(params);
+    assert.deepEqual(parsed.blocks, ["1", "X"]);
+    assert.equal(parsed.standardOnly, true);
+    assert.equal(params.get("standard"), "1");
+  });
+
+  it("drops unknown block tokens", () => {
+    const parsed = filtersFromSearchParams(
+      new URLSearchParams("block=1|nope|X"),
+    );
+    assert.deepEqual(parsed.blocks, ["1", "X"]);
   });
 
   it("drops unknown timing slugs", () => {

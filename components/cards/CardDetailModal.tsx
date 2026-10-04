@@ -11,6 +11,7 @@ import { QuantityStepper } from "@/components/ui/QuantityStepper";
 import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/contexts/AuthContext";
 import { setPreferredImage } from "@/lib/cardPrefs";
+import { formatBlockStatus } from "@/lib/standard";
 import { adjacentCard, cardSelectionIndex } from "@/lib/cardSelection";
 import type { DeckPoolCard } from "@/types/catalog";
 
@@ -268,6 +269,10 @@ export function CardDetailModal({
             <div>
               <dt className="text-[var(--ink-muted)]">Power</dt>
               <dd className="font-medium tabular-nums">{card.power ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-[var(--ink-muted)]">Block</dt>
+              <dd className="font-medium">{formatBlockStatus(card)}</dd>
             </div>
           </dl>
 

@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { withBlock } from "@/lib/blocks";
 import { withCompiledTimings } from "@/lib/compileTimings";
 import type { DeckPoolCard } from "@/types/catalog";
 
@@ -31,7 +32,9 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     void import("@/data/cards.json")
       .then((mod) => {
         if (cancelled) return;
-        const rows = (mod.default as DeckPoolCard[]).map(withCompiledTimings);
+        const rows = (
+          mod.default as Omit<DeckPoolCard, "block">[]
+        ).map((card) => withBlock(withCompiledTimings(card)));
         setCards(rows);
         setError(null);
       })

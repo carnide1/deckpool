@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "tsx --test lib/**/*.test.ts",
     "ingest-catalog": "tsx scripts/ingest-catalog.ts",
+    "build-blocks": "tsx scripts/build-blocks.ts",
     "ingest-products": "tsx scripts/ingest-products.ts"
   },
   "dependencies": {

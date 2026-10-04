@@ -1,4 +1,7 @@
 export type CardCategory = "Leader" | "Character" | "Event" | "Stage";
+
+/** Bandai's current block for a card number. X never rotates. */
+export type BlockId = "1" | "2" | "3" | "4" | "5" | "X";
 export type OptcgColor =
   | "Red"
   | "Green"
@@ -26,6 +29,8 @@ export interface DeckPoolCard {
   images: string[];
   has: string[];
   timings: string[];
+  /** Null when this card number has not been classified yet. */
+  block: BlockId | null;
 }
 
 export interface PackMeta {

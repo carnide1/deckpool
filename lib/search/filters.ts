@@ -1,8 +1,10 @@
+import { isBlockId } from "@/lib/blocks";
 import {
   isTimingSlug,
   sortTimingSlugs,
 } from "@/lib/compileTimings";
-import type { CardCategory, DeckPoolCard, OptcgColor } from "@/types/catalog";
+import { isPlayableInStandard } from "@/lib/standard";
+import type { BlockId, CardCategory, DeckPoolCard, OptcgColor } from "@/types/catalog";
 
 export const OPTCG_COLORS: OptcgColor[] = [
   "Red",
@@ -38,6 +40,8 @@ export type SearchFilters = {
   timings: string[];
   labels: string[];
   deckIds: string[];
+  blocks: BlockId[];
+  standardOnly: boolean;
 };
 
 export const EMPTY_FILTERS: SearchFilters = {
@@ -54,6 +58,8 @@ export const EMPTY_FILTERS: SearchFilters = {
   timings: [],
   labels: [],
   deckIds: [],
+  blocks: [],
+  standardOnly: false,
 };
 
 export function cloneFilters(filters: SearchFilters): SearchFilters {
@@ -71,6 +77,8 @@ export function cloneFilters(filters: SearchFilters): SearchFilters {
     timings: [...filters.timings],
     labels: [...filters.labels],
     deckIds: [...filters.deckIds],
+    blocks: [...filters.blocks],
+    standardOnly: filters.standardOnly,
   };
 }
 
@@ -87,7 +95,9 @@ export function hasActiveFilters(filters: SearchFilters): boolean {
     filters.has.length > 0 ||
     filters.timings.length > 0 ||
     filters.labels.length > 0 ||
-    filters.deckIds.length > 0
+    filters.deckIds.length > 0 ||
+    filters.blocks.length > 0 ||
+    filters.standardOnly
   );
 }
 
@@ -252,6 +262,15 @@ export function applySearchFilters(
       }
     }
 
+    if (
+      filters.blocks.length > 0 &&
+      (card.block == null || !filters.blocks.includes(card.block))
+    ) {
+      return false;
+    }
+
+    if (filters.standardOnly && !isPlayableInStandard(card)) return false;
+
     return true;
   });
 }
@@ -305,6 +324,8 @@ export function filtersFromSearchParams(params: URLSearchParams): SearchFilters 
     timings: readList(params, "timing").filter(isTimingSlug),
     labels: readList(params, "label"),
     deckIds: readList(params, "deck"),
+    blocks: readList(params, "block").filter(isBlockId),
+    standardOnly: params.get("standard") === "1",
   };
 }
 
@@ -337,6 +358,9 @@ export function writeFiltersToSearchParams(
   writeList(params, "timing", filters.timings);
   writeList(params, "label", filters.labels);
   writeList(params, "deck", filters.deckIds);
+  writeList(params, "block", filters.blocks);
+  if (filters.standardOnly) params.set("standard", "1");
+  else params.delete("standard");
 }
 
 export function filtersEqual(a: SearchFilters, b: SearchFilters): boolean {

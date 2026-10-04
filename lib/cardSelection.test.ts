@@ -23,6 +23,7 @@ function card(id: string): DeckPoolCard {
     images: [],
     has: [],
     timings: [],
+    block: "2",
   };
 }
 

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { FacetMultiSelect } from "@/components/search/FacetMultiSelect";
+import { BLOCK_IDS, isBlockId } from "@/lib/blocks";
 import { timingLabel } from "@/lib/compileTimings";
 import {
   CARD_CATEGORIES,
@@ -12,7 +13,7 @@ import {
   uniqueFilterOptions,
   type SearchFilters,
 } from "@/lib/search/filters";
-import type { CardCategory, DeckPoolCard, OptcgColor } from "@/types/catalog";
+import type { BlockId, CardCategory, DeckPoolCard, OptcgColor } from "@/types/catalog";
 
 const COLOR_CLASS: Record<OptcgColor, string> = {
   Red: "bg-[var(--color-red)]",
@@ -62,6 +63,38 @@ export function FilterPanel({
   const patch = (partial: Partial<SearchFilters>) => {
     onChange({ ...filters, ...partial });
   };
+
+  const standardSwitch = (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={filters.standardOnly}
+      aria-label="Currently Playable"
+      onClick={() => patch({ standardOnly: !filters.standardOnly })}
+      className={[
+        "inline-flex shrink-0 items-center gap-2 text-xs font-medium text-[var(--ink-primary)]",
+        stacked ? "mt-1" : "ml-auto",
+      ].join(" ")}
+    >
+      Currently Playable
+      <span
+        className={[
+          "relative h-5 w-9 rounded-full transition-colors",
+          filters.standardOnly
+            ? "bg-[var(--accent-ocean)]"
+            : "bg-[var(--bg-inset)]",
+        ].join(" ")}
+        aria-hidden
+      >
+        <span
+          className={[
+            "absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
+            filters.standardOnly ? "translate-x-4" : "translate-x-0",
+          ].join(" ")}
+        />
+      </span>
+    </button>
+  );
 
   const selects = (
     <>
@@ -155,6 +188,15 @@ export function FilterPanel({
         selected={filters.sets}
         onChange={(sets) => patch({ sets })}
       />
+      <FacetMultiSelect
+        label="Block"
+        fullWidth={stacked}
+        options={[...BLOCK_IDS]}
+        selected={filters.blocks}
+        onChange={(next) =>
+          patch({ blocks: next.filter((value): value is BlockId => isBlockId(value)) })
+        }
+      />
       {deckOptions ? (
         <FacetMultiSelect
           label="Decks"
@@ -175,6 +217,7 @@ export function FilterPanel({
         onChange={(labels) => patch({ labels })}
         emptyMessage="None"
       />
+      {standardSwitch}
     </>
   );
 

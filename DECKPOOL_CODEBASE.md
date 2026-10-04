@@ -1,8 +1,8 @@
 # DeckPool — Codebase snapshot
 
 **Status:** Living summary of the **as-built** app  
-**Last updated:** 2026-10-03
-**Git:** `main` at `https://github.com/carnide1/deckpool.git` (snapshot includes deck View import/export at `5d5e872`; prior noted commit `ad26da6`). **Friends** is on `main` (merged). Deck-list sort is `039cac0`. Its `firestore.rules` were deployed on 2026-10-02.
+**Last updated:** 2026-10-04
+**Git:** `main` at `https://github.com/carnide1/deckpool.git`. This snapshot adds block numbers and Currently Playable. Prior noted commits: deck import/export `5d5e872`, deck-list sort `039cac0`. **Friends** is on `main` (merged). Its `firestore.rules` were deployed on 2026-10-02.
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -94,6 +94,7 @@ From `C:\DeckPool`:
 | `npm run lint` | ESLint |
 | `npm run ingest-catalog -- --input <punk-records english folder>` | Rebuild `data/cards.json`, packs, construction rules, has-flags, timing-flags |
 | `npm run ingest-products` | Rebuild `data/products/` (ST01–ST36) from One Piece Player pages |
+| `npm run build-blocks` | Rebuild `data/blocks.json` from the observed printings plus Bandai’s override list. Run this after a catalog ingest that adds card numbers. |
 | `firebase deploy --only firestore:rules` | Publish `firestore.rules` to project `deckpool-64459`. The tightened rules were deployed after the audit on 2026-08-27. The Friends rules were deployed on 2026-10-02 (they only add access, so the older app code keeps working). The `invites` rule was deployed on 2026-10-02. |
 
 Ingest is a **local** maintainer task. Vercel must not scrape Bandai or One Piece Player at runtime. Commit the generated JSON.
@@ -312,7 +313,7 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 ### Deck view (`/decks/[id]` without `mode=edit`)
 
 - Read-only look at the active variation. Opens on the favorite unless `?variation=` is set (View ↔ Edit preserves the open list). Switch to Edit to brew. Card details support outside Previous/Next controls through the active variation and full-screen art zoom.
-- Same variation dropdown (favorite ★), star-to-pin, and list summary as Edit. Legal/Owned follow the list you are looking at.
+- Same variation dropdown (favorite ★), star-to-pin, and list summary as Edit. Legal/Owned follow the list you are looking at. Reason notes collapse behind “N notes”.
 - Leader portrait uses preferred art. WANTED stamp and bounty stepper still work from this page.
 - **Copy share link** creates a public `shares/{id}` snapshot of the **active** variation (deck name, Leader, variation name, card counts, preferred art URLs), copies `{origin}/s/{id}` to the clipboard for texting. Empty lists cannot be shared (client + rules). The link is a frozen snapshot — later edits do not change old links. If clipboard fails, the toast shows the URL for manual copy.
 - **Import List** pastes text into a **new** variation on this deck (name required, max 80). The Leader in the paste must be this deck’s Leader; a different Leader, no Leader, no cards, or more than 60 different cards does not save. Lines need a printed card number (`1xOP01-016`, `4 Nami (OP01-016)`, promo `P-029`, and the same shapes). The count is the one on that card’s line (`4x`, a trailing `x4`, or the first number, as in `4 Nami`). A later `DON!! x1` on the same line is not the count. Don lines, names with no number, unknown numbers, and numbers with no count are shown and left out. A short or illegal list still saves; Legal / Owned update after. The binder does not change. After save, the view switches to the new variation (`?variation=`).
@@ -345,7 +346,7 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 - One layout (`FriendShell`) with back link, name + `@username`, and Decks / Collection / Wanted tabs. A hidden area keeps its tab (eye-off icon) and shows "Hidden by {name}" (also used when rules refuse). Non-friends and unknown uids see "not available".
 - Listeners only start for shared areas; rules enforce the same thing.
 - **Decks:** same grid, sort options, and saved choice as `/decks` (one `deckpool.deckSort` value for both). **Legal badge only** (no Owned), no rename/delete, friend's Leader art. The dropdown is hidden when they have no decks.
-- **Deck view:** `DeckViewBody` with all variations, a static favorite star (not clickable), Legal only, no Wanted stamps, no Edit/Share. Card details are read-only (no art picker, no owned line).
+- **Deck view:** `DeckViewBody` with all variations, a static favorite star (not clickable), Legal only, no Wanted stamps, no Edit/Share. Reason notes are legality only. Ownership lines are omitted. Card details are read-only (no art picker, no owned line).
 - **Copy to my decks** (`CopyDeckModal`): editable name; default **This variation** (saved as one `Main` variation), or **All variations** (names kept, their favorite first and pinned). Works even if you don't own the Leader. Opens your new deck after copying (`createDeckWithVariations`).
 - **Collection:** binder grid with copies, labels (their labels + their deck labels when decks are shared), the same filters/sort/pager as `/collection`, and a Summary toggle. Card details show copies and labels read-only; "In decks" links go to the friend's deck pages.
 - **Wanted:** read-only board with `×N` bounty stamps (not clickable) and the same filters/sort/pager. Shows their owned count on tiles if their collection is shared.
@@ -364,7 +365,8 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 **What the UI uses:** `lib/search/filters.ts` + `NameSearchBar` + `FilterPanel`.
 
 - Text has two modes on Collection, Wanted, Explore, and Builder. **Name** matches name or card id substring. **Description** (`in=text` on Explore) matches effect or trigger text only (not name/id). Text folds the printed minus (`−`), en dash, and fullwidth hyphen to `-`, and ignores apostrophes, then does the substring check. Switching modes keeps the typed query. Clearing filters resets to Name.
-- Facets: color, category, cost, rarity, type, attribute, set, has (keywords), **timing**, label, deck (Collection, Wanted, and Explore). Timing values are compiled printed windows (`on-play`, `activate-main`, …) and **AND** when several are selected. Keywords stay on `card.has` (blocker, rush, searcher, …).
+- Facets: color, category, cost, rarity, type, attribute, set, **block** (`1`–`5` or `X`), has (keywords), **timing**, label, deck (Collection, Wanted, and Explore). Timing values are compiled printed windows (`on-play`, `activate-main`, …) and **AND** when several are selected. Several selected blocks match any of them. Keywords stay on `card.has` (blocker, rush, searcher, …).
+- **Currently Playable** is a switch at the end of every filter panel (Collection, Wanted, Explore, the builder, and friend boards). It starts off. On, a card must be Block 2 or higher, or X, and it must not be banned. A banned-pair card still shows, because that rule needs both cards. Explore stores it as `standard=1` and blocks as `block=1|X`.
 - Explore URL stores those filters plus `owned=1`, `wanted=1`, optional `in=text`, and `timing=`. Builder / Collection / Wanted keep filters in component state.
 
 **What exists in code but is not the live UI:** Limitless-style query language in `lib/search/parseQuery.ts` + `filterCards.ts` (`color:purple type:"Big Mom Pirates"`, `or`, `-term`, quotes, parens). Covered by `lib/search/search.test.ts`. Do not assume the search box parses `color:purple` unless you wire it up.
@@ -387,6 +389,12 @@ Pure functions: `lib/legality.ts`, `lib/construction.ts`, `lib/builder.ts`.
 4. Every card’s colors ⊆ Leader colors  
 5. Copies ≤ 4, unless a `copyLimit` rule says otherwise (`null` = unlimited)  
 6. No card matching the Leader’s `forbid` rules  
+7. The Leader and every main-deck card are legal in **Standard**: Bandai’s current block is 2 or higher, or X. A missing block fails this check.
+8. The Leader and every main-deck card are absent from the banned list in `data/standard.json`.
+9. The deck does not contain both cards from a banned pair. The Leader counts as in the deck.
+10. A restricted card is at or under its cap. The live list has none. The check is still there.
+
+Change Leader still strips only color and Leader-forbid cards. A rotated or banned card stays in the list, and the variation shows Illegal. The builder still lets you add those cards.
 
 **Owned:** Leader qty ≥ 1, and for every main-deck id, in-deck ≤ binder qty.
 
@@ -405,16 +413,20 @@ Do **not** call a language model to decide legality.
 | `data/construction-rules.json` | copyLimit + forbid |
 | `data/has-flags.json` | Flags such as blocker, rush, banish, double-attack, unblockable, searcher (derived), counter, effect, trigger |
 | `data/timing-flags.json` | Printed ability windows found at ingest (on-play, activate-main, on-ko, …) |
+| `data/blocks.json` | Bandai’s current block for every catalog id (`1`–`5` or `X`). Joined onto each card when the catalog loads. |
+| `data/block-observed.json` | Printings seen for each id. Input to `npm run build-blocks`. |
+| `data/block-overrides.json` | Bandai’s published X and Block 4 updates, plus `P-110`. These win over the observed printings. |
+| `data/standard.json` | Standard floor (`minBlock` 2), banned ids, restricted caps, and banned pairs. `OP14-020` joins the ban list on 12 Oct 2026. |
 | `data/products/index.json` | ST01–ST36 picker |
 | `data/products/STxx.json` | Real box counts (`cardId` → qty) |
 | `scripts/ingest-catalog.ts` | From punk-records English JSON |
 | `scripts/ingest-products.ts` | From One Piece Player HTML, with `scripts/product-urls.json` and `scripts/product-overrides/` |
 
-Card shape: `types/catalog.ts` (`DeckPoolCard`). `cost` on a Leader is Life. Ingest normalizes punk-records’ null Event costs to printed `0`; other unavailable costs remain `null`. `images[]` is every known scan for that number; user picks one per account in `cardPrefs`. Grids, deck rows, builder portraits, and Leader pickers all use `imageCandidates` → `CardImage`. Load order is built in `lib/cardImageUrl.ts` (`displayImageCandidates`: preferred/other scans → optional mirror, then `/card-art/{file}.png`). `CardImage` uses a plain `<img>` (not `/_next/image`). The proxy (`lib/cardArtPath.ts` + `lib/cardArtFetch.ts` + `app/card-art/[file]/route.ts`) validates filenames, times out upstream fetches, coalesces concurrent loads, returns ETag/304, and sets long cache headers. One retry per URL, then the next candidate; then “No art” + **Retry**.
+Card shape: `types/catalog.ts` (`DeckPoolCard`). `cost` on a Leader is Life. `block` is Bandai’s current number (`1`–`5` or `X`), or `null` when an id has not been classified. It is not stored in `cards.json`. `CatalogProvider` sets it from `data/blocks.json` as the catalog loads. Ingest normalizes punk-records’ null Event costs to printed `0`; other unavailable costs remain `null`. `images[]` is every known scan for that number; user picks one per account in `cardPrefs`. Grids, deck rows, builder portraits, and Leader pickers all use `imageCandidates` → `CardImage`. Load order is built in `lib/cardImageUrl.ts` (`displayImageCandidates`: preferred/other scans → optional mirror, then `/card-art/{file}.png`). `CardImage` uses a plain `<img>` (not `/_next/image`). The proxy (`lib/cardArtPath.ts` + `lib/cardArtFetch.ts` + `app/card-art/[file]/route.ts`) validates filenames, times out upstream fetches, coalesces concurrent loads, returns ETag/304, and sets long cache headers. One retry per URL, then the next candidate; then “No art” + **Retry**.
 
 **Note:** Catalog JSON is still committed offline. `/card-art` only fetches **image bytes** on demand (cached). It is not catalog scrape-at-runtime. A full CDN mirror remains the most robust long-term option if Bandai blocks datacenter IPs.
 
-When a new set releases: pull punk-records, run both ingest scripts, commit `data/`, then ship. Do not guess starter counts as “1 of each id.”
+When a new set releases: pull punk-records, run both ingest scripts, run `npm run build-blocks` (it stops if a new id has no block), commit `data/`, then ship. Do not guess starter counts as “1 of each id.” On 1 Apr 2027, raise `minBlock` in `data/standard.json` from 2 to 3. When Bandai changes the ban list, edit that same file. `OP14-020` Dracule Mihawk is banned starting 12 Oct 2026 and is not in the file before that date.
 
 ---
 
@@ -455,6 +467,8 @@ Key libraries:
 | `lib/cardPrefs.ts` | Preferred art Firestore read/write; re-exports image URL helpers |
 | `lib/compileHas.ts` | Ingest `has` flags from effect/trigger text (official tags + derived `searcher`) |
 | `lib/compileTimings.ts` | Ingest/hydrate printed timing windows (On Play, Activate: Main, On K.O., …) |
+| `lib/blocks.ts` | Block ids, the booster formula, and the joined `data/blocks.json` map |
+| `lib/standard.ts` | Standard floor, bans, restricted caps, and banned pairs |
 | `lib/variations.ts` | Favorite resolve + tab order (resolved favorite first, then recency) |
 | `lib/variationStats.ts` | Average cost/power, category and keyword counts for a list |
 | `lib/builderDeckStacks.ts` | Edit visual deck: stack sort + visible-face cap (4) |

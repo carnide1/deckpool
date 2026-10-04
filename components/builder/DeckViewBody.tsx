@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useId,
   useMemo,
   useState,
   type ComponentProps,
@@ -9,7 +10,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 import { CardImage } from "@/components/CardImage";
 import { CardDetailModal } from "@/components/cards/CardDetailModal";
 import { CardGrid } from "@/components/cards/CardGrid";
@@ -20,7 +21,7 @@ import { DeckStatusBadges } from "@/components/decks/DeckStatusBadges";
 import { useCatalog } from "@/contexts/CatalogContext";
 import { getConstructionRules } from "@/lib/construction";
 import { mainDeckCount } from "@/lib/builder";
-import { validateVariation } from "@/lib/legality";
+import { deckNotes, validateVariation } from "@/lib/legality";
 import { sortCards } from "@/lib/search/sortCards";
 import { computeVariationStats } from "@/lib/variationStats";
 import { resolveFavoriteVariationId } from "@/lib/variations";
@@ -95,6 +96,8 @@ export function DeckViewBody({
     : [];
   const constructionRules = useMemo(() => getConstructionRules(), []);
 
+  const notesId = useId();
+  const [notesOpen, setNotesOpen] = useState(false);
   const [pickedVariationId, setActiveVariationId] = useState("");
   const [appliedFocusId, setAppliedFocusId] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<DeckPoolCard | null>(null);
@@ -151,6 +154,8 @@ export function DeckViewBody({
     ownedQtyById,
     constructionRules,
   ]);
+
+  const notes = deckNotes(status.reasons, showOwned);
 
   const grouped = useMemo(() => {
     if (!activeVariation) return [];
@@ -245,7 +250,35 @@ export function DeckViewBody({
               <span className="text-sm tabular-nums text-[var(--ink-muted)]">
                 {deckCount}/50 cards
               </span>
+              {notes.length > 0 ? (
+                <button
+                  type="button"
+                  aria-expanded={notesOpen}
+                  aria-controls={notesId}
+                  onClick={() => setNotesOpen((prev) => !prev)}
+                  className="inline-flex items-center gap-1 text-xs text-[var(--ink-muted)] hover:text-[var(--ink-primary)]"
+                >
+                  {notes.length} note
+                  {notes.length === 1 ? "" : "s"}
+                  <ChevronDown
+                    className={[
+                      "h-3.5 w-3.5 transition-transform",
+                      notesOpen ? "rotate-180" : "",
+                    ].join(" ")}
+                  />
+                </button>
+              ) : null}
             </div>
+            {notes.length > 0 && notesOpen ? (
+              <ul
+                id={notesId}
+                className="mt-2 max-h-36 space-y-1 overflow-y-auto text-xs text-[var(--ink-muted)]"
+              >
+                {notes.map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         </div>
       </div>

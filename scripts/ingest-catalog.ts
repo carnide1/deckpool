@@ -264,7 +264,7 @@ async function main() {
     }
   }
 
-  const byId = new Map<string, DeckPoolCard>();
+  const byId = new Map<string, Omit<DeckPoolCard, "block">>();
   let droppedDon = 0;
   let droppedUnknown = 0;
 
@@ -289,7 +289,7 @@ async function main() {
       .map(titleCaseColor)
       .filter((c): c is OptcgColor => c != null);
 
-    const incoming: DeckPoolCard = {
+    const incoming: Omit<DeckPoolCard, "block"> = {
       id,
       name: decodeHtml(raw.name ?? id),
       category: category as CardCategory,

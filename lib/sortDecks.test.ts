@@ -41,6 +41,7 @@ function leader(
     images: [],
     has: [],
     timings: [],
+    block: "2",
   };
 }
 

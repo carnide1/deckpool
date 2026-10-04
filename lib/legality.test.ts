@@ -4,12 +4,14 @@ import {
   canIncrementCopy,
   filterBuilderCatalog,
   isColorLegalForLeader,
+  stripIllegalCards,
 } from "@/lib/builder";
 import { EMPTY_FILTERS } from "@/lib/search/filters";
 import { isForbiddenByLeader } from "@/lib/construction";
-import { summarizeDeck, validateVariation } from "@/lib/legality";
+import { deckNotes, summarizeDeck, validateVariation } from "@/lib/legality";
 import type { DeckPoolCard } from "@/types/catalog";
 import type { ConstructionRule } from "@/types/construction";
+import type { StandardRules } from "@/types/standard";
 
 const rules = [
   { kind: "copyLimit" as const, cardId: "OP08-072", max: null },
@@ -53,6 +55,7 @@ function leader(
     images: [],
     has: [],
     timings: [],
+    block: "2",
   };
 }
 
@@ -79,6 +82,7 @@ function mainCard(
     images: [],
     has: [],
     timings: [],
+    block: "2",
     ...overrides,
   };
 }
@@ -266,5 +270,172 @@ describe("legality", () => {
     );
     assert.equal(fromNamedMain.legal, false);
     assert.equal(fromNamedMain.owned, true);
+  });
+
+  it("marks a Block 1 card and a Block 1 Leader Illegal", () => {
+    const rotated = mainCard("ST01-002", { block: "1", colors: ["Red"] });
+    const rotatedLeader = leader("OP01-001", ["Red"]);
+    rotatedLeader.block = "1";
+    const map = new Map<string, DeckPoolCard>([
+      ["OP12-001", leader("OP12-001", ["Red"])],
+      ["OP01-001", rotatedLeader],
+      ["ST01-002", rotated],
+    ]);
+    const open: StandardRules = {
+      minBlock: 2,
+      banned: [],
+      restricted: [],
+      bannedPairs: [],
+    };
+    const fromCard = validateVariation(
+      "OP12-001",
+      { "ST01-002": 4 },
+      map,
+      { "OP12-001": 1, "ST01-002": 4 },
+      rules,
+      open,
+    );
+    assert.equal(fromCard.legal, false);
+    assert.match(fromCard.reasons.join(" "), /ST01-002 is Block 1/);
+
+    const fromLeader = validateVariation(
+      "OP01-001",
+      { "ST01-002": 4 },
+      map,
+      { "OP01-001": 1, "ST01-002": 4 },
+      rules,
+      open,
+    );
+    assert.equal(fromLeader.legal, false);
+    assert.match(fromLeader.reasons.join(" "), /Leader OP01-001 is Block 1/);
+  });
+
+  it("marks a missing block Illegal", () => {
+    const blank = mainCard("ST01-002", { block: null, colors: ["Red"] });
+    const map = new Map<string, DeckPoolCard>([
+      ["OP12-001", leader("OP12-001", ["Red"])],
+      ["ST01-002", blank],
+    ]);
+    const status = validateVariation(
+      "OP12-001",
+      { "ST01-002": 4 },
+      map,
+      { "OP12-001": 1, "ST01-002": 4 },
+      rules,
+      { minBlock: 2, banned: [], restricted: [], bannedPairs: [] },
+    );
+    assert.equal(status.legal, false);
+    assert.match(status.reasons.join(" "), /no block number/);
+  });
+
+  it("marks banned cards and banned pairs Illegal", () => {
+    const nami = mainCard("OP03-040", { name: "Nami", colors: ["Red"] });
+    const luffy = mainCard("OP11-040", { name: "Monkey.D.Luffy", colors: ["Red"] });
+    const linlin = mainCard("OP08-069", { name: "Charlotte Linlin", colors: ["Red"] });
+    const map = new Map<string, DeckPoolCard>([
+      ["OP12-001", leader("OP12-001", ["Red"])],
+      ["OP03-040", nami],
+      ["OP11-040", luffy],
+      ["OP08-069", linlin],
+    ]);
+    const standard: StandardRules = {
+      minBlock: 2,
+      banned: ["OP03-040"],
+      restricted: [],
+      bannedPairs: [["OP08-069", "OP11-040"]],
+    };
+    const banned = validateVariation(
+      "OP12-001",
+      { "OP03-040": 1 },
+      map,
+      { "OP12-001": 1, "OP03-040": 1 },
+      rules,
+      standard,
+    );
+    assert.match(banned.reasons.join(" "), /Nami is banned/);
+
+    const oneSide = validateVariation(
+      "OP12-001",
+      { "OP11-040": 1 },
+      map,
+      { "OP12-001": 1, "OP11-040": 1 },
+      rules,
+      standard,
+    );
+    assert.equal(
+      oneSide.reasons.some((reason) => reason.includes("cannot be in the same deck")),
+      false,
+    );
+
+    const pair = validateVariation(
+      "OP12-001",
+      { "OP11-040": 1, "OP08-069": 1 },
+      map,
+      { "OP12-001": 1, "OP11-040": 1, "OP08-069": 1 },
+      rules,
+      standard,
+    );
+    assert.match(pair.reasons.join(" "), /cannot be in the same deck/);
+  });
+
+  it("enforces a restricted copy cap", () => {
+    const filler = mainCard("ST01-002", { name: "Filler", colors: ["Red"] });
+    const map = new Map<string, DeckPoolCard>([
+      ["OP12-001", leader("OP12-001", ["Red"])],
+      ["ST01-002", filler],
+    ]);
+    const standard: StandardRules = {
+      minBlock: 2,
+      banned: [],
+      restricted: [{ cardId: "ST01-002", max: 1 }],
+      bannedPairs: [],
+    };
+    const one = validateVariation(
+      "OP12-001",
+      { "ST01-002": 1 },
+      map,
+      { "OP12-001": 1, "ST01-002": 1 },
+      rules,
+      standard,
+    );
+    assert.equal(
+      one.reasons.some((reason) => reason.includes("Too many copies")),
+      false,
+    );
+    const two = validateVariation(
+      "OP12-001",
+      { "ST01-002": 2 },
+      map,
+      { "OP12-001": 1, "ST01-002": 2 },
+      rules,
+      standard,
+    );
+    assert.match(two.reasons.join(" "), /Too many copies of Filler \(2\/1\)/);
+  });
+
+  it("hides ownership notes when there is no binder", () => {
+    const notes = deckNotes(
+      [
+        "Main deck has 1/50 cards.",
+        "Leader not owned.",
+        "Nami: need 4, own 0.",
+      ],
+      false,
+    );
+    assert.deepEqual(notes, ["Main deck has 1/50 cards."]);
+    assert.equal(
+      deckNotes(["Leader not owned."], true).length,
+      1,
+    );
+  });
+
+  it("leaves a Block 1 card in place when the Leader changes", () => {
+    const rotated = mainCard("ST01-002", { block: "1", colors: ["Red"] });
+    const map = new Map<string, DeckPoolCard>([
+      ["OP12-001", leader("OP12-001", ["Red"])],
+      ["ST01-002", rotated],
+    ]);
+    const next = stripIllegalCards({ "ST01-002": 4 }, "OP12-001", map, rules);
+    assert.deepEqual(next, { "ST01-002": 4 });
   });
 });

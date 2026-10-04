@@ -4,10 +4,18 @@ import {
   mainDeckCount,
 } from "@/lib/builder";
 import { copyLimitForCard, isForbiddenByLeader } from "@/lib/construction";
+import {
+  bannedPairsIn,
+  getStandardRules,
+  isBanned,
+  isRotated,
+  restrictedMax,
+} from "@/lib/standard";
 import { resolveFavoriteVariationId } from "@/lib/variations";
 import type { DeckPoolCard } from "@/types/catalog";
 import type { ConstructionRule } from "@/types/construction";
 import type { Variation } from "@/types/deck";
+import type { StandardRules } from "@/types/standard";
 
 export type VariationStatus = {
   legal: boolean;
@@ -21,12 +29,21 @@ export type DeckSummaryStatus = {
   owned: boolean;
 };
 
+function blockReason(name: string, card: DeckPoolCard, minBlock: number): string | null {
+  if (card.block == null) return `${name} has no block number.`;
+  if (isRotated(card.block, minBlock)) {
+    return `${name} is Block ${card.block}. Standard allows Block ${minBlock} or higher.`;
+  }
+  return null;
+}
+
 export function validateVariation(
   leaderId: string,
   cards: Record<string, number>,
   cardsById: Map<string, DeckPoolCard>,
   ownedQtyById: Record<string, number>,
   rules: ConstructionRule[],
+  standard: StandardRules = getStandardRules(),
 ): VariationStatus {
   const reasons: string[] = [];
   let legal = true;
@@ -36,6 +53,20 @@ export function validateVariation(
   if (!leader || leader.category !== "Leader") {
     reasons.push("Deck has no valid Leader.");
     legal = false;
+  } else {
+    const leaderBlock = blockReason(
+      `Leader ${leader.name}`,
+      leader,
+      standard.minBlock,
+    );
+    if (leaderBlock) {
+      reasons.push(leaderBlock);
+      legal = false;
+    }
+    if (isBanned(leaderId, standard)) {
+      reasons.push(`Leader ${leader.name} is banned.`);
+      legal = false;
+    }
   }
 
   const deckSize = mainDeckCount(cards);
@@ -77,7 +108,36 @@ export function validateVariation(
         reasons.push(`${card.name} is forbidden under this Leader.`);
         legal = false;
       }
+
+      const rotated = blockReason(card.name, card, standard.minBlock);
+      if (rotated) {
+        reasons.push(rotated);
+        legal = false;
+      }
+
+      if (isBanned(cardId, standard)) {
+        reasons.push(`${card.name} is banned.`);
+        legal = false;
+      }
+
+      const cap = restrictedMax(cardId, standard);
+      if (cap !== null && qty > cap) {
+        reasons.push(`Too many copies of ${card.name} (${qty}/${cap}).`);
+        legal = false;
+      }
     }
+  }
+
+  const present = new Set<string>();
+  if (leader) present.add(leaderId);
+  for (const [cardId, qty] of Object.entries(cards)) {
+    if (qty > 0) present.add(cardId);
+  }
+  for (const [idA, idB] of bannedPairsIn(present, standard)) {
+    const nameA = cardsById.get(idA)?.name ?? idA;
+    const nameB = cardsById.get(idB)?.name ?? idB;
+    reasons.push(`${nameA} and ${nameB} cannot be in the same deck.`);
+    legal = false;
   }
 
   const leaderOwned = (ownedQtyById[leaderId] ?? 0) >= 1;
@@ -98,6 +158,16 @@ export function validateVariation(
   }
 
   return { legal, owned, reasons };
+}
+
+/** Ownership lines assume a binder. Friend decks do not have one. */
+export function deckNotes(reasons: string[], includeOwnership: boolean): string[] {
+  if (includeOwnership) return reasons;
+  return reasons.filter((reason) => !isOwnershipReason(reason));
+}
+
+function isOwnershipReason(reason: string): boolean {
+  return reason === "Leader not owned." || /: need \d+, own \d+\.$/.test(reason);
 }
 
 export function summarizeDeck(

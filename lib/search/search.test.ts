@@ -23,6 +23,7 @@ const linlin: DeckPoolCard = {
   images: [],
   has: ["effect"],
   timings: [],
+  block: "2",
 };
 
 const bigMomPurple: DeckPoolCard = {
@@ -44,6 +45,7 @@ const bigMomPurple: DeckPoolCard = {
   images: [],
   has: ["counter"],
   timings: [],
+  block: "2",
 };
 
 const anana: DeckPoolCard = {
@@ -65,6 +67,7 @@ const anana: DeckPoolCard = {
   images: [],
   has: ["effect"],
   timings: [],
+  block: "2",
 };
 
 const lowCostPurple: DeckPoolCard = {
@@ -86,6 +89,7 @@ const lowCostPurple: DeckPoolCard = {
   images: [],
   has: ["effect"],
   timings: [],
+  block: "2",
 };
 
 const yellowCharacter: DeckPoolCard = {
@@ -107,6 +111,7 @@ const yellowCharacter: DeckPoolCard = {
   images: [],
   has: [],
   timings: [],
+  block: "2",
 };
 
 const cards = [linlin, bigMomPurple, anana, lowCostPurple, yellowCharacter];
