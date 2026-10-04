@@ -187,17 +187,21 @@ export function BuilderView({ deck }: { deck: Deck }) {
     return map;
   }, [ownedMap]);
 
-  const ownedLeaders = useMemo(
+  const leaders = useMemo(
     () =>
       cards
-        .filter(
-          (card) =>
-            card.category === "Leader" &&
-            (ownedMap[card.id]?.quantity ?? 0) > 0,
-        )
+        .filter((card) => card.category === "Leader")
         .sort((a, b) => a.name.localeCompare(b.name)),
-    [cards, ownedMap],
+    [cards],
   );
+
+  const ownedLeaderIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const leader of leaders) {
+      if ((ownedMap[leader.id]?.quantity ?? 0) > 0) ids.add(leader.id);
+    }
+    return ids;
+  }, [leaders, ownedMap]);
 
   const legalPool = useMemo(() => {
     if (!leader) return [];
@@ -609,7 +613,8 @@ export function BuilderView({ deck }: { deck: Deck }) {
         onClose={() => setChangeLeaderOpen(false)}
         deckId={deck.id}
         currentLeaderId={deck.leaderId}
-        ownedLeaders={ownedLeaders}
+        leaders={leaders}
+        ownedIds={ownedLeaderIds}
         cardsById={cardsById}
       />
 

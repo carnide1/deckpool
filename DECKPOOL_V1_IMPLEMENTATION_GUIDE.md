@@ -537,16 +537,16 @@ Use a **new** Firebase project. Do **not** reuse Diligence `diligence-38744`.
 
 ---
 
-### Step 11.2 — Create deck (owned Leaders only)
+### Step 11.2 — Create deck
 
 | | |
 |---|---|
 | **Owner** | **AGENT** |
-| **Purpose** | Enforce Leader ownership at creation (blueprint §5.1). |
-| **What to do (agent)** | **New deck** → Leader picker searches **owned** Leaders only → name input → creates `decks/{id}` + variation `Main` with empty `cards` map. |
-| **Why** | Cannot start a deck without owning the Leader card. |
-| **Why this way** | Unowned cards allowed in 50, not as Leader. |
-| **Done when** | Leader you do not own does not appear in picker. Owned Leader creates deck and navigates to Builder. |
+| **Purpose** | Start a deck from any catalog Leader (blueprint §5.1). |
+| **What to do (agent)** | **New deck** → Leader picker with **Owned** on by default → turn it off to pick any Leader → name input → creates `decks/{id}` + variation `Main` with empty `cards` map. |
+| **Why** | An unowned Leader is a legal brew target. The deck reads Unowned until the binder has that Leader. |
+| **Why this way** | Owned stays the default so the usual path is still Leaders you can sleeve. Picking a Leader does not post Wanted. |
+| **Done when** | An owned Leader creates a deck and opens Edit. With Owned off, an unowned Leader also creates a deck and the row reads Unowned. |
 
 ---
 
@@ -725,7 +725,7 @@ Run this checklist on **production** (or localhost if you prefer before deploy).
 | 1 | Sign up with display name; reset password; edit name; logout | All four work |
 | 2 | Collection: qty, multi labels, filter `label:`, add ST starter (+ optional deck) | Counts and labels persist |
 | 3 | `/cards`: full catalog; `owned=1`; query `color:purple type:"Big Mom Pirates"` + typeahead | URL sync + results correct |
-| 4 | Create deck only from owned Leader | Blocked otherwise |
+| 4 | Create deck from an owned Leader, and from an unowned Leader with Owned off | Unowned Leader saves and the deck reads Unowned |
 | 5 | Multiple variations; clone; diff modal | Variations independent |
 | 6 | 46-card draft → **Illegal**; fix to 50 + rules → **Legal** even if unowned | Tags correct |
 | 7 | **Unowned** when short copies; manifest shows `4 / 2` | Obvious styling |

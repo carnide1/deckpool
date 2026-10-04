@@ -4,7 +4,7 @@ const MAX_RESULTS = 60;
 
 /** Simple id/name search for Leader pickers. Full catalog uses FilterPanel. */
 export function searchCatalog(
-  cards: DeckPoolCard[],
+  cards: readonly DeckPoolCard[],
   query: string,
   limit = MAX_RESULTS,
 ): DeckPoolCard[] {

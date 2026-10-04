@@ -162,7 +162,7 @@ Builder search never shows off-color cards (owned or unowned). Changing Leader *
 
 **Leader ownership**
 
-- Creating a deck: the Leader picker is **owned Leaders only**. You cannot start a deck with a Leader you do not own.
+- Creating a deck or changing Leader: the picker lists catalog Leaders. **Owned** starts on. Turn it off to pick a Leader you do not own, including rotated and banned Leaders. An unowned Leader does not make the deck Illegal; the variation is **Unowned** until the binder has that Leader. Picking a Leader does not post it to Wanted.
 - The 50-card list **may** contain unowned cards (§5.4).
 - If the user later drops the Leader’s binder qty to 0, the deck remains; the active variation becomes **Unowned**. It is not auto-deleted.
 
@@ -304,7 +304,7 @@ Only products with a successful contents file appear in the Collection picker. I
 One **Deck** has:
 
 - A name
-- Exactly **one Leader**, chosen from **Leaders the user owns**
+- Exactly **one Leader**, any catalog Leader. The picker’s **Owned** switch starts on.
 - One or more **Variations**
 - Implicit inventory = the user’s single collection (labels are filters, not a second pool)
 
@@ -612,7 +612,7 @@ Catalog size is a few thousand English cards — **search in the browser**. No A
 
 - List **grouped visually by Leader** (section headers or Leader portrait clusters). **Multiple decks per Leader are allowed** — e.g. two different Red Luffy brews. Grouping is UI-only, not a data constraint.
 - Each row: mini wanted-poster card (§8.5): Leader art, deck name, color pills, variation count; compact **Legal/Owned** summary (worst case or “any legal” — show whether **any** variation is Legal and whether **any** is Owned).
-- Create deck: search **owned Leaders only**, name the deck, create default variation `Main` empty
+- Create deck: Leader picker with **Owned** on by default (off shows every catalog Leader), name the deck, create default variation `Main` empty
 
 ### 7.5 Builder
 
@@ -624,7 +624,7 @@ Catalog size is a few thousand English cards — **search in the browser**. No A
 - List lines: `in deck / owned`, unowned copies visually obvious
 - Variation tab: clone / rename / delete (cannot delete the last)
 - **Diff:** “Compare variations” opens a **modal**. User picks **base** and **compare** from dropdowns (default: current vs previous tab). Show only ids where counts differ (+/−/added/removed). Read-only; no merge.
-- Leader change: warning in §5.3, then strip all variations of that deck
+- Leader change: same picker as create (Owned on by default). Warning in §5.3, then strip all variations of that deck
 
 ### 7.6 Profile
 
@@ -1193,7 +1193,7 @@ Deploy with `firebase deploy --only firestore:rules` before first client write.
 4. Catalog ingest (§9.7) → `data/cards.json`; then **product ingest (§9.7.1)** → all **ST01–ST36** in `data/products/`; ship static files
 5. Collection: search catalog, set qty, labels, add starter (+ optional create deck)
 6. Cards: search language + URL `q=` + owned-only toggle (default off) + art grid + art picker
-7. Decks CRUD: owned Leader only, name, default variation `Main`
+7. Decks CRUD: any catalog Leader (Owned toggle default on), name, default variation `Main`
 8. Builder: one search bar, owned-only default on, add/remove, copy cap, 50 counter, **Legal/Illegal** + **Owned/Unowned**, line-level owned gap
 9. Variations: clone, rename, delete, switcher, diff; Leader change warning + strip
 10. Construction tests: Biscuit Warrior, Imu, Rayleigh; ingest grep for `in your deck`

@@ -41,14 +41,21 @@ export default function DecksPage() {
     return map;
   }, [ownedMap]);
 
-  const ownedLeaders = useMemo(() => {
-    return cards
-      .filter(
-        (card) =>
-          card.category === "Leader" && (ownedMap[card.id]?.quantity ?? 0) > 0,
-      )
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [cards, ownedMap]);
+  const leaders = useMemo(
+    () =>
+      cards
+        .filter((card) => card.category === "Leader")
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [cards],
+  );
+
+  const ownedLeaderIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const leader of leaders) {
+      if ((ownedMap[leader.id]?.quantity ?? 0) > 0) ids.add(leader.id);
+    }
+    return ids;
+  }, [leaders, ownedMap]);
 
   const sortedDecks = useMemo(
     () => sortDecks(decks, sort, cardsById),
@@ -101,7 +108,7 @@ export default function DecksPage() {
         <div className="poster-panel p-8 text-center">
           <p className="poster-stamp mb-3">No decks yet</p>
           <p className="text-sm text-[var(--ink-muted)]">
-            Set sail — pick an owned Leader and start your first list.
+            Set sail — pick a Leader and start your first list.
           </p>
           <Button onClick={() => setCreateOpen(true)} className="mt-4">
             <Plus className="h-4 w-4" />
@@ -149,7 +156,8 @@ export default function DecksPage() {
       <CreateDeckModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        ownedLeaders={ownedLeaders}
+        leaders={leaders}
+        ownedIds={ownedLeaderIds}
       />
 
       <RenameDeckModal

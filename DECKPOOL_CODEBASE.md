@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-10-04
-**Git:** `main` at `https://github.com/carnide1/deckpool.git`. This snapshot adds block numbers and Currently Playable. Prior noted commits: deck import/export `5d5e872`, deck-list sort `039cac0`. **Friends** is on `main` (merged). Its `firestore.rules` were deployed on 2026-10-02.
+**Git:** `main` at `https://github.com/carnide1/deckpool.git`. This snapshot adds unowned Leader pickers on New deck and Change Leader (Owned starts on). Prior noted commits: deck import/export `5d5e872`, deck-list sort `039cac0`. **Friends** is on `main` (merged). Its `firestore.rules` were deployed on 2026-10-02.
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -288,7 +288,7 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
   - **Newest created** and **Oldest created:** `createdAt` only. A later edit does not count as a later create.
 - Equal rows break the tie by deck name, then deck id. Name (Z–A) still orders equal names by id A–Z.
 - The choice is saved in this browser only (`localStorage` key `deckpool.deckSort`, read and written by `useDeckSort`). It is not a Firestore field and it is not stored per account. Your Decks page and a friend’s Decks tab share that one saved choice. A missing or unknown saved value falls back to last edited.
-- Create: search **owned Leaders only**, name the deck, create variation `Main` empty, pin it as the favorite.
+- Create: search catalog Leaders. **Owned** starts on and lists Leaders in the binder; turn it off to pick any Leader, including rotated and banned. Unowned Leaders show an Unowned mark. Name the deck, create variation `Main` empty, pin it as the favorite. The deck reads Unowned until that Leader is in the binder. Creating a deck does not post Wanted.
 - Rename / delete with confirm. Delete also deletes variations.
 - Legal / Owned badges on each row come from the **favorite** variation only (not “any variation”).
 - Leader art on the row uses the account’s preferred print when one is saved.
@@ -306,7 +306,7 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 - Status: plain **Legal · Owned** text (not pill buttons); reason notes collapse behind **“N notes”** with max-height scroll so long Unowned lists do not push List Summary.
 - View ↔ Edit keeps the open variation via `?variation=` on the mode toggle (does not jump back to the favorite).
 - Variations: **custom dropdown** picks the active list (matching panel borders; chevron rotates open/closed); star button pins favorite. Clone, rename, delete (cannot delete the last). Compare shows count diffs. Clone/Rename disable overlay-click dismiss and focus the name field (not the X).
-- Change Leader: warning, then strip illegal cards from **every** variation of that deck. The button is disabled while a list save is in flight.
+- Change Leader uses the same picker as New deck (Owned on by default; off lists every catalog Leader, including rotated and banned). Warning, then strip off-color and Leader-forbid cards from **every** variation. Rotated and banned cards stay. An unowned Leader leaves the lists in place and the deck reads Unowned. Picking a Leader does not post Wanted. The button is disabled while a list save is in flight.
 - Each tap issues `setVariationCards` immediately (Firestore keeps one client's writes in order and shows them in snapshots right away, including offline). The builder tracks pending writes **per variation**: while any are in flight, the next edit builds on the last list sent (so rapid taps never drop cards, even across tab switches); once none are pending it builds on the live Firestore snapshot, so Change Leader strips and other devices' edits are not overwritten. A failed write shows a toast and the view falls back to the snapshot.
 - There is **no** text Manifest in Edit anymore (`BuilderManifest` removed).
 
@@ -482,6 +482,7 @@ Key libraries:
 | `lib/invites.ts` | Invite links: create, read, expiry, stale-username check, URL + share text |
 | `lib/firestoreErrors.ts` | `isPermissionDenied` |
 | `lib/shares.ts` | Public share snapshots: create, parse, `absoluteAppUrl` (also used by invites), clipboard copy |
+| `lib/leaderChoices.ts` | Leader picker filter: Owned toggle, name/id search, optional exclude. Used by New deck and Change Leader |
 | `lib/labels.ts` | Union-merge labels |
 | `lib/variationDiff.ts` | Compare two count maps |
 | `lib/profileStats.ts` | Profile numbers |
@@ -524,6 +525,7 @@ Do not silently revert Collection to a full-catalog logger, or rip out the filte
 - One favorite variation per deck (`favoriteVariationId`). `/decks` Legal/Owned uses that list. View/Edit badges follow the open tab. Never delete the last variation (`deleteVariation` throws).
 - Do not auto-add Wanted cards to decks. Caught only touches the binder.
 - Do not add Google/Apple login, dark mode, Don cards, or a browseable public deck gallery in V1. Per-variation **share links** (`/s/{id}`) are allowed.
+- Do not lock the New deck or Change Leader pickers back to owned Leaders only. Owned defaults on; turning it off lists every catalog Leader. Picking one does not post Wanted.
 - Primary app nav is Collection, Wanted, Explore, Decks, Friends, plus Profile, as floating icon-only buttons with tooltips (left column on desktop, bottom row on mobile). Keep the page gutters (`md:pl-24`, mobile `pb-24`) so floating icons do not cover content.
 - New public routes must be added to `isPublicPath` (`lib/auth-routing.ts`, used by `AuthGate`) without treating them as auth landings (logged-in users must not be bounced off `/s/…`). Public routes must render while Auth is still loading. Preserve deep links with safe `?next=` on forced login. Do not auto-redirect to `/login` while `authTimedOut`.
 - Prefer npm. Do not add Yarn.

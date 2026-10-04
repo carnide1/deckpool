@@ -96,7 +96,7 @@ A hidden area shows "Hidden by {name}" on their page. Toggles apply immediately 
 - **Copy to my decks** on a friend's deck view copies the **active variation** into a new deck you own: their deck name (editable), same Leader, one variation named `Main` with the same card counts, pinned as favorite.
 - The other choice, **All variations**, copies every variation with its name; their favorite comes first and becomes your favorite.
 - The copy is yours and independent; later edits on either side do not sync.
-- The copy's Legal/Owned is computed against **your** binder like any deck. Copying works even if you do not own the Leader (deck shows Unowned), which differs from the normal Create Deck picker that only offers owned Leaders.
+- The copy's Legal/Owned is computed against **your** binder like any deck. Copying works even if you do not own the Leader (deck shows Unowned), the same as creating a deck with Owned turned off.
 
 ## Invite links (implemented)
 
