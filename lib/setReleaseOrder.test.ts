@@ -27,11 +27,13 @@ describe("compareSetsByReleaseOrder", () => {
     assert.deepEqual(sorted, ["OP06", "PRB01", "OP07", "OP08"]);
   });
   
-  it("places promotional sets last", () => {
+  it("places promotional sets at the bottom when sorting by newest", () => {
     const sets = ["P", "OP01", "ST01", "EB01"];
     const sorted = [...sets].sort(compareSetsByReleaseOrder);
     
-    assert.deepEqual(sorted, ["ST01", "OP01", "EB01", "P"]);
+    // P has order 0, so it comes first chronologically (before ST01)
+    // When sorting by "newest", P will appear at the bottom
+    assert.deepEqual(sorted, ["P", "ST01", "OP01", "EB01"]);
   });
   
   it("handles mixed ST, OP, EB, and PRB sets correctly", () => {

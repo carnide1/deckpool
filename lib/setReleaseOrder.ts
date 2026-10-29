@@ -6,6 +6,9 @@
  */
 
 export const SET_RELEASE_ORDER: Record<string, number> = {
+  // Promotional cards - released continuously, not part of the chronological set schedule
+  P: 0,
+  
   // Initial launch - July 2022
   ST01: 1,
   ST02: 2,
@@ -122,9 +125,6 @@ export const SET_RELEASE_ORDER: Record<string, number> = {
 
   // EXTRA BOOSTER -ONE PIECE HEROINES EDITION vol.2-
   EB05: 59,
-  
-  // Promotional cards - sorted last
-  P: 999,
 };
 
 /**
