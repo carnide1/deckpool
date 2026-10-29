@@ -1,3 +1,4 @@
+import { compareSetsByReleaseOrder } from "@/lib/setReleaseOrder";
 import type { CardCategory, DeckPoolCard, OptcgColor } from "@/types/catalog";
 
 export const VARIATION_STAT_FLAGS = [
@@ -63,17 +64,6 @@ function emptyFlags(): Record<VariationStatFlag, number> {
   return Object.fromEntries(
     VARIATION_STAT_FLAGS.map((flag) => [flag, 0]),
   ) as Record<VariationStatFlag, number>;
-}
-
-function compareSetCodes(a: string, b: string): number {
-  const matchA = /^([A-Za-z]+)(\d+)$/.exec(a);
-  const matchB = /^([A-Za-z]+)(\d+)$/.exec(b);
-  if (matchA && matchB) {
-    const prefix = matchA[1].localeCompare(matchB[1]);
-    if (prefix !== 0) return prefix;
-    return Number(matchA[2]) - Number(matchB[2]);
-  }
-  return a.localeCompare(b);
 }
 
 export function computeVariationStats(
@@ -168,7 +158,7 @@ export function computeVariationStats(
 
   const bySet: VariationSetCount[] = [...setCounts.entries()]
     .map(([setCode, setCopies]) => ({ setCode, copies: setCopies }))
-    .sort((a, b) => compareSetCodes(a.setCode, b.setCode));
+    .sort((a, b) => compareSetsByReleaseOrder(a.setCode, b.setCode));
 
   const byCost = [...costCounts.entries()]
     .map(([cost, costCopiesAt]) => ({ cost, copies: costCopiesAt }))

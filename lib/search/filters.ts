@@ -3,6 +3,7 @@ import {
   isTimingSlug,
   sortTimingSlugs,
 } from "@/lib/compileTimings";
+import { compareSetsByReleaseOrder } from "@/lib/setReleaseOrder";
 import { isPlayableInStandard } from "@/lib/standard";
 import type { BlockId, CardCategory, DeckPoolCard, OptcgColor } from "@/types/catalog";
 
@@ -136,7 +137,7 @@ export function uniqueFilterOptions(cards: DeckPoolCard[]): FilterOptions {
   const byName = (a: string, b: string) => a.localeCompare(b);
   return {
     types: [...types].sort(byName),
-    sets: [...sets].sort(byName),
+    sets: [...sets].sort(compareSetsByReleaseOrder),
     rarities: [...rarities].sort(byName),
     attributes: [...attributes].sort(byName),
     has: [...has].sort(byName),
