@@ -1,4 +1,5 @@
 import { timestampToMillis } from "@/lib/timestamps";
+import { SET_RELEASE_ORDER } from "@/lib/setReleaseOrder";
 import type { CardCategory, DeckPoolCard } from "@/types/catalog";
 
 export type SortKey =
@@ -104,10 +105,32 @@ function compareSerial(a: DeckPoolCard, b: DeckPoolCard): number {
 }
 
 function compareNewest(a: DeckPoolCard, b: DeckPoolCard): number {
+  const aSetCode = a.setCode || "";
+  const bSetCode = b.setCode || "";
+  const aOrder = SET_RELEASE_ORDER[aSetCode];
+  const bOrder = SET_RELEASE_ORDER[bSetCode];
+
+  // Both sets have known release orders - sort by actual chronology
+  if (aOrder !== undefined && bOrder !== undefined) {
+    if (aOrder !== bOrder) {
+      return bOrder - aOrder; // Higher order = newer = first
+    }
+  } else if (aOrder !== undefined) {
+    // Known sets come before unknown sets
+    return -1;
+  } else if (bOrder !== undefined) {
+    return 1;
+  } else {
+    // Both unknown - fall back to family ranking
+    const pa = parseCardIdentity(a);
+    const pb = parseCardIdentity(b);
+    const rank = setRank(pb) - setRank(pa);
+    if (rank !== 0) return rank;
+  }
+
+  // Same set or both unknown with same family - sort by collector number
   const pa = parseCardIdentity(a);
   const pb = parseCardIdentity(b);
-  const rank = setRank(pb) - setRank(pa);
-  if (rank !== 0) return rank;
   if (pa.num !== pb.num) return pa.num - pb.num;
   return a.id.localeCompare(b.id);
 }

@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-10-29
-**Git:** `main` at `https://github.com/carnide1/deckpool.git`. This snapshot adds EB-05 (ONE PIECE HEROINES EDITION vol.2) and promos `P-152`–`P-154`, `P-157` to the catalog, with EB05 in the set release order. Prior main: card modal size fix during navigation (PR #6), chronological set sorting (PR #5), README (PR #4), deck import/export `5d5e872`, deck-list sort `039cac0`. **Friends** is on `main` (merged). Its `firestore.rules` were deployed on 2026-10-02.
+**Git:** `main` at `https://github.com/carnide1/deckpool.git`. This snapshot adds EB-05 (ONE PIECE HEROINES EDITION vol.2) and promos `P-152`–`P-154`, `P-157` to the catalog, with EB05 in the set release order. **Card sorting** now uses actual chronological release order so EB05 appears as newer than OP17 when sorting by "Newest set" (JOE-34). Prior main: card modal size fix during navigation (PR #6), chronological set sorting (PR #5), README (PR #4), deck import/export `5d5e872`, deck-list sort `039cac0`. **Friends** is on `main` (merged). Its `firestore.rules` were deployed on 2026-10-02.
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -475,7 +475,7 @@ Key libraries:
 | `lib/decks.ts` | Deck/variation CRUD, favorite pin, starter→deck, change Leader, delete cascade. `createDeckWithVariations` (one batch, first variation = favorite) backs create, starter→deck, and friend copy. `createVariation` adds one list to an existing deck (clone and import) |
 | `lib/deckList.ts` | Paste parser and OPTCGSim export text for deck View import/export |
 | `lib/sortDecks.ts` | Deck-list sort (edited, name, Leader, color, created) plus the saved `localStorage` key. Used by `/decks` and a friend's Decks tab |
-| `lib/setReleaseOrder.ts` | Chronological release order mapping for all One Piece TCG sets (ST, OP, EB, PRB). Used by filter options and variation stats to sort sets by release date instead of alphabetically |
+| `lib/setReleaseOrder.ts` | Chronological release order mapping for all One Piece TCG sets (ST, OP, EB, PRB). Used by filter options, variation stats, and card sorting (newest/oldest) to sort sets by release date instead of alphabetically |
 | `lib/usernames.ts` | Username format, reserved list, normalize + validate |
 | `lib/profiles.ts` | `profiles/{uid}` + `usernames/{name}`: claim/change username (transaction), privacy, display-name sync |
 | `lib/friends.ts` | Username lookup, request send/cancel/decline/accept (batch), remove friend, queries + parsers |
