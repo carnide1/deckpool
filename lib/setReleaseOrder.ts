@@ -119,6 +119,9 @@ export const SET_RELEASE_ORDER: Record<string, number> = {
   
   // November 2025
   OP17: 58,
+
+  // EXTRA BOOSTER -ONE PIECE HEROINES EDITION vol.2-
+  EB05: 59,
   
   // Promotional cards - sorted last
   P: 999,

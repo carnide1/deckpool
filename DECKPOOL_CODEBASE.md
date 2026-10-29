@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-10-29
-**Git:** `cursor/fix-card-modal-size-3de4` branch (PR #6) at `https://github.com/carnide1/deckpool.git`. This branch fixes card modal size changes during navigation (JOE-35, commit `8fd8ee3`). Prior main: set sorting chronological order (JOE-34), deck import/export `5d5e872`, deck-list sort `039cac0`. **Friends** is on `main` (merged). Its `firestore.rules` were deployed on 2026-10-02.
+**Git:** `main` at `https://github.com/carnide1/deckpool.git`. This snapshot adds EB-05 (ONE PIECE HEROINES EDITION vol.2) and promos `P-152`–`P-154`, `P-157` to the catalog, with EB05 in the set release order. Prior main: card modal size fix during navigation (PR #6), chronological set sorting (PR #5), README (PR #4), deck import/export `5d5e872`, deck-list sort `039cac0`. **Friends** is on `main` (merged). Its `firestore.rules` were deployed on 2026-10-02.
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -73,7 +73,7 @@ V1 cost rules still in force in code: no paid search service, no language-model 
 | Theme | Bright only. Parchment cream, pirate red, ocean blue. No dark mode. |
 | Auth | Firebase Auth, **email/password only**. Client `AuthGate`. No `middleware.ts`. Public routes render while Auth is still resolving (avoids mobile “Loading…” freeze). Auth init falls back IndexedDB → localStorage → memory, with an 8s ready timeout + Retry. |
 | Data | Cloud Firestore, nested under `users/{uid}/…`, plus top-level `usernames`, `profiles`, `friendRequests`, `friendships` for Friends. Client SDK writes. |
-| Catalog | Static JSON in `data/`, loaded in the browser. ~**2785** English cards. Don cards stripped at ingest. |
+| Catalog | Static JSON in `data/`, loaded in the browser. ~**2850** English cards. Don cards stripped at ingest. |
 | Images | Same-origin `/card-art/{file}.png` proxy for Bandai (avoids Chrome **CORP** and Vercel `/_next/image` **402**). Strict filename allowlist, upstream timeout, ETag/304, in-flight coalesce, long cache. Optional CDN mirror first via `NEXT_PUBLIC_CARD_IMAGE_ORIGIN`. Retries + **Retry** UI. |
 | Hosting (intended) | Vercel Hobby. No `vercel.json` in the repo. `.vercel/` is gitignored. Redirects (e.g. `/collection?view=wanted` → `/wanted`, `/cards` → `/explore`) live in `next.config.ts`. |
 | Package manager | **npm** (`package-lock.json`) |
@@ -408,7 +408,7 @@ Do **not** call a language model to decide legality.
 
 | File | Role |
 |---|---|
-| `data/cards.json` | All searchable cards (~2785). No Don. |
+| `data/cards.json` | All searchable cards (~2850). No Don. |
 | `data/packs.json` | Set/pack metadata |
 | `data/construction-rules.json` | copyLimit + forbid |
 | `data/has-flags.json` | Flags such as blocker, rush, banish, double-attack, unblockable, searcher (derived), counter, effect, trigger |
@@ -426,7 +426,7 @@ Card shape: `types/catalog.ts` (`DeckPoolCard`). `cost` on a Leader is Life. `bl
 
 **Note:** Catalog JSON is still committed offline. `/card-art` only fetches **image bytes** on demand (cached). It is not catalog scrape-at-runtime. A full CDN mirror remains the most robust long-term option if Bandai blocks datacenter IPs.
 
-When a new set releases: pull punk-records, run both ingest scripts, run `npm run build-blocks` (it stops if a new id has no block), commit `data/`, then ship. Do not guess starter counts as “1 of each id.” On 1 Apr 2027, raise `minBlock` in `data/standard.json` from 2 to 3. When Bandai changes the ban list, edit that same file. `OP14-020` Dracule Mihawk is banned starting 12 Oct 2026 and is not in the file before that date.
+When a new set releases: pull punk-records, run both ingest scripts, run `npm run build-blocks` (it stops if a new id has no block), commit `data/`, then ship. punk-records now includes a `block_number` on each card; for new ids, copy it into `data/block-observed.json` before `npm run build-blocks`. When it is blank, read the block icon on the card image and add it by hand (an X card also goes in `data/block-overrides.json`, as `EB05-014` did). Add the new set code to `lib/setReleaseOrder.ts`, or it sorts after Promos in the Set filter. Do not guess starter counts as “1 of each id.” On 1 Apr 2027, raise `minBlock` in `data/standard.json` from 2 to 3. When Bandai changes the ban list, edit that same file. `OP14-020` Dracule Mihawk is banned starting 12 Oct 2026 and is not in the file before that date.
 
 ---
 
@@ -444,7 +444,7 @@ lib/                    firebase, users, profiles, friends, friendIds, usernames
 types/                  catalog, collection, wanted, deck, share, user, friends, cardPref, construction, product
 app/s/[shareId]/         public shared-deck page (+ CatalogProvider layout)
 app/invite/[code]/       public friend-invite page (+ FriendsProvider layout)
-data/                   committed snapshots (~2785 cards; includes OP17)
+data/                   committed snapshots (~2850 cards; includes OP17 and EB05)
 scripts/                ingest + product URL/override JSON
 firestore.rules
 firebase.json
