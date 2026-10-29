@@ -116,7 +116,12 @@ export function Modal({
         ].join(" ")}
       >
         <div
-          className="poster-panel flex max-h-[min(90dvh,720px)] w-full flex-col shadow-[var(--shadow-poster)]"
+          className={[
+            "poster-panel flex w-full flex-col shadow-[var(--shadow-poster)]",
+            size === "wide"
+              ? "h-[min(90dvh,720px)]"
+              : "max-h-[min(90dvh,720px)]",
+          ].join(" ")}
           onClick={(event) => event.stopPropagation()}
           role="dialog"
           aria-modal="true"

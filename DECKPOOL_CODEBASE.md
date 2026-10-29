@@ -2,7 +2,7 @@
 
 **Status:** Living summary of the **as-built** app  
 **Last updated:** 2026-10-29
-**Git:** `main` at `https://github.com/carnide1/deckpool.git`. This snapshot fixes set sorting to use chronological release order instead of alphabetical (JOE-34). Prior noted commits: deck import/export `5d5e872`, deck-list sort `039cac0`. **Friends** is on `main` (merged). Its `firestore.rules` were deployed on 2026-10-02.
+**Git:** `cursor/fix-card-modal-size-3de4` branch (PR #6) at `https://github.com/carnide1/deckpool.git`. This branch fixes card modal size changes during navigation (JOE-35, commit `8fd8ee3`). Prior main: set sorting chronological order (JOE-34), deck import/export `5d5e872`, deck-list sort `039cac0`. **Friends** is on `main` (merged). Its `firestore.rules` were deployed on 2026-10-02.
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -253,7 +253,7 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 - Pagination: 60 per page.
 - Binder qty stepper only adjusts existing rows. To log a **new** card, use `/explore` or **Caught** on Wanted.
 - Card tiles have a WANTED stamp (bottom-right of the art). Tap posts bounty 1 or drops the poster. Owned `×qty` stays top-right.
-- Card detail opens in a wide, two-column modal with which decks include that number, plus a **Bounty** stepper (extra copies to buy). Previous/Next controls sit outside the modal panel but remain in the modal keyboard focus loop, and the modal includes a focus-isolated, scroll-locking full-screen art lightbox.
+- Card detail opens in a wide, two-column modal with which decks include that number, plus a **Bounty** stepper (extra copies to buy). Previous/Next controls sit outside the modal panel but remain in the modal keyboard focus loop, and the modal includes a focus-isolated, scroll-locking full-screen art lightbox. The modal maintains a **fixed height** to prevent jarring size changes when navigating between cards (JOE-35, PR #6).
 
 ### Wanted board (`/wanted`)
 
