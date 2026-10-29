@@ -98,12 +98,13 @@ describe("sortCards", () => {
       card("ST01-001", "ST01", "Starter One"),
       card("PRB01-001", "PRB01", "Premium Booster One"),
       card("OP06-001", "OP06", "Op Six"),
+      card("P-001", "P", "Promo"),
     ];
     const sorted = sortCards(cards, "newest");
-    // Chronological order: ST01, OP01, ST06, OP02, EB01, OP06, PRB01
+    // Chronological order (newest first): PRB01, OP06, EB01, OP02, ST06, OP01, ST01, P (promos at bottom)
     assert.deepEqual(
       sorted.map((row) => row.id),
-      ["PRB01-001", "OP06-001", "EB01-001", "OP02-001", "ST06-001", "OP01-001", "ST01-001"],
+      ["PRB01-001", "OP06-001", "EB01-001", "OP02-001", "ST06-001", "OP01-001", "ST01-001", "P-001"],
     );
   });
 });
