@@ -1,8 +1,8 @@
 # DeckPool — Codebase snapshot
 
 **Status:** Living summary of the **as-built** app  
-**Last updated:** 2026-10-04
-**Git:** `main` at `https://github.com/carnide1/deckpool.git`. This snapshot adds unowned Leader pickers on New deck and Change Leader (Owned starts on). Prior noted commits: deck import/export `5d5e872`, deck-list sort `039cac0`. **Friends** is on `main` (merged). Its `firestore.rules` were deployed on 2026-10-02.
+**Last updated:** 2026-10-29
+**Git:** `main` at `https://github.com/carnide1/deckpool.git`. This snapshot fixes set sorting to use chronological release order instead of alphabetical (JOE-34). Prior noted commits: deck import/export `5d5e872`, deck-list sort `039cac0`. **Friends** is on `main` (merged). Its `firestore.rules` were deployed on 2026-10-02.
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -365,7 +365,7 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 **What the UI uses:** `lib/search/filters.ts` + `NameSearchBar` + `FilterPanel`.
 
 - Text has two modes on Collection, Wanted, Explore, and Builder. **Name** matches name or card id substring. **Description** (`in=text` on Explore) matches effect or trigger text only (not name/id). Text folds the printed minus (`−`), en dash, and fullwidth hyphen to `-`, and ignores apostrophes, then does the substring check. Switching modes keeps the typed query. Clearing filters resets to Name.
-- Facets: color, category, cost, rarity, type, attribute, set, **block** (`1`–`5` or `X`), has (keywords), **timing**, label, deck (Collection, Wanted, and Explore). Timing values are compiled printed windows (`on-play`, `activate-main`, …) and **AND** when several are selected. Several selected blocks match any of them. Keywords stay on `card.has` (blocker, rush, searcher, …).
+- Facets: color, category, cost, rarity, type, attribute, set, **block** (`1`–`5` or `X`), has (keywords), **timing**, label, deck (Collection, Wanted, and Explore). Timing values are compiled printed windows (`on-play`, `activate-main`, …) and **AND** when several are selected. Several selected blocks match any of them. Keywords stay on `card.has` (blocker, rush, searcher, …). **Set filter options are sorted by chronological release order** (not alphabetically) so EB, ST, and PRB sets appear in their correct historical positions within the OP series releases (`lib/setReleaseOrder.ts`).
 - **Currently Playable** is a switch at the end of every filter panel (Collection, Wanted, Explore, the builder, and friend boards). It starts off. On, a card must be Block 2 or higher, or X, and it must not be banned. A banned-pair card still shows, because that rule needs both cards. Explore stores it as `standard=1` and blocks as `block=1|X`.
 - Explore URL stores those filters plus `owned=1`, `wanted=1`, optional `in=text`, and `timing=`. Builder / Collection / Wanted keep filters in component state.
 
@@ -475,6 +475,7 @@ Key libraries:
 | `lib/decks.ts` | Deck/variation CRUD, favorite pin, starter→deck, change Leader, delete cascade. `createDeckWithVariations` (one batch, first variation = favorite) backs create, starter→deck, and friend copy. `createVariation` adds one list to an existing deck (clone and import) |
 | `lib/deckList.ts` | Paste parser and OPTCGSim export text for deck View import/export |
 | `lib/sortDecks.ts` | Deck-list sort (edited, name, Leader, color, created) plus the saved `localStorage` key. Used by `/decks` and a friend's Decks tab |
+| `lib/setReleaseOrder.ts` | Chronological release order mapping for all One Piece TCG sets (ST, OP, EB, PRB). Used by filter options and variation stats to sort sets by release date instead of alphabetically |
 | `lib/usernames.ts` | Username format, reserved list, normalize + validate |
 | `lib/profiles.ts` | `profiles/{uid}` + `usernames/{name}`: claim/change username (transaction), privacy, display-name sync |
 | `lib/friends.ts` | Username lookup, request send/cancel/decline/accept (batch), remove friend, queries + parsers |
