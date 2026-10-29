@@ -137,7 +137,7 @@ export function uniqueFilterOptions(cards: DeckPoolCard[]): FilterOptions {
   const byName = (a: string, b: string) => a.localeCompare(b);
   return {
     types: [...types].sort(byName),
-    sets: [...sets].sort(compareSetsByReleaseOrder),
+    sets: [...sets].sort(compareSetsByReleaseOrder).reverse(),
     rarities: [...rarities].sort(byName),
     attributes: [...attributes].sort(byName),
     has: [...has].sort(byName),

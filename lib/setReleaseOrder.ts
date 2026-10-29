@@ -3,6 +3,9 @@
  * Sets are ordered chronologically by their actual release dates.
  * This ensures proper sorting when filtering by set, rather than alphabetical sorting
  * which would incorrectly order EB/PRB sets.
+ * 
+ * The filter UI displays sets in reverse order (newest to oldest) by calling .reverse()
+ * on the sorted array, so higher order numbers appear first in the dropdown.
  */
 
 export const SET_RELEASE_ORDER: Record<string, number> = {
@@ -101,6 +104,7 @@ export const SET_RELEASE_ORDER: Record<string, number> = {
   // March 2025
   "OP14EB04": 48,
   OP14: 48, // Alias for compatibility
+  EB04: 48, // EXTRA BOOSTER cards released with OP14 and OP15
   
   // April 2025
   ST30: 49,
