@@ -24,7 +24,7 @@ export function FacetMultiSelect({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [dropdownPosition, setDropdownPosition] = useState<"left" | "right" | "full">("left");
+  const [alignRight, setAlignRight] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const showSearch = options.length > 12;
 
@@ -52,33 +52,19 @@ export function FacetMultiSelect({
     const button = rootRef.current;
     if (!button) return;
     
-    const viewportWidth = window.innerWidth;
-    const dropdownWidth = 256;
-    
-    /* eslint-disable react-hooks/set-state-in-effect */
-    // useLayoutEffect is synchronous and designed for DOM measurement before paint,
-    // making this setState call safe and appropriate for responsive dropdown positioning
-    
-    // Use full-width on mobile (< 640px)
-    if (viewportWidth < 640) {
-      setDropdownPosition("full");
-      return;
-    }
-    
     const rect = button.getBoundingClientRect();
+    const dropdownWidth = 256; // w-64
+    const viewportWidth = window.innerWidth;
     
-    // Check if dropdown would overflow right edge
-    const wouldOverflowRight = rect.left + dropdownWidth > viewportWidth;
-    // Check if right-aligning would overflow left edge  
-    const wouldOverflowLeft = rect.right - dropdownWidth < 0;
+    // Check if left-align would clip right edge
+    const wouldClipRight = rect.left + dropdownWidth > viewportWidth;
     
-    // Align right only if it would overflow right but not left
-    if (wouldOverflowRight && !wouldOverflowLeft) {
-      setDropdownPosition("right");
-    } else {
-      setDropdownPosition("left");
-    }
-    /* eslint-enable react-hooks/set-state-in-effect */
+    // Check if right-align would clip left edge
+    const wouldClipLeft = rect.right - dropdownWidth < 0;
+    
+    // Use right-align only if left-align would clip AND right-align wouldn't clip
+    // Prefer left-align by default
+    setAlignRight(wouldClipRight && !wouldClipLeft);
   }, [open, fullWidth]);
 
   const filtered = options.filter((option) => {
@@ -125,9 +111,9 @@ export function FacetMultiSelect({
         <div
           className={[
             "absolute z-30 mt-1 rounded-xl border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-2 shadow-[var(--shadow-poster)]",
-            fullWidth || dropdownPosition === "full"
+            fullWidth 
               ? "left-0 right-0 w-full"
-              : dropdownPosition === "right"
+              : alignRight
                 ? "right-0 w-64"
                 : "left-0 w-64",
           ].join(" ")}
