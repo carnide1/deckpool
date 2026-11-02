@@ -24,6 +24,7 @@ export function FacetMultiSelect({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [alignRight, setAlignRight] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const showSearch = options.length > 12;
 
@@ -44,6 +45,17 @@ export function FacetMultiSelect({
       window.removeEventListener("keydown", onKey);
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!open || fullWidth) return;
+    const button = rootRef.current;
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    const dropdownWidth = 256;
+    const viewportWidth = window.innerWidth;
+    const wouldOverflow = rect.left + dropdownWidth > viewportWidth;
+    setAlignRight(wouldOverflow);
+  }, [open, fullWidth]);
 
   const filtered = options.filter((option) => {
     const q = query.trim().toLowerCase();
@@ -89,7 +101,7 @@ export function FacetMultiSelect({
         <div
           className={[
             "absolute z-30 mt-1 rounded-xl border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-2 shadow-[var(--shadow-poster)]",
-            fullWidth ? "left-0 right-0 w-full" : "w-64",
+            fullWidth ? "left-0 right-0 w-full" : alignRight ? "right-0 w-64" : "left-0 w-64",
           ].join(" ")}
         >
           {showSearch ? (
