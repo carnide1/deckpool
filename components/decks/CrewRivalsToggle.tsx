@@ -14,7 +14,7 @@ export function CrewRivalsToggle({
   rivalsHref?: string;
 }) {
   return (
-    <div className="inline-flex rounded-lg border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-0.5 text-sm font-semibold">
+    <div className="inline-flex w-fit self-start rounded-lg border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-0.5 text-sm font-semibold">
       <Link
         href={crewHref}
         className={[

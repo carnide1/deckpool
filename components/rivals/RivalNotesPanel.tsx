@@ -4,10 +4,13 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
+import {
+  NotesDisplay,
+  NotesEditor,
+} from "@/components/rivals/NotesEditor";
 import { Button } from "@/components/ui/Button";
 import { Modal, ModalActions } from "@/components/ui/Modal";
 import { QuantityStepper } from "@/components/ui/QuantityStepper";
-import { TextArea } from "@/components/ui/TextArea";
 import type { Deck } from "@/types/deck";
 import type { RivalJournal, RivalVsDeckNotes } from "@/types/rival";
 import { RIVAL_NOTES_MAX } from "@/types/rival";
@@ -95,15 +98,15 @@ export function RivalNotesPanel({
           How to play, what to watch for, general ideas vs this Leader.
         </p>
         {readOnly ? (
-          <p className="whitespace-pre-wrap rounded-lg border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-3 text-sm text-[var(--ink-primary)]">
-            {journal.notes.trim() || "No notes."}
-          </p>
+          <div className="rounded-lg border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-3">
+            <NotesDisplay text={journal.notes} />
+          </div>
         ) : (
-          <TextArea
+          <NotesEditor
             label="Notes"
             value={general}
             maxLength={RIVAL_NOTES_MAX}
-            onChange={(event) => setGeneral(event.target.value)}
+            onChange={setGeneral}
             onBlur={() => void flushGeneral()}
             disabled={savingGeneral}
             placeholder="e.g. Keep blocker up into their on-play turns…"
@@ -322,15 +325,13 @@ function VsDeckBlock({
       </div>
 
       {readOnly ? (
-        <p className="whitespace-pre-wrap text-sm text-[var(--ink-primary)]">
-          {block.notes.trim() || "No notes."}
-        </p>
+        <NotesDisplay text={block.notes} />
       ) : (
-        <TextArea
+        <NotesEditor
           label="Deck notes"
           value={notes}
           maxLength={RIVAL_NOTES_MAX}
-          onChange={(event) => setNotes(event.target.value)}
+          onChange={setNotes}
           onBlur={() => void flushNotes()}
           disabled={busy}
           placeholder="What works with this list into them…"

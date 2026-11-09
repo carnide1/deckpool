@@ -183,7 +183,7 @@ export function RivalJournalView({
         )}
       </div>
 
-      <div className="inline-flex rounded-lg border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-0.5 text-sm font-semibold">
+      <div className="inline-flex w-fit self-start rounded-lg border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-0.5 text-sm font-semibold">
         <Link
           href={tabHref("deck")}
           className={[
@@ -212,7 +212,8 @@ export function RivalJournalView({
         <div className="space-y-10">
           <RivalCardSetSection
             title="Key pieces"
-            description="Engine staples for this matchup."
+            description="Engine staples for this deck."
+            leader={leader}
             ids={journal.keyPieceIds}
             otherBucketIds={journal.techOptionIds}
             readOnly={readOnly}
@@ -220,7 +221,7 @@ export function RivalJournalView({
           />
           <RivalCardSetSection
             title="Tech options"
-            description="Flex cards that give an edge but aren’t core to the plan."
+            leader={leader}
             ids={journal.techOptionIds}
             otherBucketIds={journal.keyPieceIds}
             readOnly={readOnly}

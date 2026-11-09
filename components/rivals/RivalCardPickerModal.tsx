@@ -3,37 +3,48 @@
 import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { CardImage } from "@/components/CardImage";
+import { FilterPanel } from "@/components/search/FilterPanel";
+import { NameSearchBar } from "@/components/search/NameSearchBar";
+import { SortSelect } from "@/components/search/SortSelect";
 import { Modal, ModalActions } from "@/components/ui/Modal";
-import { TextInput } from "@/components/ui/TextInput";
 import { useCardPrefs } from "@/contexts/CardPrefsContext";
 import { useCatalog } from "@/contexts/CatalogContext";
+import { filterRivalReferenceUniverse } from "@/lib/builder";
 import { imageCandidates } from "@/lib/cardPrefs";
+import { getConstructionRules } from "@/lib/construction";
 import { assignCardBucket } from "@/lib/rivals";
-import { searchCatalog } from "@/lib/search/simpleCatalogSearch";
+import {
+  applySearchFilters,
+  EMPTY_FILTERS,
+  type SearchFilters,
+} from "@/lib/search/filters";
+import { sortCards, type SortKey } from "@/lib/search/sortCards";
 import type { DeckPoolCard } from "@/types/catalog";
 
-const PICKABLE = new Set(["Character", "Event", "Stage"]);
+const MAX_RESULTS = 96;
+const PICKER_SORTS: SortKey[] = ["newest", "serial", "name", "cost", "category"];
 
 export function RivalCardPickerModal({
   open,
   onClose,
   title,
+  leader,
   selectedIds,
   otherBucketIds,
   onSave,
-  readOnly = false,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
+  leader: DeckPoolCard;
   selectedIds: readonly string[];
   otherBucketIds: readonly string[];
   onSave: (nextIds: string[]) => Promise<void> | void;
-  readOnly?: boolean;
 }) {
   const { cards } = useCatalog();
   const { preferredByCardId } = useCardPrefs();
-  const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState<SearchFilters>(EMPTY_FILTERS);
+  const [sort, setSort] = useState<SortKey>("newest");
   const [draft, setDraft] = useState<string[]>(() => [...selectedIds]);
   const [saving, setSaving] = useState(false);
   const [wasOpen, setWasOpen] = useState(open);
@@ -42,25 +53,33 @@ export function RivalCardPickerModal({
     setWasOpen(open);
     if (open) {
       setDraft([...selectedIds]);
-      setQuery("");
+      setFilters(EMPTY_FILTERS);
+      setSort("newest");
     }
   }
 
-  const pool = useMemo(
-    () => cards.filter((card) => PICKABLE.has(card.category)),
-    [cards],
+  const constructionRules = useMemo(() => getConstructionRules(), []);
+
+  const legalPool = useMemo(
+    () => filterRivalReferenceUniverse(cards, leader, constructionRules),
+    [cards, leader, constructionRules],
   );
 
   const visible = useMemo(() => {
-    const q = query.trim();
-    return q ? searchCatalog(pool, q, 80) : pool.slice(0, 80);
-  }, [pool, query]);
+    const filtered = applySearchFilters(legalPool, filters);
+    return sortCards(filtered, sort).slice(0, MAX_RESULTS);
+  }, [legalPool, filters, sort]);
 
   const draftSet = useMemo(() => new Set(draft), [draft]);
   const otherSet = useMemo(() => new Set(otherBucketIds), [otherBucketIds]);
+  const legalIds = useMemo(
+    () => new Set(legalPool.map((card) => card.id)),
+    [legalPool],
+  );
 
   const toggle = (card: DeckPoolCard) => {
-    if (readOnly) return;
+    if (!legalIds.has(card.id)) return;
+    if (otherSet.has(card.id) && !draftSet.has(card.id)) return;
     setDraft((prev) => {
       if (prev.includes(card.id)) return prev.filter((id) => id !== card.id);
       return [...prev, card.id];
@@ -68,13 +87,14 @@ export function RivalCardPickerModal({
   };
 
   const handleSave = async () => {
-    if (readOnly) {
-      onClose();
-      return;
-    }
     setSaving(true);
     try {
-      const { target } = assignCardBucket(selectedIds, otherBucketIds, draft);
+      const legalDraft = draft.filter((id) => legalIds.has(id));
+      const { target } = assignCardBucket(
+        selectedIds,
+        otherBucketIds,
+        legalDraft,
+      );
       await onSave(target);
       onClose();
     } catch (error) {
@@ -93,32 +113,51 @@ export function RivalCardPickerModal({
       title={title}
       size="wide"
       footer={
-        readOnly ? undefined : (
-          <ModalActions
-            onCancel={onClose}
-            onConfirm={() => void handleSave()}
-            confirmLabel="Save cards"
-            confirming={saving}
-          />
-        )
+        <ModalActions
+          onCancel={onClose}
+          onConfirm={() => void handleSave()}
+          confirmLabel="Save cards"
+          confirming={saving}
+        />
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-3">
         <p className="text-sm text-[var(--ink-muted)]">
-          Reference only — presence matters, not counts. A card cannot sit in
-          both Key pieces and Tech.
+          Same color and construction rules as building under{" "}
+          {leader.name}. Banned cards are hidden. Tap to select; a card cannot
+          sit in both Key pieces and Tech.
         </p>
-        <TextInput
-          label="Search cards"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Name or id"
+        <NameSearchBar
+          value={filters.text}
+          onChange={(text) => setFilters((prev) => ({ ...prev, text }))}
+          textField={filters.textField}
+          onTextFieldChange={(textField) =>
+            setFilters((prev) => ({ ...prev, textField }))
+          }
+          inputClassName="h-9 rounded-lg text-sm shadow-none"
         />
-        {draft.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterPanel
+            filters={filters}
+            onChange={setFilters}
+            cards={legalPool}
+            allowedColors={leader.colors}
+            allowedCategories={["Character", "Event", "Stage"]}
+            showHeading={false}
+          />
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-[var(--ink-muted)]">
-            Selected: {draft.length}
+            {visible.length.toLocaleString()} shown
+            {visible.length >= MAX_RESULTS ? "+" : ""}. Selected: {draft.length}
           </p>
-        ) : null}
+          <SortSelect
+            value={sort}
+            onChange={setSort}
+            options={PICKER_SORTS}
+            compact
+          />
+        </div>
         <div className="grid max-h-80 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4 md:grid-cols-5">
           {visible.map((card) => {
             const selected = draftSet.has(card.id);
@@ -131,7 +170,7 @@ export function RivalCardPickerModal({
               <button
                 key={card.id}
                 type="button"
-                disabled={readOnly || inOther}
+                disabled={inOther}
                 aria-pressed={selected}
                 onClick={() => toggle(card)}
                 className={[

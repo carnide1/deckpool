@@ -310,8 +310,8 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 
 - List of opponent-Leader journals (`RivalRow`). **Add rival** opens the shared `LeaderPicker` with **Owned off** by default; creates `users/{uid}/rivals/{leaderId}` on first open.
 - Detail (`/decks/rivals/[leaderId]`):
-  - **Deck** tab: **Key pieces** and **Tech options** — reference card sets (Character/Event/Stage), mutual exclusion, no counts, no product cap (rules allow ≤ 200 each).
-  - **Notes** tab: general freeform notes; **Your decks** blocks pick one of your Crew decks for notes + manual Wins/Losses steppers (`QuantityStepper`, min 0). Deleted Crew decks keep the block with a **Deleted deck** tag until removed.
+  - **Deck** tab: **Key pieces** (“Engine staples for this deck.”) and **Tech options** — reference card sets with the same color / Leader-forbid pool as the builder, banned ids excluded, Name/Text search + FilterPanel (incl. Currently Playable). Tap a listed card for `CardDetailModal`. Mutual exclusion, no counts.
+  - **Notes** tab: freeform notes with a **Bullet** helper (• lines; Enter continues the list); **Your decks** blocks pick one of your Crew decks for notes + manual Wins/Losses steppers (`QuantityStepper`, min 0). Deleted Crew decks keep the block with a **Deleted deck** tag until removed.
 - Friends may read journals when `privacy.rivals` is on (independent of Decks/Crew privacy).
 
 ### Builder (`/decks/[id]?mode=edit`)

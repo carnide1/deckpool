@@ -9,6 +9,7 @@ import {
   type ApplyFilterContext,
   type SearchFilters,
 } from "@/lib/search/filters";
+import { isBanned } from "@/lib/standard";
 import type { DeckPoolCard } from "@/types/catalog";
 import type { ConstructionRule } from "@/types/construction";
 
@@ -36,6 +37,20 @@ export function filterBuilderUniverse(
     if (isForbiddenByLeader(card, leader.id, rules)) return false;
     return true;
   });
+}
+
+/**
+ * Cards allowed in a Rival Key pieces / Tech list for an opponent Leader:
+ * same color + forbid rules as the builder, plus no banned ids.
+ */
+export function filterRivalReferenceUniverse(
+  cards: DeckPoolCard[],
+  leader: DeckPoolCard,
+  rules: ConstructionRule[] = getConstructionRules(),
+): DeckPoolCard[] {
+  return filterBuilderUniverse(cards, leader, rules).filter(
+    (card) => !isBanned(card.id),
+  );
 }
 
 export function filterBuilderCatalog(
