@@ -14,7 +14,9 @@ import { onSnapshot } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   claimUsername as claimUsernameDoc,
+  ensurePrivacyShape,
   parsePublicProfile,
+  privacyNeedsRivalsBackfill,
   profileRef,
   setPrivacy as setPrivacyDoc,
   syncProfileDisplayName,
@@ -154,11 +156,17 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
       profileRef(uid),
       (snap) => {
         if (cancelled) return;
-        setPublicProfile(
-          snap.exists()
-            ? parsePublicProfile(uid, snap.data() as Record<string, unknown>)
-            : null,
-        );
+        if (snap.exists()) {
+          const data = snap.data() as Record<string, unknown>;
+          setPublicProfile(parsePublicProfile(uid, data));
+          if (privacyNeedsRivalsBackfill(data.privacy)) {
+            void ensurePrivacyShape(uid).catch((error) => {
+              console.error(error);
+            });
+          }
+        } else {
+          setPublicProfile(null);
+        }
         setPublicLoadedUid(uid);
       },
       (err) => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { CrewRivalsToggle } from "@/components/decks/CrewRivalsToggle";
 import { DeckRow } from "@/components/decks/DeckRow";
 import { FriendAreaGate } from "@/components/friends/FriendAreaGate";
 import { SortSelect } from "@/components/search/SortSelect";
@@ -93,9 +94,29 @@ function FriendDecksList() {
 }
 
 export default function FriendDecksPage() {
+  const { uid, shares } = useFriendData();
+
   return (
-    <FriendAreaGate area="decks">
-      <FriendDecksList />
-    </FriendAreaGate>
+    <div className="flex flex-col gap-4">
+      <CrewRivalsToggle
+        mode="crew"
+        crewHref={`/friends/${uid}`}
+        rivalsHref={`/friends/${uid}/rivals`}
+      />
+      {shares("decks") ? (
+        <FriendAreaGate area="decks">
+          <FriendDecksList />
+        </FriendAreaGate>
+      ) : shares("rivals") ? (
+        <div className="poster-panel p-6 text-sm text-[var(--ink-muted)]">
+          Crew decks are hidden. Switch to Rivals above to see their matchup
+          journals.
+        </div>
+      ) : (
+        <FriendAreaGate area="decks">
+          <FriendDecksList />
+        </FriendAreaGate>
+      )}
+    </div>
   );
 }

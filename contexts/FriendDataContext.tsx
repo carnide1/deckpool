@@ -8,6 +8,7 @@ import {
   type OwnerCollection,
 } from "@/hooks/useOwnerCollection";
 import { useOwnerDecks, type OwnerDecks } from "@/hooks/useOwnerDecks";
+import { useOwnerRivals, type OwnerRivals } from "@/hooks/useOwnerRivals";
 import { useOwnerWanted, type OwnerWanted } from "@/hooks/useOwnerWanted";
 import type { PrivacyArea, PublicProfile } from "@/types/friends";
 
@@ -23,6 +24,7 @@ type FriendDataValue = {
   collection: OwnerCollection;
   wanted: OwnerWanted;
   decks: OwnerDecks;
+  rivals: OwnerRivals;
   cardPrefs: OwnerCardPrefs;
   shares: (area: PrivacyArea) => boolean;
 };
@@ -66,6 +68,9 @@ export function FriendDataProvider({
     enabled: Boolean(profile?.privacy.wanted),
   });
   const decks = useOwnerDecks(uid, { enabled: Boolean(profile?.privacy.decks) });
+  const rivals = useOwnerRivals(uid, {
+    enabled: Boolean(profile?.privacy.rivals),
+  });
   const cardPrefs = useOwnerCardPrefs(uid, { enabled: Boolean(profile) });
 
   const name = profile
@@ -81,10 +86,22 @@ export function FriendDataProvider({
       collection,
       wanted,
       decks,
+      rivals,
       cardPrefs,
       shares,
     }),
-    [uid, access, profile, name, collection, wanted, decks, cardPrefs, shares],
+    [
+      uid,
+      access,
+      profile,
+      name,
+      collection,
+      wanted,
+      decks,
+      rivals,
+      cardPrefs,
+      shares,
+    ],
   );
 
   return (
