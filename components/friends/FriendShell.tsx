@@ -69,10 +69,13 @@ function FriendShellBody({ children }: { children: ReactNode }) {
     : pathname.startsWith(`${base}/wanted`)
       ? "wanted"
       : "decks";
-  // Deck detail pages carry their own header and back link (when decks are shared).
+  // Deck / rival detail pages carry their own header and back link.
   const onDeckDetail = pathname.startsWith(`${base}/decks/`);
+  const onRivalDetail =
+    pathname.startsWith(`${base}/rivals/`) && pathname !== `${base}/rivals`;
 
   if (onDeckDetail && shares("decks")) return <>{children}</>;
+  if (onRivalDetail && shares("rivals")) return <>{children}</>;
 
   return (
     <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-4">

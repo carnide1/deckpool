@@ -38,7 +38,7 @@ service cloud.firestore {
     function validPublicProfile(uid) {
       let d = request.resource.data;
       let fields = ['username', 'displayName', 'privacy', 'updatedAt'];
-      let areas = ['decks', 'collection', 'wanted'];
+      let areas = ['decks', 'collection', 'wanted', 'rivals'];
       return d.keys().hasOnly(fields)
         && d.keys().hasAll(fields)
         && validUsername(d.username)
@@ -50,6 +50,7 @@ service cloud.firestore {
         && d.privacy.decks is bool
         && d.privacy.collection is bool
         && d.privacy.wanted is bool
+        && d.privacy.rivals is bool
         && d.updatedAt is timestamp
         && getAfter(/databases/$(database)/documents/usernames/$(d.username)).data.uid == uid;
     }
@@ -149,6 +150,34 @@ service cloud.firestore {
         && request.resource.data.updatedAt is timestamp;
     }
 
+    // vsDecks map *values* are cleaned client-side (parseRivalJournal / vsDecksForWrite).
+    function validRivalJournal(rivalId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'leaderId',
+          'keyPieceIds',
+          'techOptionIds',
+          'notes',
+          'vsDecks',
+          'createdAt',
+          'updatedAt'
+        ])
+        && d.leaderId is string
+        && d.leaderId.size() > 0
+        && d.leaderId.size() <= 32
+        && d.leaderId == rivalId
+        && d.keyPieceIds is list
+        && d.keyPieceIds.size() <= 200
+        && d.techOptionIds is list
+        && d.techOptionIds.size() <= 200
+        && d.notes is string
+        && d.notes.size() <= 5000
+        && d.vsDecks is map
+        && d.vsDecks.size() <= 100
+        && d.updatedAt is timestamp
+        && (!d.keys().hasAny(['createdAt']) || d.createdAt is timestamp);
+    }
+
     match /users/{uid} {
       allow read: if isOwner(uid);
       allow create: if isOwner(uid) && validUserProfileCreate();
@@ -178,6 +207,11 @@ service cloud.firestore {
           allow create, update: if isOwner(uid) && validVariation();
           allow delete: if isOwner(uid);
         }
+      }
+      match /rivals/{rivalId} {
+        allow read: if isOwner(uid) || friendCanRead(uid, 'rivals');
+        allow create, update: if isOwner(uid) && validRivalJournal(rivalId);
+        allow delete: if isOwner(uid);
       }
     }
 

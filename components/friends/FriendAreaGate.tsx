@@ -9,6 +9,7 @@ const AREA_LABEL: Record<PrivacyArea, string> = {
   decks: "Decks",
   collection: "Collection",
   wanted: "Wanted board",
+  rivals: "Rivals",
 };
 
 /**
@@ -35,7 +36,8 @@ export function FriendAreaGate({
           Hidden by {data.name}
         </p>
         <p className="text-sm text-[var(--ink-muted)]">
-          {AREA_LABEL[area]} {area === "decks" ? "are" : "is"} not shared with
+          {AREA_LABEL[area]}{" "}
+          {area === "decks" || area === "rivals" ? "are" : "is"} not shared with
           friends.
         </p>
       </div>

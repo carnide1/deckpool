@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   readStoredDeckSort,
   writeStoredDeckSort,
@@ -9,11 +9,7 @@ import {
 
 /** Last deck-list sort, remembered in localStorage for this browser. */
 export function useDeckSort(): [DeckSortKey, (next: DeckSortKey) => void] {
-  const [sort, setSort] = useState<DeckSortKey>("edited");
-
-  useLayoutEffect(() => {
-    setSort(readStoredDeckSort());
-  }, []);
+  const [sort, setSort] = useState<DeckSortKey>(() => readStoredDeckSort());
 
   const update = useCallback((next: DeckSortKey) => {
     setSort(next);

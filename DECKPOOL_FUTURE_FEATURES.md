@@ -32,7 +32,7 @@ If a future chat is asked to implement any of these, read this file first, then 
 | # | Idea | Decision | When |
 |---|---|---|---|
 | 5 | Wishlist | **Build** | First, after V1. 1–3 days. |
-| 2 | Win/loss + notes on each variation | **Build** | Second. 3–7 days. |
+| 2 | Win/loss + notes on each variation | **Superseded in shape by Rivals journals** (Leader-first key/tech + notes + per-deck W/L running totals under Decks → Rivals). A chronological per-match log per variation is still optional later if needed. | Rivals shipped 2026-11-09. |
 | 1 | Bulk photo scan of a collection | **Do not build our own camera scanner.** **Do build import**, so people can scan in other apps and load the list here. | Import: 1–2 weeks after wishlist / match log. |
 | 4 | AI deck-building chatbot | **Optional later.** Only if we agree to add a server route and pay for (or let the user provide) a language-model API. | After import. 2–4 weeks for a first chat. |
 | 3 | Battle simulator you play against a computer | **Long-term yes, as solo practice**, with real tournament decks already loaded. Not online play against other people. | After V1 is solid. Months for a first limited version; years to feel complete. |

@@ -1,4 +1,4 @@
-export type PrivacyArea = "decks" | "collection" | "wanted";
+export type PrivacyArea = "decks" | "collection" | "wanted" | "rivals";
 
 export type PrivacySettings = Record<PrivacyArea, boolean>;
 

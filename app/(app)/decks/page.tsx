@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { CreateDeckModal } from "@/components/decks/CreateDeckModal";
+import { CrewRivalsToggle } from "@/components/decks/CrewRivalsToggle";
 import { DeleteDeckModal } from "@/components/decks/DeleteDeckModal";
 import { DeckRow } from "@/components/decks/DeckRow";
 import { RenameDeckModal } from "@/components/decks/RenameDeckModal";
@@ -93,6 +94,9 @@ export default function DecksPage() {
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
             Wanted-poster rows for every brew.
           </p>
+          <div className="mt-3">
+            <CrewRivalsToggle mode="crew" />
+          </div>
         </div>
         <Button onClick={() => setCreateOpen(true)} className="shrink-0">
           <Plus className="h-4 w-4" />

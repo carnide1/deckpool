@@ -9,6 +9,7 @@ const AREAS: { area: PrivacyArea; label: string }[] = [
   { area: "decks", label: "Show my decks to friends" },
   { area: "collection", label: "Show my collection to friends" },
   { area: "wanted", label: "Show my Wanted to friends" },
+  { area: "rivals", label: "Show my Rivals to friends" },
 ];
 
 export function PrivacyToggles() {

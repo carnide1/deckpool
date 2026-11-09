@@ -1,8 +1,8 @@
 # DeckPool — Codebase snapshot
 
 **Status:** Living summary of the **as-built** app  
-**Last updated:** 2026-10-29
-**Git:** `main` at `https://github.com/carnide1/deckpool.git`. This snapshot adds EB-05 (ONE PIECE HEROINES EDITION vol.2) and promos `P-152`–`P-154`, `P-157` to the catalog, with EB05 in the set release order. **Card sorting** now uses actual chronological release order so EB05 appears as newer than OP17 when sorting by "Newest set" (JOE-34). **Set filter** displays sets in reverse chronological order (newest to oldest) with EB04 correctly positioned in the release timeline (JOE-52). Prior main: card modal size fix during navigation (PR #6), chronological set sorting (PR #5), README (PR #4), deck import/export `5d5e872`, deck-list sort `039cac0`. **Friends** is on `main` (merged). Its `firestore.rules` were deployed on 2026-10-02.
+**Last updated:** 2026-11-09
+**Git:** `main` at `https://github.com/carnide1/deckpool.git`. This snapshot adds **Crew / Rivals** under Decks: Leader-first matchup journals (key pieces, tech options, freeform notes, per-deck notes + manual W/L) with a fourth friends privacy switch `rivals`. Prior main: mobile filter dropdown overflow (JOE-47, PRs #10–#12), EB-05 catalog + chronological set sorting (JOE-34 / JOE-52), Friends (merged; rules deployed 2026-10-02). **Rivals `firestore.rules` must be published** after this lands (privacy now requires four keys including `rivals`).
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -95,7 +95,7 @@ From `C:\DeckPool`:
 | `npm run ingest-catalog -- --input <punk-records english folder>` | Rebuild `data/cards.json`, packs, construction rules, has-flags, timing-flags |
 | `npm run ingest-products` | Rebuild `data/products/` (ST01–ST36) from One Piece Player pages |
 | `npm run build-blocks` | Rebuild `data/blocks.json` from the observed printings plus Bandai’s override list. Run this after a catalog ingest that adds card numbers. |
-| `firebase deploy --only firestore:rules` | Publish `firestore.rules` to project `deckpool-64459`. The tightened rules were deployed after the audit on 2026-08-27. The Friends rules were deployed on 2026-10-02 (they only add access, so the older app code keeps working). The `invites` rule was deployed on 2026-10-02. |
+| `firebase deploy --only firestore:rules` | Publish `firestore.rules` to project `deckpool-64459`. The tightened rules were deployed after the audit on 2026-08-27. Friends rules: 2026-10-02. **Rivals + four-key privacy:** publish after the Crew/Rivals PR merges (Console → Firestore → Rules is fine). |
 
 Ingest is a **local** maintainer task. Vercel must not scrape Bandai or One Piece Player at runtime. Commit the generated JSON.
 
@@ -147,10 +147,14 @@ Logged-in users on the auth landing routes (`/`, `/login`, `/signup`, `/forgot-p
 | `/collection` | **Owned binder** by default. Modes: Binder, Summary (`?view=summary`). Binder cannot create new card numbers (`useCollectionWrite(false)`). |
 | `/wanted` | **Wanted** shopping board — extra copies to buy. **Caught** can create binder rows. Old `/collection?view=wanted` redirects here. |
 | `/explore` | **Full catalog.** Name/text search + filters, URL-synced. `owned=1` limits to owned. `wanted=1` limits to posters. `in=text` searches rules text. `timing=` is printed ability windows (AND). Click a card to set qty (this **can** create new collection rows), bounty, labels, preferred art. Starter-deck add lives here too. Old `/cards` redirects here. |
-| `/decks` | Deck grid with a sort dropdown (default newest edits). Create / rename / delete. The last choice is saved in this browser. |
+| `/decks` | **Crew** (default): deck grid with sort (default newest edits). Create / rename / delete. Crew / Rivals toggle. |
+| `/decks/rivals` | **Rivals** list: opponent-Leader journals. Add rival via full Leader picker (Owned off by default). |
+| `/decks/rivals/[leaderId]` | Rival journal: **Deck** tab (Key pieces + Tech options) and **Notes** tab (general notes + per-your-deck notes with W/L). `?tab=notes` opens Notes. |
 | `/decks/[id]` | **View** by default (`DeckView`). **Edit** at `?mode=edit` (`BuilderView`). |
 | `/friends` | Your username (copy / change), add a friend by exact username, incoming + sent requests, friend list (remove), privacy toggles. Accounts without a username see only a "pick a username" form. |
-| `/friends/[uid]` | A friend's **Decks** (default tab). Shared layout with header + Decks / Collection / Wanted tabs. Non-friends see "not available". |
+| `/friends/[uid]` | A friend's **Decks** tab (Crew by default) with Crew / Rivals toggle. Shared layout + Decks / Collection / Wanted tabs. Non-friends see "not available". |
+| `/friends/[uid]/rivals` | Friend's Rivals list (read-only); gated by `privacy.rivals`. |
+| `/friends/[uid]/rivals/[leaderId]` | Friend's rival journal (read-only). |
 | `/friends/[uid]/collection` | Friend's binder (read-only grid + filters); Summary at `?view=summary`. |
 | `/friends/[uid]/wanted` | Friend's Wanted board, read-only, with bounty counts. |
 | `/friends/[uid]/decks/[deckId]` | Friend's deck view (all variations, read-only) + **Copy to my decks**. |
@@ -167,7 +171,7 @@ There is **no** `/api/*` folder. Card art uses App Router `GET /card-art/[file]`
 
 Root (`app/layout.tsx`): `Providers` (`AuthProvider` → `UserProfileProvider` + sibling `Toaster`) → `AuthGate`
 
-Authenticated shell (`app/(app)/layout.tsx` → `AppDataProviders`): `CatalogProvider` → `CollectionProvider` → `WantedProvider` → `CardPrefsProvider` → `DecksProvider` → `FriendsProvider` → `AppShell`
+Authenticated shell (`app/(app)/layout.tsx` → `AppDataProviders`): `CatalogProvider` → `CollectionProvider` → `WantedProvider` → `CardPrefsProvider` → `DecksProvider` → `RivalsProvider` → `FriendsProvider` → `AppShell`
 
 Friend pages add `FriendDataProvider` (in `app/(app)/friends/[uid]/layout.tsx` via `FriendShell`). It does **not** nest a second set of Collection/Decks providers (that would shadow your own data); it uses the owner-scoped hooks instead.
 
@@ -178,11 +182,12 @@ Friend pages add `FriendDataProvider` (in `app/(app)/friends/[uid]/layout.tsx` v
 | Wanted | `useOwnerWanted(uid)` → snapshot `users/{uid}/wanted` |
 | Card prefs | `useOwnerCardPrefs(uid)` → snapshot `users/{uid}/cardPrefs` |
 | Decks | `useOwnerDecks(uid)` → snapshot `users/{uid}/decks` plus each deck’s `variations` |
-| User profile | `ensureUserDoc` for `users/{uid}`, plus a live `profiles/{uid}` listener (username + privacy). Exposes `claimUsername` and `setPrivacy`. Display-name saves also sync to `profiles/{uid}`. Gated like other providers so prior-account data is hidden until the current uid loads |
+| Rivals | `useOwnerRivals(uid)` → snapshot `users/{uid}/rivals` |
+| User profile | `ensureUserDoc` for `users/{uid}`, plus a live `profiles/{uid}` listener (username + privacy). On load, backfills missing `privacy.rivals: true` for older profiles. Exposes `claimUsername` and `setPrivacy` (writes the full four-key privacy map). Display-name saves also sync to `profiles/{uid}`. |
 | Friends | Idle until you have a username. Live `friendships` (array-contains you), incoming and outgoing `friendRequests`, and one `profiles/{friendUid}` listener per friend. Exposes send / cancel / accept / decline / remove |
-| Friend data | One friend's profile (from Friends) + the owner hooks above for **their** uid, each enabled only when that area is shared. `access` is loading / unavailable / ready |
+| Friend data | One friend's profile (from Friends) + the owner hooks above for **their** uid, each enabled only when that area is shared (`rivals` included). `access` is loading / unavailable / ready |
 
-The four `useOwner*` hooks (`hooks/`) take `(ownerUid, { enabled })`, keep the "hide previous uid's data" gate, and report `failed` / `denied` (permission-denied). Your own providers are thin wrappers that pass your uid.
+The `useOwner*` hooks (`hooks/`) take `(ownerUid, { enabled })`, keep the "hide previous uid's data" gate, and report `failed` / `denied` (permission-denied). Your own providers are thin wrappers that pass your uid.
 
 ### AuthGate (as built)
 
@@ -208,11 +213,14 @@ users/{uid}                          displayName, email, createdAt (field-allowl
   cardPrefs/{cardId}                 preferredImageUrl
   decks/{deckId}                     name, leaderId, favoriteVariationId, createdAt, updatedAt
     variations/{variationId}         name, cards { [cardId]: number }, updatedAt
+  rivals/{leaderId}                  keyPieceIds[], techOptionIds[], notes,
+                                     vsDecks { [deckId]: { deckName, notes, wins, losses, updatedAt } },
+                                     createdAt, updatedAt
 shares/{shareId}                     public snapshot: ownerUid, deckId, variationId,
                                      deckName, leaderId, variationName, cards,
                                      preferredImages, createdAt, updatedAt
 usernames/{name}                     uid  (doc id = lowercase username; unique claim)
-profiles/{uid}                       username, displayName, privacy {decks, collection, wanted}, updatedAt
+profiles/{uid}                       username, displayName, privacy {decks, collection, wanted, rivals}, updatedAt
 friendRequests/{fromUid_toUid}       fromUid, toUid, fromUsername, fromDisplayName, toUsername, createdAt
 friendships/{uidA_uidB}              members [uidA, uidB] (sorted), createdAt
 invites/{code}                       inviterUid, inviterUsername, inviterDisplayName, createdAt, expiresAt (7 days)
@@ -225,7 +233,8 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 - `friendRequests`: read/delete by sender or recipient. Create checks the id format, the recipient's `usernames` mapping, the sender's profile username, not already friends, and no reverse request. Names are copied onto the request because the recipient cannot read the sender's profile yet.
 - `friendships`: read/delete by either member. Create needs sorted members, the id `m0_m1`, and an existing request from the other person to you. Accept = one batch (create friendship, delete their request, delete yours too if both sent).
 - `invites`: public single-doc **get** (signed-out people see who invited them), **list denied**. Create only as yourself with your current profile username, `createdAt == request.time`, and `expiresAt` within 8 days (7 + clock slack). No update; inviter may delete. Invites grant nothing: the request itself goes through the normal `friendRequests` rules. Expiry is enforced on the landing page.
-- Friend reads: `collection` / `wanted` / `decks` (+ `variations`) are readable by a friend only when `profiles/{owner}.privacy.<area> == true`. A missing profile means deny. `cardPrefs` is readable by any friend (so their art shows).
+- Friend reads: `collection` / `wanted` / `decks` (+ `variations`) / `rivals` are readable by a friend only when `profiles/{owner}.privacy.<area> == true`. A missing profile means deny. `cardPrefs` is readable by any friend (so their art shows).
+- **Rivals** doc id is the opponent Leader id. Key pieces and tech are mutually exclusive id lists (no counts). `vsDecks` keeps a `deckName` snapshot so deleting a Crew deck leaves a **Deleted deck** tag until the user removes that notes block. Wins/losses are non-negative ints (no draws, no match history rows).
 
 - Collection document **id** is the card number. Qty 0 **deletes** the doc.
 - Wanted document **id** is the same card number. Qty is extra copies to buy, not a total target. Qty 0 **deletes** the doc.
@@ -276,7 +285,11 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 - WANTED stamp on every tile. Owned `+` while a poster exists catches against that bounty.
 - **Add starter deck** modal: increment ST01–ST36 contents; optional labels merged; optional “also create a deck.”
 
-### Decks (`/decks`)
+### Decks (`/decks`) — Crew / Rivals
+
+- **Crew / Rivals** segmented toggle (`CrewRivalsToggle`) on `/decks` and `/decks/rivals` (and on a friend’s Decks tab). Nav icon still goes to `/decks` (Crew).
+
+### Crew (`/decks`)
 
 - Deck cards in a responsive grid (up to 3 per row). Multiple decks per Leader are allowed.
 - **Sort** sits above the grid (deck count on the left, the same dropdown control as Collection on the right). It is hidden while decks are loading and when there are none. Options, in order:
@@ -292,6 +305,14 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 - Rename / delete with confirm. Delete also deletes variations.
 - Legal / Owned badges on each row come from the **favorite** variation only (not “any variation”).
 - Leader art on the row uses the account’s preferred print when one is saved.
+
+### Rivals (`/decks/rivals`)
+
+- List of opponent-Leader journals (`RivalRow`). **Add rival** opens the shared `LeaderPicker` with **Owned off** by default; creates `users/{uid}/rivals/{leaderId}` on first open.
+- Detail (`/decks/rivals/[leaderId]`):
+  - **Deck** tab: **Key pieces** (“Engine staples for this deck.”) and **Tech options** — reference card sets with the same color / Leader-forbid pool as the builder, banned ids excluded, Name/Text search + FilterPanel (incl. Currently Playable). Tap a listed card for `CardDetailModal`. Mutual exclusion, no counts.
+  - **Notes** tab: freeform notes with a **Bullet** helper (• lines; Enter continues the list); **Your decks** blocks pick one of your Crew decks for notes + manual Wins/Losses steppers (`QuantityStepper`, min 0). Deleted Crew decks keep the block with a **Deleted deck** tag until removed.
+- Friends may read journals when `privacy.rivals` is on (independent of Decks/Crew privacy).
 
 ### Builder (`/decks/[id]?mode=edit`)
 
@@ -339,13 +360,13 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 - **Friend list:** sorted by display name, links to `/friends/{uid}`, remove with confirm (copied decks stay yours).
 - **Invite link:** button on the username card. Each tap writes a new `invites/{random id}` (7 days, reusable, no list or cancel UI) and opens the share sheet (`navigator.share`); without one it copies the link (toast shows the URL if the clipboard fails).
 - **Invite page (`/invite/[code]`):** writes nothing on open (link previews are harmless). Unknown, expired, or stale (inviter changed username — checked against `usernames/{name}`) → "expired, ask for a new one". Signed out → Sign up / Log in carrying `?next=` back. No username → claim form first. Then: own link, already friends (link to their page), request sent, **Accept** (they already asked you), or **Send friend request** (request from you to the inviter, who accepts as usual).
-- **Privacy:** three switches (Decks, Collection, Wanted), all on by default, stored in `profiles/{uid}.privacy`. Collection labels are visible to friends when Collection is shared. Preferred art (`cardPrefs`) is always visible to friends.
+- **Privacy:** four switches (Decks, Collection, Wanted, **Rivals**), all on by default, stored in `profiles/{uid}.privacy`. Older profiles missing `rivals` are backfilled to `true` on load. Collection labels are visible to friends when Collection is shared. Preferred art (`cardPrefs`) is always visible to friends.
 
 ### Friend pages (`/friends/[uid]/…`)
 
 - One layout (`FriendShell`) with back link, name + `@username`, and Decks / Collection / Wanted tabs. A hidden area keeps its tab (eye-off icon) and shows "Hidden by {name}" (also used when rules refuse). Non-friends and unknown uids see "not available".
 - Listeners only start for shared areas; rules enforce the same thing.
-- **Decks:** same grid, sort options, and saved choice as `/decks` (one `deckpool.deckSort` value for both). **Legal badge only** (no Owned), no rename/delete, friend's Leader art. The dropdown is hidden when they have no decks.
+- **Decks tab:** Crew / Rivals toggle. **Crew:** same grid, sort options, and saved choice as `/decks` (one `deckpool.deckSort` value for both). **Legal badge only** (no Owned), no rename/delete, friend's Leader art. The dropdown is hidden when they have no decks. If Crew is hidden but Rivals is shared, the page points them at Rivals. **Rivals:** read-only list + journal (`/friends/[uid]/rivals`…); no edits, no W/L steppers.
 - **Deck view:** `DeckViewBody` with all variations, a static favorite star (not clickable), Legal only, no Wanted stamps, no Edit/Share. Reason notes are legality only. Ownership lines are omitted. Card details are read-only (no art picker, no owned line).
 - **Copy to my decks** (`CopyDeckModal`): editable name; default **This variation** (saved as one `Main` variation), or **All variations** (names kept, their favorite first and pinned). Works even if you don't own the Leader. Opens your new deck after copying (`createDeckWithVariations`).
 - **Collection:** binder grid with copies, labels (their labels + their deck labels when decks are shared), the same filters/sort/pager as `/collection`, and a Summary toggle. Card details show copies and labels read-only; "In decks" links go to the friend's deck pages.
@@ -437,11 +458,12 @@ app/                    routes + layouts + globals.css + card-art/[file] proxy
 app/(app)/explore/      Full-catalog Explore page (authenticated)
 app/(app)/wanted/       Wanted board page (authenticated)
 app/(app)/friends/      Friends page + [uid] layout and friend Decks / Collection / Wanted / deck pages
-components/             UI by area: auth, builder (DeckBoard/CardStack/CardResults/DeckViewBody), cards, collection, decks, friends, profile, search, share, ui, wanted
-contexts/               Auth, UserProfile, Catalog, Collection, Wanted, CardPrefs, Decks, Friends, FriendData
-hooks/                  useCollectionWrite, useWantedWrite, useOwner{Collection,Wanted,CardPrefs,Decks}, useCardListBrowser, useDeckSort
-lib/                    firebase, users, profiles, friends, friendIds, usernames, collection, wanted, shares, cardPrefs, cardArt*, cardImageUrl, variations, decks, deckList, sortDecks, legality, builder, search, tests
-types/                  catalog, collection, wanted, deck, share, user, friends, cardPref, construction, product
+components/             UI by area: auth, builder, cards, collection, decks, friends, profile, rivals, search, share, ui, wanted
+contexts/               Auth, UserProfile, Catalog, Collection, Wanted, CardPrefs, Decks, Rivals, Friends, FriendData
+hooks/                  useCollectionWrite, useWantedWrite, useOwner{Collection,Wanted,CardPrefs,Decks,Rivals}, useCardListBrowser, useDeckSort
+lib/                    firebase, users, profiles, friends, friendIds, usernames, collection, wanted, rivals, shares, cardPrefs, cardArt*, cardImageUrl, variations, decks, deckList, sortDecks, legality, builder, search, tests
+types/                  catalog, collection, wanted, deck, rival, share, user, friends, cardPref, construction, product
+app/(app)/decks/rivals/ Crew/Rivals rival list + [leaderId] journal
 app/s/[shareId]/         public shared-deck page (+ CatalogProvider layout)
 app/invite/[code]/       public friend-invite page (+ FriendsProvider layout)
 data/                   committed snapshots (~2850 cards; includes OP17 and EB05)
@@ -475,6 +497,7 @@ Key libraries:
 | `lib/decks.ts` | Deck/variation CRUD, favorite pin, starter→deck, change Leader, delete cascade. `createDeckWithVariations` (one batch, first variation = favorite) backs create, starter→deck, and friend copy. `createVariation` adds one list to an existing deck (clone and import) |
 | `lib/deckList.ts` | Paste parser and OPTCGSim export text for deck View import/export |
 | `lib/sortDecks.ts` | Deck-list sort (edited, name, Leader, color, created) plus the saved `localStorage` key. Used by `/decks` and a friend's Decks tab |
+| `lib/rivals.ts` | Rival journals: parse/clean, ensure/delete, key/tech buckets, general notes, vs-deck notes + W/L |
 | `lib/setReleaseOrder.ts` | Chronological release order mapping for all One Piece TCG sets (ST, OP, EB, PRB). Used by filter options, variation stats, and card sorting (newest/oldest) to sort sets by release date instead of alphabetically |
 | `lib/usernames.ts` | Username format, reserved list, normalize + validate |
 | `lib/profiles.ts` | `profiles/{uid}` + `usernames/{name}`: claim/change username (transaction), privacy, display-name sync |
