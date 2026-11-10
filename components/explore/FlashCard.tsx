@@ -37,11 +37,11 @@ export function FlashCard({
         {/* Blur overlay with gradient fade - smooth transition from clear to blurred */}
         {!revealed && (
           <div 
-            className="absolute bottom-0 left-0 right-0 h-3/5 rounded-b-lg backdrop-blur-md transition-opacity duration-300"
+            className="absolute bottom-0 left-0 right-0 h-2/3 rounded-b-lg backdrop-blur-md transition-opacity duration-300"
             style={{
               background: 'linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.25) 100%)',
-              maskImage: 'linear-gradient(to bottom, transparent 0%, black 40%)',
-              WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 40%)',
+              maskImage: 'linear-gradient(to bottom, transparent 0%, black 25%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 25%)',
             }}
           />
         )}
