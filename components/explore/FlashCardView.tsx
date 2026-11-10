@@ -82,6 +82,7 @@ export function FlashCardView({
   return (
     <div className="flex flex-col items-center gap-6 pb-8">
       <FlashCard
+        key={currentCard.id}
         card={currentCard}
         preferredImages={preferredImages}
         revealed={revealed}
