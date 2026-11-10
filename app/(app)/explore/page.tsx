@@ -13,6 +13,8 @@ import { PackagePlus } from "lucide-react";
 import { AddStarterDeckModal } from "@/components/collection/AddStarterDeckModal";
 import { CardDetailModal } from "@/components/cards/CardDetailModal";
 import { CardGrid } from "@/components/cards/CardGrid";
+import { ExploreModeToggle, parseExploreView } from "@/components/explore/ExploreModeToggle";
+import { FlashCardView } from "@/components/explore/FlashCardView";
 import { FilterPanel } from "@/components/search/FilterPanel";
 import { NameSearchBar } from "@/components/search/NameSearchBar";
 import { SortSelect } from "@/components/search/SortSelect";
@@ -67,6 +69,7 @@ function ExplorePageContent() {
     useWantedWrite();
 
   const urlKey = searchParams.toString();
+  const view = parseExploreView(searchParams.get("view"));
   const urlFilters = useMemo(
     () => filtersFromSearchParams(searchParams),
     [searchParams],
@@ -232,9 +235,15 @@ function ExplorePageContent() {
             Explore
           </h1>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            Search the full catalog and add copies to your binder.
+            {view === "browse"
+              ? "Search the full catalog and add copies to your binder."
+              : "Practice card memorization with flashcards."}
           </p>
         </div>
+        <ExploreModeToggle mode={view} />
+      </div>
+
+      {view === "browse" && (
         <div className="flex flex-wrap items-center gap-3">
           <label className="inline-flex items-center gap-2 text-sm font-medium text-[var(--ink-primary)]">
             <input
@@ -277,7 +286,7 @@ function ExplorePageContent() {
             Add starter deck
           </Button>
         </div>
-      </div>
+      )}
 
       <NameSearchBar
         value={filters.text}
@@ -296,7 +305,8 @@ function ExplorePageContent() {
         deckOptions={deckOptions}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      {view === "browse" && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-[var(--ink-muted)]">
           {catalogLoading
             ? "Loading catalog…"
@@ -314,9 +324,12 @@ function ExplorePageContent() {
           }
           options={CARDS_SORTS}
         />
-      </div>
+        </div>
+      )}
 
-      <CardGrid
+      {view === "browse" ? (
+        <>
+          <CardGrid
         cards={results}
         quantityById={quantityById}
         preferredImages={preferredByCardId}
@@ -330,20 +343,33 @@ function ExplorePageContent() {
         labelsByCardId={cardLabelsById}
       />
 
-      {visibleCount < filtered.length ? (
-        <div className="flex justify-center">
-          <Button
-            variant="secondary"
-            onClick={() =>
-              setPaging({ key: resultsKey, count: visibleCount + PAGE_SIZE })
-            }
-          >
-            Show more
-          </Button>
-        </div>
-      ) : null}
+          {visibleCount < filtered.length ? (
+            <div className="flex justify-center">
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  setPaging({ key: resultsKey, count: visibleCount + PAGE_SIZE })
+                }
+              >
+                Show more
+              </Button>
+            </div>
+          ) : null}
+        </>
+      ) : catalogLoading ? (
+        <p className="text-center text-sm text-[var(--ink-muted)]">
+          Loading catalog…
+        </p>
+      ) : catalogError ? (
+        <p className="text-center text-sm text-[var(--accent-pirate-red)]">
+          {catalogError}
+        </p>
+      ) : (
+        <FlashCardView cards={filtered} preferredImages={preferredByCardId} />
+      )}
 
-      <CardDetailModal
+      {view === "browse" && (
+        <CardDetailModal
         card={selectedCard}
         open={selectedCard !== null}
         onClose={() => setSelectedCard(null)}
@@ -369,12 +395,15 @@ function ExplorePageContent() {
         onLabelsChange={(nextLabels) => {
           if (selectedCard) void setLabels(selectedCard.id, nextLabels);
         }}
-      />
+        />
+      )}
 
-      <AddStarterDeckModal
-        open={starterOpen}
-        onClose={() => setStarterOpen(false)}
-      />
+      {view === "browse" && (
+        <AddStarterDeckModal
+          open={starterOpen}
+          onClose={() => setStarterOpen(false)}
+        />
+      )}
     </div>
   );
 }

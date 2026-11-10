@@ -1,8 +1,8 @@
 # DeckPool — Codebase snapshot
 
 **Status:** Living summary of the **as-built** app  
-**Last updated:** 2026-11-09
-**Git:** `main` at `https://github.com/carnide1/deckpool.git`. This snapshot adds **Crew / Rivals** under Decks: Leader-first matchup journals (key pieces, tech options, freeform notes, per-deck notes + manual W/L) with a fourth friends privacy switch `rivals`. Prior main: mobile filter dropdown overflow (JOE-47, PRs #10–#12), EB-05 catalog + chronological set sorting (JOE-34 / JOE-52), Friends (merged; rules deployed 2026-10-02). **Rivals `firestore.rules` must be published** after this lands (privacy now requires four keys including `rivals`).
+**Last updated:** 2026-11-10
+**Git:** `main` at `https://github.com/carnide1/deckpool.git`. This snapshot adds **Flash mode** to Explore: a flashcard study feature for card memorization practice. The page now has Browse/Flash toggle; Flash shows random cards with blurred effect text, Unblur button, Next button, automatic loop + reshuffle, mobile-optimized layout. Filters work in both modes. Prior main: Crew/Rivals matchup journals (key pieces, tech options, freeform notes, per-deck notes + manual W/L) with fourth friends privacy switch `rivals`.
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -146,7 +146,7 @@ Logged-in users on the auth landing routes (`/`, `/login`, `/signup`, `/forgot-p
 |---|---|
 | `/collection` | **Owned binder** by default. Modes: Binder, Summary (`?view=summary`). Binder cannot create new card numbers (`useCollectionWrite(false)`). |
 | `/wanted` | **Wanted** shopping board — extra copies to buy. **Caught** can create binder rows. Old `/collection?view=wanted` redirects here. |
-| `/explore` | **Full catalog.** Name/text search + filters, URL-synced. `owned=1` limits to owned. `wanted=1` limits to posters. `in=text` searches rules text. `timing=` is printed ability windows (AND). Click a card to set qty (this **can** create new collection rows), bounty, labels, preferred art. Starter-deck add lives here too. Old `/cards` redirects here. |
+| `/explore` | **Full catalog.** Browse/Flash mode toggle (`?view=flash`). **Browse mode** (default): grid with name/text search + filters, URL-synced. `owned=1` limits to owned. `wanted=1` limits to posters. `in=text` searches rules text. `timing=` is printed ability windows (AND). Click a card to set qty (this **can** create new collection rows), bounty, labels, preferred art. Starter-deck add lives here too. **Flash mode**: flashcard study — random card with blurred effect text, Unblur/Next buttons, automatic loop + reshuffle. Filters and search work in both modes. Old `/cards` redirects here. |
 | `/decks` | **Crew** (default): deck grid with sort (default newest edits). Create / rename / delete. Crew / Rivals toggle. |
 | `/decks/rivals` | **Rivals** list: opponent-Leader journals. Add rival via full Leader picker (Owned off by default). |
 | `/decks/rivals/[leaderId]` | Rival journal: **Deck** tab (Key pieces + Tech options) and **Notes** tab (general notes + per-your-deck notes with W/L). `?tab=notes` opens Notes. |
@@ -458,7 +458,8 @@ app/                    routes + layouts + globals.css + card-art/[file] proxy
 app/(app)/explore/      Full-catalog Explore page (authenticated)
 app/(app)/wanted/       Wanted board page (authenticated)
 app/(app)/friends/      Friends page + [uid] layout and friend Decks / Collection / Wanted / deck pages
-components/             UI by area: auth, builder, cards, collection, decks, friends, profile, rivals, search, share, ui, wanted
+components/             UI by area: auth, builder, cards, collection, decks, explore, friends, profile, rivals, search, share, ui, wanted
+components/explore/     Flash mode: ExploreModeToggle, FlashCardView, FlashCard
 contexts/               Auth, UserProfile, Catalog, Collection, Wanted, CardPrefs, Decks, Rivals, Friends, FriendData
 hooks/                  useCollectionWrite, useWantedWrite, useOwner{Collection,Wanted,CardPrefs,Decks,Rivals}, useCardListBrowser, useDeckSort
 lib/                    firebase, users, profiles, friends, friendIds, usernames, collection, wanted, rivals, shares, cardPrefs, cardArt*, cardImageUrl, variations, decks, deckList, sortDecks, legality, builder, search, tests
@@ -535,6 +536,7 @@ The blueprint is still the product source of truth for **rules** (color identity
 | Compact Legal/Owned on `/decks` is **any** variation | Compact Legal/Owned is the **favorite** variation. Profile still counts every variation. |
 | Wishlist (future-features #5) | Built as **Wanted**: extra copies to buy, top-level `/wanted` route + nav, Explore `wanted=1`, catch into the binder. Not a Collection mode. |
 | No public deck gallery / share network | **Share links** only: owner copies `/s/{id}` for one variation snapshot. Not a browseable gallery. **Friends** can browse each other's decks / collection / Wanted (exact-username add or a 7-day invite link, per-area privacy). Still no public directory. |
+| No study/practice tools | **Flash mode** in Explore (`?view=flash`): random flashcards with blurred effect text that reveals on click. Mobile-optimized. Loops + reshuffles. Filters work in both modes. |
 
 Do not silently revert Collection to a full-catalog logger, or rip out the filter UI to restore `color:purple` in the box, without the user asking.
 
