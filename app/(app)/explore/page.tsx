@@ -13,6 +13,8 @@ import { PackagePlus } from "lucide-react";
 import { AddStarterDeckModal } from "@/components/collection/AddStarterDeckModal";
 import { CardDetailModal } from "@/components/cards/CardDetailModal";
 import { CardGrid } from "@/components/cards/CardGrid";
+import { ExploreModeToggle, parseExploreView } from "@/components/explore/ExploreModeToggle";
+import { FlashCardView } from "@/components/explore/FlashCardView";
 import { FilterPanel } from "@/components/search/FilterPanel";
 import { NameSearchBar } from "@/components/search/NameSearchBar";
 import { SortSelect } from "@/components/search/SortSelect";
@@ -67,6 +69,7 @@ function ExplorePageContent() {
     useWantedWrite();
 
   const urlKey = searchParams.toString();
+  const view = parseExploreView(searchParams.get("view"));
   const urlFilters = useMemo(
     () => filtersFromSearchParams(searchParams),
     [searchParams],
@@ -108,6 +111,7 @@ function ExplorePageContent() {
     ownedOnly,
     sort,
     wantedOnly,
+    view,
   );
   const [paging, setPaging] = useState({ key: resultsKey, count: PAGE_SIZE });
   const visibleCount = paging.key === resultsKey ? paging.count : PAGE_SIZE;
@@ -213,11 +217,11 @@ function ExplorePageContent() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      const search = cardsSearchString(filters, ownedOnly, sort, wantedOnly);
+      const search = cardsSearchString(filters, ownedOnly, sort, wantedOnly, view);
       if (search !== urlKey) replaceUrl(search);
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [filters, ownedOnly, wantedOnly, sort, urlKey, replaceUrl]);
+  }, [filters, ownedOnly, wantedOnly, sort, view, urlKey, replaceUrl]);
 
   const selectedOwned = selectedCard ? ownedMap[selectedCard.id] : undefined;
   const selectedDecks = selectedCard
@@ -232,9 +236,15 @@ function ExplorePageContent() {
             Explore
           </h1>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            Search the full catalog and add copies to your binder.
+            {view === "browse"
+              ? "Search the full catalog and add copies to your binder."
+              : "Practice card memorization with flashcards."}
           </p>
         </div>
+        <ExploreModeToggle mode={view} />
+      </div>
+
+      {view === "browse" && (
         <div className="flex flex-wrap items-center gap-3">
           <label className="inline-flex items-center gap-2 text-sm font-medium text-[var(--ink-primary)]">
             <input
@@ -247,6 +257,7 @@ function ExplorePageContent() {
                     event.target.checked,
                     sort,
                     wantedOnly,
+                    view,
                   ),
                 )
               }
@@ -265,6 +276,7 @@ function ExplorePageContent() {
                     ownedOnly,
                     sort,
                     event.target.checked,
+                    view,
                   ),
                 )
               }
@@ -277,16 +289,18 @@ function ExplorePageContent() {
             Add starter deck
           </Button>
         </div>
-      </div>
+      )}
 
-      <NameSearchBar
-        value={filters.text}
-        onChange={(text) => setFilters((prev) => ({ ...prev, text }))}
-        textField={filters.textField}
-        onTextFieldChange={(textField) =>
-          setFilters((prev) => ({ ...prev, textField }))
-        }
-      />
+      {view === "browse" && (
+        <NameSearchBar
+          value={filters.text}
+          onChange={(text) => setFilters((prev) => ({ ...prev, text }))}
+          textField={filters.textField}
+          onTextFieldChange={(textField) =>
+            setFilters((prev) => ({ ...prev, textField }))
+          }
+        />
+      )}
 
       <FilterPanel
         filters={filters}
@@ -296,7 +310,8 @@ function ExplorePageContent() {
         deckOptions={deckOptions}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      {view === "browse" && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-[var(--ink-muted)]">
           {catalogLoading
             ? "Loading catalog…"
@@ -310,13 +325,16 @@ function ExplorePageContent() {
         <SortSelect
           value={sort}
           onChange={(next) =>
-            replaceUrl(cardsSearchString(filters, ownedOnly, next, wantedOnly))
+            replaceUrl(cardsSearchString(filters, ownedOnly, next, wantedOnly, view))
           }
           options={CARDS_SORTS}
         />
-      </div>
+        </div>
+      )}
 
-      <CardGrid
+      {view === "browse" ? (
+        <>
+          <CardGrid
         cards={results}
         quantityById={quantityById}
         preferredImages={preferredByCardId}
@@ -330,20 +348,33 @@ function ExplorePageContent() {
         labelsByCardId={cardLabelsById}
       />
 
-      {visibleCount < filtered.length ? (
-        <div className="flex justify-center">
-          <Button
-            variant="secondary"
-            onClick={() =>
-              setPaging({ key: resultsKey, count: visibleCount + PAGE_SIZE })
-            }
-          >
-            Show more
-          </Button>
-        </div>
-      ) : null}
+          {visibleCount < filtered.length ? (
+            <div className="flex justify-center">
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  setPaging({ key: resultsKey, count: visibleCount + PAGE_SIZE })
+                }
+              >
+                Show more
+              </Button>
+            </div>
+          ) : null}
+        </>
+      ) : catalogLoading ? (
+        <p className="text-center text-sm text-[var(--ink-muted)]">
+          Loading catalog…
+        </p>
+      ) : catalogError ? (
+        <p className="text-center text-sm text-[var(--accent-pirate-red)]">
+          {catalogError}
+        </p>
+      ) : (
+        <FlashCardView cards={filtered} preferredImages={preferredByCardId} />
+      )}
 
-      <CardDetailModal
+      {view === "browse" && (
+        <CardDetailModal
         card={selectedCard}
         open={selectedCard !== null}
         onClose={() => setSelectedCard(null)}
@@ -369,12 +400,15 @@ function ExplorePageContent() {
         onLabelsChange={(nextLabels) => {
           if (selectedCard) void setLabels(selectedCard.id, nextLabels);
         }}
-      />
+        />
+      )}
 
-      <AddStarterDeckModal
-        open={starterOpen}
-        onClose={() => setStarterOpen(false)}
-      />
+      {view === "browse" && (
+        <AddStarterDeckModal
+          open={starterOpen}
+          onClose={() => setStarterOpen(false)}
+        />
+      )}
     </div>
   );
 }

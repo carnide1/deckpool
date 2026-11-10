@@ -373,11 +373,13 @@ export function cardsSearchString(
   ownedOnly: boolean,
   sort: string,
   wantedOnly = false,
+  view?: string,
 ): string {
   const params = new URLSearchParams();
   writeFiltersToSearchParams(params, filters);
   if (ownedOnly) params.set("owned", "1");
   if (wantedOnly) params.set("wanted", "1");
   if (sort && sort !== "newest") params.set("sort", sort);
+  if (view && view !== "browse") params.set("view", view);
   return params.toString();
 }
