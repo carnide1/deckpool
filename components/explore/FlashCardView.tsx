@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { FlashCard } from "./FlashCard";
 import { Button } from "@/components/ui/Button";
+import { imageCandidates } from "@/lib/cardImageUrl";
 import type { DeckPoolCard } from "@/types/catalog";
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -71,6 +72,13 @@ export function FlashCardView({
     );
   }
 
+  // Preload next 3 cards for instant transitions
+  const preloadCards = [
+    shuffled[safeIndex + 1],
+    shuffled[safeIndex + 2],
+    shuffled[safeIndex + 3],
+  ].filter(Boolean);
+
   return (
     <div className="flex flex-col items-center gap-6 pb-8">
       <FlashCard
@@ -78,6 +86,23 @@ export function FlashCardView({
         preferredImages={preferredImages}
         revealed={revealed}
       />
+
+      {/* Hidden preload for next cards - loads images in advance */}
+      <div className="hidden">
+        {preloadCards.map((card) => {
+          const [img] = imageCandidates(card, preferredImages);
+          return img ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={card.id}
+              src={img}
+              alt=""
+              loading="eager"
+              decoding="async"
+            />
+          ) : null;
+        })}
+      </div>
 
       <div className="flex gap-3 px-4">
         {!revealed && (
