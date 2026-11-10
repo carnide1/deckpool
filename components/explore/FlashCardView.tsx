@@ -26,16 +26,43 @@ export function FlashCardView({
   const [revealed, setRevealed] = useState(false);
   const [shuffleKey, setShuffleKey] = useState(0);
 
-  // Shuffle when cards OR shuffleKey changes.
+  // Create stable key from card IDs to prevent unnecessary reshuffles
+  // when parent passes new array reference with same cards
+  const cardsKey = useMemo(
+    () => cards.map((c) => c.id).join(","),
+    [cards],
+  );
+
+  // Shuffle when cards content OR shuffleKey changes.
   // shuffleKey is intentionally included to force reshuffle on loop.
   const shuffled = useMemo(
     () => shuffleArray(cards),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cards, shuffleKey],
+    [cardsKey, shuffleKey],
   );
 
-  // Clamp current index to valid range
-  const safeIndex = Math.min(currentIndex, Math.max(0, shuffled.length - 1));
+  // Clamp current index to valid range and reset if out of bounds
+  // This prevents issues when filters reduce the card count
+  const safeIndex = useMemo(() => {
+    const maxIndex = Math.max(0, shuffled.length - 1);
+    return Math.min(currentIndex, maxIndex);
+  }, [currentIndex, shuffled.length]);
+
+  // Preload next 3 cards for instant transitions
+  const preloadCards = useMemo(
+    () => [
+      shuffled[safeIndex + 1],
+      shuffled[safeIndex + 2],
+      shuffled[safeIndex + 3],
+    ].filter(Boolean),
+    [shuffled, safeIndex],
+  );
+
+  // Precompute image URLs for preloading (avoid re-computation in render)
+  const preloadImages = useMemo(
+    () => preloadCards.map((card) => imageCandidates(card, preferredImages)[0]).filter(Boolean),
+    [preloadCards, preferredImages],
+  );
 
   // Handle empty state
   if (cards.length === 0) {
@@ -54,13 +81,16 @@ export function FlashCardView({
   const handleNext = () => {
     setRevealed(false); // Reset blur for next card
 
-    if (safeIndex >= shuffled.length - 1) {
-      // Loop back AND reshuffle
-      setCurrentIndex(0);
-      setShuffleKey((prev) => prev + 1);
-    } else {
-      setCurrentIndex((prev) => prev + 1);
-    }
+    // Use functional update to avoid stale closure issues with rapid clicks
+    setCurrentIndex((prevIndex) => {
+      const nextIndex = prevIndex + 1;
+      if (nextIndex >= shuffled.length) {
+        // Loop back AND reshuffle
+        setShuffleKey((prev) => prev + 1);
+        return 0;
+      }
+      return nextIndex;
+    });
   };
 
   const currentCard = shuffled[safeIndex];
@@ -71,13 +101,6 @@ export function FlashCardView({
       <p className="text-center text-[var(--ink-muted)]">Loading...</p>
     );
   }
-
-  // Preload next 3 cards for instant transitions
-  const preloadCards = [
-    shuffled[safeIndex + 1],
-    shuffled[safeIndex + 2],
-    shuffled[safeIndex + 3],
-  ].filter(Boolean);
 
   return (
     <div className="flex flex-col items-center gap-6 pb-8">
@@ -93,19 +116,16 @@ export function FlashCardView({
 
       {/* Hidden preload for next cards - loads images in advance */}
       <div className="hidden">
-        {preloadCards.map((card) => {
-          const [img] = imageCandidates(card, preferredImages);
-          return img ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={card.id}
-              src={img}
-              alt=""
-              loading="eager"
-              decoding="async"
-            />
-          ) : null;
-        })}
+        {preloadImages.map((img, index) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={`preload-${safeIndex}-${index}`}
+            src={img}
+            alt=""
+            loading="eager"
+            decoding="async"
+          />
+        ))}
       </div>
 
       <div className="flex gap-3 px-4">

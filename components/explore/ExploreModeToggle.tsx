@@ -14,6 +14,7 @@ export function ExploreModeToggle({ mode }: { mode: ExploreView }) {
     <div className="inline-flex rounded-lg border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-0.5 text-sm font-semibold">
       <Link
         href="/explore"
+        aria-current={mode === "browse" ? "page" : undefined}
         className={[
           "rounded-md px-3 py-1.5",
           mode === "browse"
@@ -25,6 +26,7 @@ export function ExploreModeToggle({ mode }: { mode: ExploreView }) {
       </Link>
       <Link
         href="/explore?view=flash"
+        aria-current={mode === "flash" ? "page" : undefined}
         className={[
           "rounded-md px-3 py-1.5",
           mode === "flash"
