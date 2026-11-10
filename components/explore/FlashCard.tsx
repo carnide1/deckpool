@@ -17,14 +17,8 @@ export function FlashCard({
 
   return (
     <div className="flex flex-col items-center px-4">
-      {/* Card image - blurred when not revealed */}
-      <div
-        className={[
-          "w-full max-w-[300px] sm:max-w-[400px] md:max-w-[500px]",
-          "transition-all duration-300",
-          !revealed && "blur-md",
-        ].join(" ")}
-      >
+      {/* Card image with bottom half blurred when not revealed */}
+      <div className="relative w-full max-w-[300px] sm:max-w-[400px] md:max-w-[500px]">
         {image ? (
           <CardImage
             src={image}
@@ -38,6 +32,11 @@ export function FlashCard({
           <div className="flex aspect-[5/7] w-full items-center justify-center rounded-lg bg-[var(--bg-inset)] text-sm text-[var(--ink-muted)]">
             No image
           </div>
+        )}
+        
+        {/* Blur overlay on bottom half only */}
+        {!revealed && (
+          <div className="absolute bottom-0 left-0 right-0 h-1/2 rounded-b-lg backdrop-blur-md bg-white/20 transition-opacity duration-300" />
         )}
       </div>
     </div>
