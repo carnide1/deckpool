@@ -111,6 +111,7 @@ function ExplorePageContent() {
     ownedOnly,
     sort,
     wantedOnly,
+    view,
   );
   const [paging, setPaging] = useState({ key: resultsKey, count: PAGE_SIZE });
   const visibleCount = paging.key === resultsKey ? paging.count : PAGE_SIZE;
@@ -216,11 +217,12 @@ function ExplorePageContent() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      const search = cardsSearchString(filters, ownedOnly, sort, wantedOnly);
+      const search = cardsSearchString(filters, ownedOnly, sort, wantedOnly, view);
       if (search !== urlKey) replaceUrl(search);
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [filters, ownedOnly, wantedOnly, sort, urlKey, replaceUrl]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, ownedOnly, wantedOnly, sort, view, urlKey, replaceUrl]);
 
   const selectedOwned = selectedCard ? ownedMap[selectedCard.id] : undefined;
   const selectedDecks = selectedCard
@@ -256,6 +258,7 @@ function ExplorePageContent() {
                     event.target.checked,
                     sort,
                     wantedOnly,
+                    view,
                   ),
                 )
               }
@@ -274,6 +277,7 @@ function ExplorePageContent() {
                     ownedOnly,
                     sort,
                     event.target.checked,
+                    view,
                   ),
                 )
               }
@@ -320,7 +324,7 @@ function ExplorePageContent() {
         <SortSelect
           value={sort}
           onChange={(next) =>
-            replaceUrl(cardsSearchString(filters, ownedOnly, next, wantedOnly))
+            replaceUrl(cardsSearchString(filters, ownedOnly, next, wantedOnly, view))
           }
           options={CARDS_SORTS}
         />
