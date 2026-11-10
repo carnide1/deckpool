@@ -81,12 +81,15 @@ export function FlashCardView({
 
   return (
     <div className="flex flex-col items-center gap-6 pb-8">
-      <FlashCard
-        key={currentCard.id}
-        card={currentCard}
-        preferredImages={preferredImages}
-        revealed={revealed}
-      />
+      {/* Fixed-size container prevents layout shift during card transitions */}
+      <div className="w-full max-w-[300px] sm:max-w-[400px] md:max-w-[500px] min-h-[420px] sm:min-h-[560px] md:min-h-[700px]">
+        <FlashCard
+          key={currentCard.id}
+          card={currentCard}
+          preferredImages={preferredImages}
+          revealed={revealed}
+        />
+      </div>
 
       {/* Hidden preload for next cards - loads images in advance */}
       <div className="hidden">
