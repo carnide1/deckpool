@@ -221,7 +221,6 @@ function ExplorePageContent() {
       if (search !== urlKey) replaceUrl(search);
     }, 350);
     return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, ownedOnly, wantedOnly, sort, view, urlKey, replaceUrl]);
 
   const selectedOwned = selectedCard ? ownedMap[selectedCard.id] : undefined;
@@ -292,14 +291,16 @@ function ExplorePageContent() {
         </div>
       )}
 
-      <NameSearchBar
-        value={filters.text}
-        onChange={(text) => setFilters((prev) => ({ ...prev, text }))}
-        textField={filters.textField}
-        onTextFieldChange={(textField) =>
-          setFilters((prev) => ({ ...prev, textField }))
-        }
-      />
+      {view === "browse" && (
+        <NameSearchBar
+          value={filters.text}
+          onChange={(text) => setFilters((prev) => ({ ...prev, text }))}
+          textField={filters.textField}
+          onTextFieldChange={(textField) =>
+            setFilters((prev) => ({ ...prev, textField }))
+          }
+        />
+      )}
 
       <FilterPanel
         filters={filters}
