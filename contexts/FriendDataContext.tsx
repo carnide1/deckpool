@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useFriends } from "@/contexts/FriendsContext";
 import { useOwnerCardPrefs, type OwnerCardPrefs } from "@/hooks/useOwnerCardPrefs";
 import {
@@ -48,13 +55,27 @@ export function FriendDataProvider({
     ? (friends.find((row) => row.uid === uid) ?? null)
     : null;
 
+  // If friendship is known but the profile doc never arrives, stop spinning.
+  const waitKey = `${uid}:${friendsLoading}:${isFriend}:${profile ? "yes" : "no"}`;
+  const [timedOutForKey, setTimedOutForKey] = useState<string | null>(null);
+  useEffect(() => {
+    if (friendsLoading || !isFriend || profile) return;
+    const key = waitKey;
+    const timer = window.setTimeout(() => setTimedOutForKey(key), 8000);
+    return () => window.clearTimeout(timer);
+  }, [waitKey, friendsLoading, isFriend, profile]);
+
+  const profileTimedOut = timedOutForKey === waitKey;
+
   const access: FriendAccess = friendsLoading
     ? "loading"
     : !isFriend
       ? "unavailable"
       : profile
         ? "ready"
-        : "loading";
+        : profileTimedOut
+          ? "unavailable"
+          : "loading";
 
   const shares = useMemo(
     () => (area: PrivacyArea) => Boolean(profile?.privacy[area]),

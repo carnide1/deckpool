@@ -1,9 +1,14 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
+  getDocs,
+  query,
   serverTimestamp,
+  where,
+  writeBatch,
 } from "firebase/firestore";
 import { cleanCardsMap } from "@/lib/decks";
 import { getFirebaseDb } from "@/lib/firebase";
@@ -185,6 +190,52 @@ export async function getDeckShare(shareId: string): Promise<DeckShare | null> {
   const snap = await getDoc(shareDocRef(id));
   if (!snap.exists()) return null;
   return parseShare(snap.id, snap.data() as Record<string, unknown>);
+}
+
+/** Owner revoke for one share link. */
+export async function deleteDeckShare(
+  ownerUid: string,
+  shareId: string,
+): Promise<void> {
+  const id = shareId.trim();
+  if (!id) return;
+  const ref = shareDocRef(id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const data = snap.data() as Record<string, unknown>;
+  if (data.ownerUid !== ownerUid) {
+    throw new Error("You can only delete your own share links.");
+  }
+  await deleteDoc(ref);
+}
+
+/** Delete every share snapshot for one of the owner's decks (on deck delete). */
+export async function deleteSharesForDeck(
+  ownerUid: string,
+  deckId: string,
+): Promise<void> {
+  const snap = await getDocs(
+    query(
+      sharesCollectionRef(),
+      where("ownerUid", "==", ownerUid),
+      where("deckId", "==", deckId),
+    ),
+  );
+  if (snap.empty) return;
+
+  const db = getFirebaseDb();
+  let batch = writeBatch(db);
+  let ops = 0;
+  for (const docSnap of snap.docs) {
+    batch.delete(docSnap.ref);
+    ops += 1;
+    if (ops >= 400) {
+      await batch.commit();
+      batch = writeBatch(db);
+      ops = 0;
+    }
+  }
+  if (ops > 0) await batch.commit();
 }
 
 export async function copyTextToClipboard(text: string): Promise<void> {

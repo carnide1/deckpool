@@ -82,7 +82,7 @@ export function RivalNotesPanel({
       toast.error(
         error instanceof Error ? error.message : "Could not save notes",
       );
-      setGeneral(journal.notes);
+      // Keep the draft so a failed save does not discard typed text.
     } finally {
       setSavingGeneral(false);
     }
@@ -206,7 +206,9 @@ function VsDeckBlock({
   onRemove?: (deckId: string) => Promise<void>;
 }) {
   const deleted = !liveDeck;
-  const title = liveDeck?.name ?? block.deckName;
+  // When Crew decks are hidden from a friend, do not leak stored deckName.
+  const title =
+    liveDeck?.name ?? (readOnly ? "Hidden deck" : block.deckName);
   const [notes, setNotes] = useState(block.notes);
   const [busy, setBusy] = useState(false);
 
@@ -220,7 +222,7 @@ function VsDeckBlock({
       toast.error(
         error instanceof Error ? error.message : "Could not save notes",
       );
-      setNotes(block.notes);
+      // Keep the draft so a failed save does not discard typed text.
     } finally {
       setBusy(false);
     }

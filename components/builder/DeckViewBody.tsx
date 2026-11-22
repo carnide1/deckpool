@@ -307,6 +307,7 @@ export function DeckViewBody({
             <CardGrid
               cards={group.cards}
               quantityById={group.quantityById}
+              quantityChipLabel="×"
               preferredImages={preferredImages}
               onSelect={setSelectedCard}
               wantedQtyById={wanted?.wantedQtyById}

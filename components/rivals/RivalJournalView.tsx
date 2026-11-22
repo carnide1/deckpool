@@ -104,28 +104,15 @@ export function RivalJournalView({
     if (!onSaveBuckets) return;
     const keySet = new Set(nextIds);
     const tech = journal.techOptionIds.filter((id) => !keySet.has(id));
-    try {
-      await onSaveBuckets(nextIds, tech);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Could not save key pieces",
-      );
-      throw error;
-    }
+    // Errors toast in RivalCardPickerModal / RivalCardSetSection only.
+    await onSaveBuckets(nextIds, tech);
   };
 
   const saveTech = async (nextIds: string[]) => {
     if (!onSaveBuckets) return;
     const keySet = new Set(journal.keyPieceIds);
     const tech = nextIds.filter((id) => !keySet.has(id));
-    try {
-      await onSaveBuckets([...journal.keyPieceIds], tech);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Could not save tech options",
-      );
-      throw error;
-    }
+    await onSaveBuckets([...journal.keyPieceIds], tech);
   };
 
   return (

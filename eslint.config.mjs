@@ -15,8 +15,8 @@ const eslintConfig = defineConfig([
   ]),
   {
     files: [
-      "app/(app)/cards/page.tsx",
       "app/(app)/collection/page.tsx",
+      "app/(app)/explore/page.tsx",
       "components/CardImage.tsx",
       "components/builder/BuilderView.tsx",
       "components/builder/ChangeLeaderModal.tsx",
@@ -25,10 +25,12 @@ const eslintConfig = defineConfig([
       "components/builder/VariationModals.tsx",
       "components/collection/AddStarterDeckModal.tsx",
       "components/decks/RenameDeckModal.tsx",
+      "components/explore/FlashCardView.tsx",
       "components/wanted/WantedBoard.tsx",
       "contexts/CardPrefsContext.tsx",
       "contexts/CollectionContext.tsx",
       "contexts/DecksContext.tsx",
+      "contexts/FriendDataContext.tsx",
       "contexts/WantedContext.tsx",
     ],
     rules: {

@@ -107,6 +107,10 @@ export function NotesEditor({
         )}
         <button
           type="button"
+          onMouseDown={(event) => {
+            // Keep focus in the textarea so blur-save does not disable this click.
+            event.preventDefault();
+          }}
           onClick={insertBullet}
           disabled={disabled}
           className="inline-flex items-center gap-1 rounded-md border border-[var(--bg-inset)] px-2 py-1 text-xs font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-inset)] hover:text-[var(--ink-primary)] disabled:opacity-40"

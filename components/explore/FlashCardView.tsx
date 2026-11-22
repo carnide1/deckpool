@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { FlashCard } from "./FlashCard";
 import { Button } from "@/components/ui/Button";
-import { imageCandidates } from "@/lib/cardImageUrl";
+import {
+  displayImageCandidates,
+  imageCandidates,
+} from "@/lib/cardImageUrl";
 import type { DeckPoolCard } from "@/types/catalog";
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -26,45 +29,52 @@ export function FlashCardView({
   const [revealed, setRevealed] = useState(false);
   const [shuffleKey, setShuffleKey] = useState(0);
 
-  // Create stable key from card IDs to prevent unnecessary reshuffles
-  // when parent passes new array reference with same cards
   const cardsKey = useMemo(
     () => cards.map((c) => c.id).join(","),
     [cards],
   );
 
-  // Shuffle when cards content OR shuffleKey changes.
-  // shuffleKey is intentionally included to force reshuffle on loop.
+  // New filter set → start over with blur restored (cardsKey already reshuffles).
+  const [sessionKey, setSessionKey] = useState(cardsKey);
+  if (sessionKey !== cardsKey) {
+    setSessionKey(cardsKey);
+    setCurrentIndex(0);
+    setRevealed(false);
+  }
+
   const shuffled = useMemo(
     () => shuffleArray(cards),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [cardsKey, shuffleKey],
   );
 
-  // Clamp current index to valid range and reset if out of bounds
-  // This prevents issues when filters reduce the card count
   const safeIndex = useMemo(() => {
     const maxIndex = Math.max(0, shuffled.length - 1);
     return Math.min(currentIndex, maxIndex);
   }, [currentIndex, shuffled.length]);
 
-  // Preload next 3 cards for instant transitions
   const preloadCards = useMemo(
-    () => [
-      shuffled[safeIndex + 1],
-      shuffled[safeIndex + 2],
-      shuffled[safeIndex + 3],
-    ].filter(Boolean),
+    () =>
+      [
+        shuffled[safeIndex + 1],
+        shuffled[safeIndex + 2],
+        shuffled[safeIndex + 3],
+      ].filter(Boolean),
     [shuffled, safeIndex],
   );
 
-  // Precompute image URLs for preloading (avoid re-computation in render)
+  // Same proxy/mirror URLs CardImage uses, so preload warms the real cache.
   const preloadImages = useMemo(
-    () => preloadCards.map((card) => imageCandidates(card, preferredImages)[0]).filter(Boolean),
+    () =>
+      preloadCards
+        .map(
+          (card) =>
+            displayImageCandidates(imageCandidates(card, preferredImages))[0],
+        )
+        .filter(Boolean),
     [preloadCards, preferredImages],
   );
 
-  // Handle empty state
   if (cards.length === 0) {
     return (
       <div className="flex flex-col items-center gap-4 py-12 text-center">
@@ -79,13 +89,10 @@ export function FlashCardView({
   }
 
   const handleNext = () => {
-    setRevealed(false); // Reset blur for next card
-
-    // Use functional update to avoid stale closure issues with rapid clicks
+    setRevealed(false);
     setCurrentIndex((prevIndex) => {
       const nextIndex = prevIndex + 1;
       if (nextIndex >= shuffled.length) {
-        // Loop back AND reshuffle
         setShuffleKey((prev) => prev + 1);
         return 0;
       }
@@ -96,7 +103,6 @@ export function FlashCardView({
   const currentCard = shuffled[safeIndex];
 
   if (!currentCard) {
-    // Defensive check
     return (
       <p className="text-center text-[var(--ink-muted)]">Loading...</p>
     );
@@ -104,7 +110,6 @@ export function FlashCardView({
 
   return (
     <div className="flex flex-col items-center gap-6 pb-8">
-      {/* Fixed-size container prevents layout shift during card transitions */}
       <div className="w-full max-w-[300px] sm:max-w-[400px] md:max-w-[500px] min-h-[420px] sm:min-h-[560px] md:min-h-[700px]">
         <FlashCard
           key={currentCard.id}
@@ -114,12 +119,11 @@ export function FlashCardView({
         />
       </div>
 
-      {/* Hidden preload for next cards - loads images in advance */}
       <div className="hidden">
         {preloadImages.map((img, index) => (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            key={`preload-${safeIndex}-${index}`}
+            key={`preload-${currentCard.id}-${index}-${img}`}
             src={img}
             alt=""
             loading="eager"
@@ -128,15 +132,17 @@ export function FlashCardView({
         ))}
       </div>
 
-      <div className="flex gap-3 px-4">
-        {!revealed && (
-          <Button
-            onClick={() => setRevealed(true)}
-            className="min-h-[44px] px-6"
-          >
-            Unblur
-          </Button>
-        )}
+      <div className="flex min-h-[44px] gap-3 px-4">
+        <Button
+          onClick={() => setRevealed(true)}
+          className="min-h-[44px] px-6"
+          disabled={revealed}
+          aria-hidden={revealed}
+          tabIndex={revealed ? -1 : undefined}
+          style={revealed ? { visibility: "hidden" } : undefined}
+        >
+          Unblur
+        </Button>
         <Button
           onClick={handleNext}
           variant="secondary"

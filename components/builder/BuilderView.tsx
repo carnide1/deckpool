@@ -72,7 +72,7 @@ export function BuilderView({ deck }: { deck: Deck }) {
   const variationFromUrl = searchParams.get("variation");
   const { cards, cardsById } = useCatalog();
   const { preferredByCardId } = useCardPrefs();
-  const { ownedMap, allLabels } = useCollection();
+  const { ownedMap, allLabels, error: collectionError } = useCollection();
   const { wantedMap } = useWanted();
   const {
     togglePosted,
@@ -80,7 +80,7 @@ export function BuilderView({ deck }: { deck: Deck }) {
     adjustQuantity: adjustWanted,
     saving: wantedSaving,
   } = useWantedWrite();
-  const { variationsByDeckId } = useDecks();
+  const { variationsByDeckId, error: decksError } = useDecks();
 
   const variations = useMemo(
     () => variationsByDeckId[deck.id] ?? [],
@@ -394,6 +394,12 @@ export function BuilderView({ deck }: { deck: Deck }) {
 
   return (
     <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-4">
+      {collectionError || decksError ? (
+        <p className="text-sm text-[var(--accent-pirate-red)]" role="alert">
+          {[collectionError, decksError].filter(Boolean).join(" ")} Owned
+          status may be wrong until this reloads.
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/decks"

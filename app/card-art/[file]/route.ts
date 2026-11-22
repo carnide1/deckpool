@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isCatalogCardArtFile } from "@/lib/cardArtAllowlist";
 import { loadCardArt } from "@/lib/cardArtFetch";
 import { isSafeCardArtFile } from "@/lib/cardArtPath";
 
@@ -6,11 +7,14 @@ type RouteContext = {
   params: Promise<{ file: string }>;
 };
 
+const ERROR_CACHE =
+  "public, max-age=300, s-maxage=300, stale-while-revalidate=60";
+
 /**
  * Same-origin card art proxy: `/card-art/OP17-001.png`
  *
  * Avoids Bandai CORP on direct <img> and Vercel Image Optimization 402s.
- * Path-shaped URLs cache cleanly; filenames are strictly allowlisted.
+ * Path-shaped URLs cache cleanly; filenames must be safe *and* in the catalog.
  */
 export async function GET(request: NextRequest, context: RouteContext) {
   const { file: rawFile } = await context.params;
@@ -18,11 +22,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
   try {
     file = decodeURIComponent(rawFile);
   } catch {
-    return new NextResponse("Invalid file", { status: 400 });
+    return new NextResponse("Invalid file", {
+      status: 400,
+      headers: { "Cache-Control": ERROR_CACHE },
+    });
   }
 
-  if (!isSafeCardArtFile(file)) {
-    return new NextResponse("File not allowed", { status: 400 });
+  if (!isSafeCardArtFile(file) || !isCatalogCardArtFile(file)) {
+    return new NextResponse("File not allowed", {
+      status: 400,
+      headers: { "Cache-Control": ERROR_CACHE },
+    });
   }
 
   const ifNoneMatch = request.headers.get("if-none-match");
@@ -59,8 +69,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
       typeof (error as { status: unknown }).status === "number"
         ? (error as { status: number }).status
         : 502;
-    const message =
-      error instanceof Error ? error.message : "Upstream fetch failed";
-    return new NextResponse(message, { status });
+    return new NextResponse("Upstream fetch failed", {
+      status,
+      headers: { "Cache-Control": ERROR_CACHE },
+    });
   }
 }

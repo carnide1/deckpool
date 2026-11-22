@@ -70,9 +70,10 @@ function quantityBeside(prefix: string, suffix: string): number | null {
   if (suffixMatch) return Number(suffixMatch[1]);
   const prefixX = /(\d+)\s*x\s*$/i.exec(prefix);
   if (prefixX) return Number(prefixX[1]);
-  const leading = prefix.match(/\d+/);
+  // "4 Nami (OP01-016)" — only the first token, not digits inside the name.
+  const leading = /^\s*(\d+)\s+/.exec(prefix);
   if (!leading) return null;
-  return Number(leading[0]);
+  return Number(leading[1]);
 }
 
 /** Same line as `index`, not including the newline. */

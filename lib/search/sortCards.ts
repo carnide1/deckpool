@@ -104,35 +104,46 @@ function compareSerial(a: DeckPoolCard, b: DeckPoolCard): number {
   return a.id.localeCompare(b.id);
 }
 
-function compareNewest(a: DeckPoolCard, b: DeckPoolCard): number {
+function compareByRelease(
+  a: DeckPoolCard,
+  b: DeckPoolCard,
+  /** Positive when `a` should come before `b` for "newer first". */
+  newerFirst: boolean,
+): number {
   const aSetCode = a.setCode || "";
   const bSetCode = b.setCode || "";
   const aOrder = SET_RELEASE_ORDER[aSetCode];
   const bOrder = SET_RELEASE_ORDER[bSetCode];
+  const setDir = newerFirst ? -1 : 1;
 
-  // Both sets have known release orders - sort by actual chronology
   if (aOrder !== undefined && bOrder !== undefined) {
     if (aOrder !== bOrder) {
-      return bOrder - aOrder; // Higher order = newer = first
+      return (aOrder - bOrder) * setDir;
     }
   } else if (aOrder !== undefined) {
-    // Known sets come before unknown sets
     return -1;
   } else if (bOrder !== undefined) {
     return 1;
   } else {
-    // Both unknown - fall back to family ranking
     const pa = parseCardIdentity(a);
     const pb = parseCardIdentity(b);
-    const rank = setRank(pb) - setRank(pa);
+    const rank = (setRank(pa) - setRank(pb)) * setDir;
     if (rank !== 0) return rank;
   }
 
-  // Same set or both unknown with same family - sort by collector number
+  // Within a set, always low collector number first (oldest and newest).
   const pa = parseCardIdentity(a);
   const pb = parseCardIdentity(b);
   if (pa.num !== pb.num) return pa.num - pb.num;
   return a.id.localeCompare(b.id);
+}
+
+function compareNewest(a: DeckPoolCard, b: DeckPoolCard): number {
+  return compareByRelease(a, b, true);
+}
+
+function compareOldest(a: DeckPoolCard, b: DeckPoolCard): number {
+  return compareByRelease(a, b, false);
 }
 
 export type SortExtras = {
@@ -150,7 +161,7 @@ export function sortCards(
       case "newest":
         return compareNewest(a, b);
       case "oldest":
-        return compareNewest(b, a);
+        return compareOldest(a, b);
       case "serial":
         return compareSerial(a, b);
       case "name": {

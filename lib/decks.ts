@@ -135,13 +135,15 @@ export async function createDeck(
   ]);
 }
 
+export const DECK_NAME_MAX = 120;
+
 export async function renameDeck(
   uid: string,
   deckId: string,
   name: string,
 ): Promise<void> {
   await updateDoc(deckDocRef(uid, deckId), {
-    name: name.trim() || "Untitled deck",
+    name: name.trim().slice(0, DECK_NAME_MAX) || "Untitled deck",
     updatedAt: serverTimestamp(),
   });
 }
@@ -251,7 +253,7 @@ export async function renameVariation(
 ): Promise<void> {
   const batch = writeBatch(getFirebaseDb());
   batch.update(variationDocRef(uid, deckId, variationId), {
-    name: name.trim() || "Variation",
+    name: name.trim().slice(0, VARIATION_NAME_MAX) || "Variation",
     updatedAt: serverTimestamp(),
   });
   batch.update(deckDocRef(uid, deckId), {
@@ -337,4 +339,12 @@ export async function deleteDeck(uid: string, deckId: string): Promise<void> {
   }
   batch.delete(deckDocRef(uid, deckId));
   await batch.commit();
+
+  // Best-effort: revoke public share snapshots for this deck.
+  try {
+    const { deleteSharesForDeck } = await import("@/lib/shares");
+    await deleteSharesForDeck(uid, deckId);
+  } catch (error) {
+    console.error("Could not delete share links for deck", error);
+  }
 }

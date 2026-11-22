@@ -219,10 +219,13 @@ service cloud.firestore {
     match /usernames/{name} {
       allow get: if request.auth != null;
       allow list: if false;
+      // Create only together with a profile that claims this name (blocks
+      // orphan username squatting without a matching profiles/{uid} write).
       allow create: if request.auth != null
         && validUsername(name)
         && request.resource.data.keys().hasOnly(['uid'])
-        && request.resource.data.uid == request.auth.uid;
+        && request.resource.data.uid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.username == name;
       allow update: if false;
       allow delete: if request.auth != null
         && resource.data.uid == request.auth.uid;
@@ -334,7 +337,10 @@ service cloud.firestore {
     // cards / preferredImages map *values* are sanitized by the client on write and parse.
     match /shares/{shareId} {
       allow get: if true;
-      allow list: if false;
+      // Owner-only list so deleteDeck can find and revoke links for a deck.
+      // Public gallery stays impossible (query must constrain ownerUid).
+      allow list: if request.auth != null
+        && resource.data.ownerUid == request.auth.uid;
       allow create: if request.auth != null
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.keys().hasOnly([

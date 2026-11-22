@@ -114,6 +114,19 @@ describe("parseDeckList", () => {
     );
   });
 
+  it("does not treat digits inside a card name as the copy count", () => {
+    const parsed = parseDeckList(
+      "1xOP12-001\nMr.1 (Daz.Bonez) (OP01-016)",
+      cards,
+      "OP12-001",
+    );
+    assert.equal(parsed.cards["OP01-016"], undefined);
+    assert.equal(
+      parsed.skipped.some((row) => row.kind === "no-count"),
+      true,
+    );
+  });
+
   it("does not treat a longer token as a card number", () => {
     const parsed = parseDeckList(
       "1xOP12-001\n4xOP01-016\nOP01-0160",

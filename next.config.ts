@@ -32,7 +32,10 @@ function mirrorRemotePattern(): ImageRemotePattern | null {
 const mirror = mirrorRemotePattern();
 
 const nextConfig: NextConfig = {
+  // Card grids use plain <img> + /card-art; keep the optimizer off so the
+  // unused /_next/image surface is not exposed.
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",

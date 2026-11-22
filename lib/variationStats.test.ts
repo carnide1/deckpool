@@ -103,9 +103,9 @@ describe("computeVariationStats", () => {
     ]);
     assert.deepEqual(stats.byColor, []);
     assert.deepEqual(stats.bySet, [
+      { setCode: "ST01", copies: 1 },
       { setCode: "OP01", copies: 6 },
       { setCode: "OP08", copies: 3 },
-      { setCode: "ST01", copies: 1 },
     ]);
   });
 

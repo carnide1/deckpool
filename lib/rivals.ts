@@ -2,9 +2,8 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDoc,
+  runTransaction,
   serverTimestamp,
-  setDoc,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { timestampToMillis } from "@/lib/timestamps";
@@ -58,15 +57,13 @@ export function cleanCardIdList(
 
 /** Move ids into `target`, removing them from `other`. */
 export function assignCardBucket(
-  target: readonly string[],
+  _target: readonly string[],
   other: readonly string[],
   nextTarget: readonly string[],
 ): { target: string[]; other: string[] } {
   const cleanedTarget = cleanCardIdList(nextTarget);
   const targetSet = new Set(cleanedTarget);
   const cleanedOther = cleanCardIdList(other, { exclude: targetSet });
-  // Keep prior target order when possible is unnecessary; cleaned list is fine.
-  void target;
   return { target: cleanedTarget, other: cleanedOther };
 }
 
@@ -172,6 +169,38 @@ function vsDecksForWrite(
   return out;
 }
 
+function journalPayload(journal: RivalJournal): Record<string, unknown> {
+  return {
+    leaderId: journal.leaderId,
+    keyPieceIds: journal.keyPieceIds,
+    techOptionIds: journal.techOptionIds,
+    notes: journal.notes,
+    vsDecks: vsDecksForWrite(journal.vsDecks),
+    createdAt: journal.createdAt ?? serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+}
+
+/**
+ * Read-modify-write inside a transaction so notes / W-L / key-tech edits
+ * cannot silently overwrite each other.
+ */
+async function updateRivalJournal(
+  uid: string,
+  leaderId: string,
+  mutate: (current: RivalJournal) => RivalJournal,
+): Promise<void> {
+  const ref = rivalDocRef(uid, leaderId);
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(ref);
+    const current = snap.exists()
+      ? parseRivalJournal(leaderId, snap.data() as Record<string, unknown>)
+      : emptyRivalJournal(leaderId);
+    const next = mutate(current);
+    tx.set(ref, journalPayload({ ...next, leaderId }));
+  });
+}
+
 /** Create an empty journal if missing; return the parsed journal. */
 export async function ensureRivalJournal(
   uid: string,
@@ -180,20 +209,23 @@ export async function ensureRivalJournal(
   const id = leaderId.trim();
   if (!id) throw new Error("Pick a Leader.");
   const ref = rivalDocRef(uid, id);
-  const snap = await getDoc(ref);
-  if (snap.exists()) {
-    return parseRivalJournal(id, snap.data() as Record<string, unknown>);
-  }
-  await setDoc(ref, {
-    leaderId: id,
-    keyPieceIds: [],
-    techOptionIds: [],
-    notes: "",
-    vsDecks: {},
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+  return runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(ref);
+    if (snap.exists()) {
+      return parseRivalJournal(id, snap.data() as Record<string, unknown>);
+    }
+    const empty = emptyRivalJournal(id);
+    tx.set(ref, {
+      leaderId: id,
+      keyPieceIds: [],
+      techOptionIds: [],
+      notes: "",
+      vsDecks: {},
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return empty;
   });
-  return emptyRivalJournal(id);
 }
 
 export async function deleteRivalJournal(
@@ -201,30 +233,6 @@ export async function deleteRivalJournal(
   leaderId: string,
 ): Promise<void> {
   await deleteDoc(rivalDocRef(uid, leaderId));
-}
-
-async function readRivalOrEmpty(
-  uid: string,
-  leaderId: string,
-): Promise<RivalJournal> {
-  const snap = await getDoc(rivalDocRef(uid, leaderId));
-  if (!snap.exists()) return emptyRivalJournal(leaderId);
-  return parseRivalJournal(leaderId, snap.data() as Record<string, unknown>);
-}
-
-async function writeRivalJournal(
-  uid: string,
-  journal: RivalJournal,
-): Promise<void> {
-  await setDoc(rivalDocRef(uid, journal.leaderId), {
-    leaderId: journal.leaderId,
-    keyPieceIds: journal.keyPieceIds,
-    techOptionIds: journal.techOptionIds,
-    notes: journal.notes,
-    vsDecks: vsDecksForWrite(journal.vsDecks),
-    createdAt: journal.createdAt ?? serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
 }
 
 export async function setRivalCardBuckets(
@@ -235,13 +243,11 @@ export async function setRivalCardBuckets(
 ): Promise<void> {
   const key = cleanCardIdList(keyPieceIds);
   const tech = cleanCardIdList(techOptionIds, { exclude: new Set(key) });
-  const current = await readRivalOrEmpty(uid, leaderId);
-  await writeRivalJournal(uid, {
+  await updateRivalJournal(uid, leaderId, (current) => ({
     ...current,
-    leaderId,
     keyPieceIds: key,
     techOptionIds: tech,
-  });
+  }));
 }
 
 export async function setRivalGeneralNotes(
@@ -249,12 +255,10 @@ export async function setRivalGeneralNotes(
   leaderId: string,
   notes: string,
 ): Promise<void> {
-  const current = await readRivalOrEmpty(uid, leaderId);
-  await writeRivalJournal(uid, {
+  await updateRivalJournal(uid, leaderId, (current) => ({
     ...current,
-    leaderId,
     notes: clampNotes(notes),
-  });
+  }));
 }
 
 export async function upsertRivalVsDeck(
@@ -268,39 +272,38 @@ export async function upsertRivalVsDeck(
     losses?: number;
   },
 ): Promise<void> {
-  const current = await readRivalOrEmpty(uid, leaderId);
+  await updateRivalJournal(uid, leaderId, (current) => {
+    if (
+      !current.vsDecks[deckId] &&
+      Object.keys(current.vsDecks).length >= RIVAL_VS_DECKS_MAX
+    ) {
+      throw new Error("Too many deck notes on this rival.");
+    }
 
-  if (
-    !current.vsDecks[deckId] &&
-    Object.keys(current.vsDecks).length >= RIVAL_VS_DECKS_MAX
-  ) {
-    throw new Error("Too many deck notes on this rival.");
-  }
+    const prev = current.vsDecks[deckId];
+    const nextBlock: RivalVsDeckNotes = {
+      deckId,
+      deckName: clampDeckName(patch.deckName || prev?.deckName),
+      notes:
+        patch.notes !== undefined
+          ? clampNotes(patch.notes)
+          : (prev?.notes ?? ""),
+      wins:
+        patch.wins !== undefined
+          ? clampRecordCount(patch.wins)
+          : (prev?.wins ?? 0),
+      losses:
+        patch.losses !== undefined
+          ? clampRecordCount(patch.losses)
+          : (prev?.losses ?? 0),
+      updatedAt: undefined,
+      updatedAtMs: Date.now(),
+    };
 
-  const prev = current.vsDecks[deckId];
-  const nextBlock: RivalVsDeckNotes = {
-    deckId,
-    deckName: clampDeckName(patch.deckName || prev?.deckName),
-    notes:
-      patch.notes !== undefined
-        ? clampNotes(patch.notes)
-        : (prev?.notes ?? ""),
-    wins:
-      patch.wins !== undefined
-        ? clampRecordCount(patch.wins)
-        : (prev?.wins ?? 0),
-    losses:
-      patch.losses !== undefined
-        ? clampRecordCount(patch.losses)
-        : (prev?.losses ?? 0),
-    updatedAt: undefined,
-    updatedAtMs: Date.now(),
-  };
-
-  await writeRivalJournal(uid, {
-    ...current,
-    leaderId,
-    vsDecks: { ...current.vsDecks, [deckId]: nextBlock },
+    return {
+      ...current,
+      vsDecks: { ...current.vsDecks, [deckId]: nextBlock },
+    };
   });
 }
 
@@ -311,26 +314,21 @@ export async function adjustRivalVsDeckRecord(
   field: "wins" | "losses",
   delta: number,
 ): Promise<void> {
-  const ref = rivalDocRef(uid, leaderId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error("Rival journal not found.");
-  const current = parseRivalJournal(
-    leaderId,
-    snap.data() as Record<string, unknown>,
-  );
-  const prev = current.vsDecks[deckId];
-  if (!prev) throw new Error("Deck notes not found.");
-
-  const nextBlock: RivalVsDeckNotes = {
-    ...prev,
-    [field]: nextRecordCount(prev[field], delta),
-    updatedAt: undefined,
-    updatedAtMs: Date.now(),
-  };
-  await writeRivalJournal(uid, {
-    ...current,
-    leaderId,
-    vsDecks: { ...current.vsDecks, [deckId]: nextBlock },
+  await updateRivalJournal(uid, leaderId, (current) => {
+    const prev = current.vsDecks[deckId];
+    if (!prev) throw new Error("Deck notes not found.");
+    return {
+      ...current,
+      vsDecks: {
+        ...current.vsDecks,
+        [deckId]: {
+          ...prev,
+          [field]: nextRecordCount(prev[field], delta),
+          updatedAt: undefined,
+          updatedAtMs: Date.now(),
+        },
+      },
+    };
   });
 }
 
@@ -339,9 +337,10 @@ export async function removeRivalVsDeck(
   leaderId: string,
   deckId: string,
 ): Promise<void> {
-  const current = await readRivalOrEmpty(uid, leaderId);
-  if (!current.vsDecks[deckId]) return;
-  const vsDecks = { ...current.vsDecks };
-  delete vsDecks[deckId];
-  await writeRivalJournal(uid, { ...current, leaderId, vsDecks });
+  await updateRivalJournal(uid, leaderId, (current) => {
+    if (!current.vsDecks[deckId]) return current;
+    const vsDecks = { ...current.vsDecks };
+    delete vsDecks[deckId];
+    return { ...current, vsDecks };
+  });
 }

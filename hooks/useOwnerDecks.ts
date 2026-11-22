@@ -31,7 +31,8 @@ export function useOwnerDecks(
   const [variationsByDeckId, setVariationsByDeckId] = useState<
     Record<string, Variation[]>
   >({});
-  const [loading, setLoading] = useState(false);
+  const [decksLoading, setDecksLoading] = useState(false);
+  const [variationsPending, setVariationsPending] = useState(0);
   const [failed, setFailed] = useState<"decks" | "variations" | null>(null);
   const [denied, setDenied] = useState(false);
   const [loadedUid, setLoadedUid] = useState<string | null>(null);
@@ -64,7 +65,8 @@ export function useOwnerDecks(
       setVariationsByDeckId({});
       setFailed(null);
       setDenied(false);
-      setLoading(true);
+      setDecksLoading(true);
+      setVariationsPending(0);
     });
 
     const unsub = onSnapshot(
@@ -77,7 +79,7 @@ export function useOwnerDecks(
         next.sort((a, b) => a.name.localeCompare(b.name));
         setDecks(next);
         setLoadedUid(uid);
-        setLoading(false);
+        setDecksLoading(false);
         setFailed(null);
         setDenied(false);
       },
@@ -89,7 +91,8 @@ export function useOwnerDecks(
         setDecks([]);
         setVariationsByDeckId({});
         setLoadedUid(uid);
-        setLoading(false);
+        setDecksLoading(false);
+        setVariationsPending(0);
       },
     );
 
@@ -101,15 +104,20 @@ export function useOwnerDecks(
 
   useEffect(() => {
     if (!uid || !deckIdsKey) {
-      queueMicrotask(() => setVariationsByDeckId({}));
+      queueMicrotask(() => {
+        setVariationsByDeckId({});
+        setVariationsPending(0);
+      });
       return;
     }
 
     const deckIds = deckIdsKey.split("\0");
     let cancelled = false;
+    const pending = new Set(deckIds);
 
     queueMicrotask(() => {
       if (cancelled) return;
+      setVariationsPending(pending.size);
       setVariationsByDeckId((prev) => {
         const next: Record<string, Variation[]> = {};
         for (const deckId of deckIds) {
@@ -140,12 +148,18 @@ export function useOwnerDecks(
               favoritesRef.current[deckId],
             ),
           }));
+          if (pending.delete(deckId)) {
+            setVariationsPending(pending.size);
+          }
         },
         (err) => {
           console.error(err);
           if (cancelled) return;
           setFailed("variations");
           if (isPermissionDenied(err)) setDenied(true);
+          if (pending.delete(deckId)) {
+            setVariationsPending(pending.size);
+          }
         },
       ),
     );
@@ -181,16 +195,21 @@ export function useOwnerDecks(
   }, [uid, decks]);
 
   const hasCurrentUserData = Boolean(uid && loadedUid === uid);
+  const loading =
+    Boolean(uid) &&
+    (!hasCurrentUserData ||
+      decksLoading ||
+      (decks.length > 0 && variationsPending > 0));
+
   return useMemo(
     () => ({
       decks: hasCurrentUserData ? decks : [],
       variationsByDeckId: hasCurrentUserData ? variationsByDeckId : {},
-      loading: Boolean(uid) && !hasCurrentUserData ? true : loading,
+      loading,
       failed: hasCurrentUserData ? failed : null,
       denied: hasCurrentUserData ? denied : false,
     }),
     [
-      uid,
       hasCurrentUserData,
       decks,
       variationsByDeckId,

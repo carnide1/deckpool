@@ -47,6 +47,19 @@ describe("sortCards", () => {
     );
   });
 
+  it("sorts oldest set first but keeps collector numbers ascending within a set", () => {
+    const cards = [
+      card("OP13-050", "OP13", "New later"),
+      card("OP01-016", "OP01", "Old"),
+      card("OP13-001", "OP13", "New first"),
+    ];
+    const sorted = sortCards(cards, "oldest");
+    assert.deepEqual(
+      sorted.map((row) => row.id),
+      ["OP01-016", "OP13-001", "OP13-050"],
+    );
+  });
+
   it("sorts serial numbers numerically across sets", () => {
     const cards = [
       card("OP10-001", "OP10", "Ten"),

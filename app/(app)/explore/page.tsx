@@ -60,9 +60,9 @@ function parseSort(raw: string | null): SortKey {
 function ExplorePageContent() {
   const searchParams = useSearchParams();
   const { cards, loading: catalogLoading, error: catalogError } = useCatalog();
-  const { ownedMap, allLabels } = useCollection();
-  const { decks, variationsByDeckId } = useDecks();
-  const { wantedMap } = useWanted();
+  const { ownedMap, allLabels, error: collectionError } = useCollection();
+  const { decks, variationsByDeckId, error: decksError } = useDecks();
+  const { wantedMap, error: wantedError } = useWanted();
   const { preferredByCardId } = useCardPrefs();
   const { saving, adjustQuantity, setLabels } = useCollectionWrite(true);
   const { saving: wantedSaving, togglePosted, adjustQuantity: adjustWanted } =
@@ -241,8 +241,17 @@ function ExplorePageContent() {
               : "Practice card memorization with flashcards."}
           </p>
         </div>
-        <ExploreModeToggle mode={view} />
+        <ExploreModeToggle mode={view} search={urlKey} />
       </div>
+
+      {collectionError || wantedError || decksError ? (
+        <p className="text-sm text-[var(--accent-pirate-red)]" role="alert">
+          {[collectionError, wantedError, decksError]
+            .filter(Boolean)
+            .join(" ")}{" "}
+          Owned and Wanted badges may be wrong until this reloads.
+        </p>
+      ) : null}
 
       {view === "browse" && (
         <div className="flex flex-wrap items-center gap-3">

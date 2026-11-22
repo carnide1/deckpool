@@ -39,6 +39,7 @@ export function CardGrid({
   wantedSaving = false,
   labelsByCardId,
   tileFooter,
+  quantityChipLabel = "Own",
 }: {
   cards: DeckPoolCard[];
   quantityById: Record<string, number>;
@@ -53,6 +54,8 @@ export function CardGrid({
   wantedSaving?: boolean;
   labelsByCardId?: Record<string, string[]>;
   tileFooter?: (card: DeckPoolCard) => ReactNode;
+  /** Chip above the art. Deck View uses "×" so in-deck counts are not labeled Own. */
+  quantityChipLabel?: string;
 }) {
   if (cards.length === 0) {
     return (
@@ -96,7 +99,7 @@ export function CardGrid({
               {qty > 0 ? (
                 <div className="absolute top-1 right-1 z-10">
                   <CardQtyChip
-                    label="Own"
+                    label={quantityChipLabel}
                     value={qty}
                     accentClassName="bg-[var(--badge-owned)]"
                     visible

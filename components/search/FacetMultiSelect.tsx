@@ -25,6 +25,7 @@ export function FacetMultiSelect({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [alignRight, setAlignRight] = useState(false);
+  const [maxDropdownWidth, setMaxDropdownWidth] = useState<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const showSearch = options.length > 12;
 
@@ -35,36 +36,57 @@ export function FacetMultiSelect({
         setOpen(false);
       }
     };
+    // Capture so parent Modal does not also close on Escape.
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      setOpen(false);
     };
     window.addEventListener("mousedown", onPointer);
-    window.addEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
     return () => {
       window.removeEventListener("mousedown", onPointer);
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onKey, true);
     };
   }, [open]);
 
   useLayoutEffect(() => {
     if (!open || fullWidth) return;
-    
-    const button = rootRef.current;
-    if (!button) return;
-    
-    const rect = button.getBoundingClientRect();
-    const dropdownWidth = 256; // w-64
-    const viewportWidth = window.innerWidth;
-    
-    // Check if left-align would clip right edge
-    const wouldClipRight = rect.left + dropdownWidth > viewportWidth;
-    
-    // Check if right-align would clip left edge
-    const wouldClipLeft = rect.right - dropdownWidth < 0;
-    
-    // Use right-align only if left-align would clip AND right-align wouldn't clip
-    // Prefer left-align by default
-    setAlignRight(wouldClipRight && !wouldClipLeft);
+
+    const measure = () => {
+      const button = rootRef.current;
+      if (!button) return;
+
+      const rect = button.getBoundingClientRect();
+      const dropdownWidth = 256; // w-64
+      const viewportWidth = window.innerWidth;
+      const pad = 8;
+
+      const spaceRight = viewportWidth - rect.left - pad;
+      const spaceLeft = rect.right - pad;
+      const wouldClipRight = rect.left + dropdownWidth > viewportWidth - pad;
+      const wouldClipLeft = rect.right - dropdownWidth < pad;
+
+      if (wouldClipRight && !wouldClipLeft) {
+        setAlignRight(true);
+        setMaxDropdownWidth(Math.min(dropdownWidth, Math.max(160, spaceLeft)));
+      } else if (wouldClipRight && wouldClipLeft) {
+        // Prefer the side with more room and shrink to fit.
+        const useRight = spaceLeft >= spaceRight;
+        setAlignRight(useRight);
+        setMaxDropdownWidth(
+          Math.min(dropdownWidth, Math.max(160, useRight ? spaceLeft : spaceRight)),
+        );
+      } else {
+        setAlignRight(false);
+        setMaxDropdownWidth(null);
+      }
+    };
+
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
   }, [open, fullWidth]);
 
   const filtered = options.filter((option) => {
@@ -111,12 +133,17 @@ export function FacetMultiSelect({
         <div
           className={[
             "absolute z-30 mt-1 rounded-xl border border-[var(--bg-inset)] bg-[var(--bg-panel)] p-2 shadow-[var(--shadow-poster)]",
-            fullWidth 
+            fullWidth
               ? "left-0 right-0 w-full"
               : alignRight
                 ? "right-0 w-64"
                 : "left-0 w-64",
           ].join(" ")}
+          style={
+            !fullWidth && maxDropdownWidth !== null
+              ? { width: maxDropdownWidth, maxWidth: "calc(100vw - 16px)" }
+              : undefined
+          }
         >
           {showSearch ? (
             <input

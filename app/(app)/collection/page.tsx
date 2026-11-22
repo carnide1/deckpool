@@ -54,9 +54,14 @@ function CollectionPageMain() {
   const searchParams = useSearchParams();
   const view = parseCollectionView(searchParams.get("view"));
   const { cards, cardsById, loading: catalogLoading } = useCatalog();
-  const { ownedMap, allLabels, ownedCardCount, loading: collectionLoading } =
-    useCollection();
-  const { decks, variationsByDeckId } = useDecks();
+  const {
+    ownedMap,
+    allLabels,
+    ownedCardCount,
+    loading: collectionLoading,
+    error: collectionError,
+  } = useCollection();
+  const { decks, variationsByDeckId, error: decksError } = useDecks();
   const { preferredByCardId } = useCardPrefs();
   const { saving, adjustQuantity, setLabels } = useCollectionWrite(false);
   const { wantedMap } = useWanted();
@@ -164,6 +169,11 @@ function CollectionPageMain() {
 
   return (
     <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-4">
+      {collectionError || decksError ? (
+        <p className="text-sm text-[var(--accent-pirate-red)]" role="alert">
+          {[collectionError, decksError].filter(Boolean).join(" ")}
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-[var(--ink-primary)]">

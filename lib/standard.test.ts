@@ -21,7 +21,8 @@ describe("standard format", () => {
     assert.equal(isPlayableInStandard({ id: "OP05-001", block: "2" }), true);
     assert.equal(isBanned("OP06-116"), true);
     assert.equal(isPlayableInStandard({ id: "OP06-116", block: "2" }), false);
-    assert.equal(isBanned("OP14-020"), false);
+    assert.equal(isBanned("OP14-020"), true);
+    assert.equal(isPlayableInStandard({ id: "OP14-020", block: "4" }), false);
   });
 
   it("flags a banned pair only when both cards are present", () => {

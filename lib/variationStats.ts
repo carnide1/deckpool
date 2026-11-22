@@ -44,7 +44,7 @@ export type VariationStats = {
   counterOther: number;
   /** Populated only when the Leader has 2+ colors. */
   byColor: VariationColorCount[];
-  /** Sets that appear in the list (Leader excluded), sorted by set code. */
+  /** Sets that appear in the list (Leader excluded), sorted oldest release first (`compareSetsByReleaseOrder`). */
   bySet: VariationSetCount[];
 };
 

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
+import toast from "react-hot-toast";
 import { CardImage } from "@/components/CardImage";
 import { CardDetailModal } from "@/components/cards/CardDetailModal";
 import { RivalCardPickerModal } from "@/components/rivals/RivalCardPickerModal";
@@ -50,6 +51,10 @@ export function RivalCardSetSection({
     setSaving(true);
     try {
       await onChange(ids.filter((id) => id !== cardId));
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not remove card",
+      );
     } finally {
       setSaving(false);
     }

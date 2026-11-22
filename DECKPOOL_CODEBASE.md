@@ -1,8 +1,8 @@
 # DeckPool — Codebase snapshot
 
 **Status:** Living summary of the **as-built** app  
-**Last updated:** 2026-11-10
-**Git:** `main` at `https://github.com/carnide1/deckpool.git`. This snapshot adds **Flash mode** to Explore: a flashcard study feature for card memorization practice. The page now has Browse/Flash toggle; Flash shows random cards with blurred effect text, Unblur button, Next button, automatic loop + reshuffle, mobile-optimized layout. Filters work in both modes. Prior main: Crew/Rivals matchup journals (key pieces, tech options, freeform notes, per-deck notes + manual W/L) with fourth friends privacy switch `rivals`.
+**Last updated:** 2026-11-22
+**Git:** `main` at `https://github.com/carnide1/deckpool.git`. 2026-11-22 review fixes (local, not necessarily pushed): `OP14-020` added to Standard ban list; Next.js **16.4.6**; Deck View qty chip uses `×` not Own; Flash preload uses `/card-art`, resets on filter change, mode toggle keeps URL filters; `useOwnerDecks` waits for variation snapshots; rival writes are transactional; `/card-art` requires catalog filenames + error caching; Firestore username create requires matching profile `getAfter`; owner can list/delete shares (deck delete revokes them); Collection/Explore/Builder surface read errors; `app/error.tsx` + `global-error.tsx`; Firestore persistent cache. Prior: Flash mode (PR #14), Crew/Rivals journals.
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -66,7 +66,7 @@ V1 cost rules still in force in code: no paid search service, no language-model 
 
 | Layer | Choice |
 |---|---|
-| App | Next.js **16.3.1** App Router, React **19**, TypeScript strict, `app/` at repo root (no `src/`) |
+| App | Next.js **16.4.6** App Router, React **19**, TypeScript strict, `app/` at repo root (no `src/`) |
 | Path alias | `@/*` → repo root |
 | CSS | Tailwind **4**, tokens in `app/globals.css` |
 | Fonts (as built) | **Nunito** (body) + **Cinzel** (display). Blueprint mentioned Fredoka; the app uses Cinzel. |
@@ -74,10 +74,10 @@ V1 cost rules still in force in code: no paid search service, no language-model 
 | Auth | Firebase Auth, **email/password only**. Client `AuthGate`. No `middleware.ts`. Public routes render while Auth is still resolving (avoids mobile “Loading…” freeze). Auth init falls back IndexedDB → localStorage → memory, with an 8s ready timeout + Retry. |
 | Data | Cloud Firestore, nested under `users/{uid}/…`, plus top-level `usernames`, `profiles`, `friendRequests`, `friendships` for Friends. Client SDK writes. |
 | Catalog | Static JSON in `data/`, loaded in the browser. ~**2850** English cards. Don cards stripped at ingest. |
-| Images | Same-origin `/card-art/{file}.png` proxy for Bandai (avoids Chrome **CORP** and Vercel `/_next/image` **402**). Strict filename allowlist, upstream timeout, ETag/304, in-flight coalesce, long cache. Optional CDN mirror first via `NEXT_PUBLIC_CARD_IMAGE_ORIGIN`. Retries + **Retry** UI. |
+| Images | Same-origin `/card-art/{file}.png` proxy for Bandai (avoids Chrome **CORP** and Vercel `/_next/image` **402**). Filename must be safe **and** present on a catalog image URL; upstream timeout, ETag/304, in-flight coalesce, long cache on hits, short cache on errors. Optional CDN mirror first via `NEXT_PUBLIC_CARD_IMAGE_ORIGIN`. Retries + **Retry** UI. `next.config` sets `images.unoptimized: true` (grids use plain `<img>`). |
 | Hosting (intended) | Vercel Hobby. No `vercel.json` in the repo. `.vercel/` is gitignored. Redirects (e.g. `/collection?view=wanted` → `/wanted`, `/cards` → `/explore`) live in `next.config.ts`. |
 | Package manager | **npm** (`package-lock.json`) |
-| Tests | `npm test` → `tsx --test lib/**/*.test.ts` |
+| Tests | `npm test` → `tsx --test "lib/**/*.test.ts"` (glob is quoted so it also expands on Windows) |
 | No | Firebase Admin, Storage uploads, cron, Resend, OAuth, Algolia |
 
 ---
@@ -95,7 +95,7 @@ From `C:\DeckPool`:
 | `npm run ingest-catalog -- --input <punk-records english folder>` | Rebuild `data/cards.json`, packs, construction rules, has-flags, timing-flags |
 | `npm run ingest-products` | Rebuild `data/products/` (ST01–ST36) from One Piece Player pages |
 | `npm run build-blocks` | Rebuild `data/blocks.json` from the observed printings plus Bandai’s override list. Run this after a catalog ingest that adds card numbers. |
-| `firebase deploy --only firestore:rules` | Publish `firestore.rules` to project `deckpool-64459`. The tightened rules were deployed after the audit on 2026-08-27. Friends rules: 2026-10-02. **Rivals + four-key privacy:** publish after the Crew/Rivals PR merges (Console → Firestore → Rules is fine). |
+| `firebase deploy --only firestore:rules` | Publish `firestore.rules` to project `deckpool-64459`. Redeploy after 2026-11-22 (rivals privacy, username `getAfter` claim, owner share list). Friends rules: 2026-10-02. |
 
 Ingest is a **local** maintainer task. Vercel must not scrape Bandai or One Piece Player at runtime. Commit the generated JSON.
 
@@ -146,7 +146,7 @@ Logged-in users on the auth landing routes (`/`, `/login`, `/signup`, `/forgot-p
 |---|---|
 | `/collection` | **Owned binder** by default. Modes: Binder, Summary (`?view=summary`). Binder cannot create new card numbers (`useCollectionWrite(false)`). |
 | `/wanted` | **Wanted** shopping board — extra copies to buy. **Caught** can create binder rows. Old `/collection?view=wanted` redirects here. |
-| `/explore` | **Full catalog.** Browse/Flash mode toggle (`?view=flash`). **Browse mode** (default): grid with name/text search + filters, URL-synced. `owned=1` limits to owned. `wanted=1` limits to posters. `in=text` searches rules text. `timing=` is printed ability windows (AND). Click a card to set qty (this **can** create new collection rows), bounty, labels, preferred art. Starter-deck add lives here too. **Flash mode**: flashcard study — random card with blurred effect text, Unblur/Next buttons, automatic loop + reshuffle. Filters and search work in both modes. Old `/cards` redirects here. |
+| `/explore` | **Full catalog.** Browse/Flash mode toggle (`?view=flash`). **Browse mode** (default): grid with name/text search + filters, URL-synced. `owned=1` limits to owned. `wanted=1` limits to posters. `in=text` searches rules text. `timing=` is printed ability windows (AND). Click a card to set qty (this **can** create new collection rows), bounty, labels, preferred art. Starter-deck add lives here too. **Flash mode**: flashcard study — one random card from the filtered catalog, lower part of the art blurred until **Unblur**, then **Next** (loops and reshuffles at the end). Filter changes reset to the first card with blur restored. Preload uses the same `/card-art` (or mirror) URLs as the visible card. Only the filter panel shows in Flash; the Name/Text bar, Owned/Wanted toggles, sort, Add starter deck, and the card modal are hidden (a text/`owned`/`wanted` value already in the URL still applies). Browse/Flash toggle keeps the rest of the query string. Old `/cards` redirects here. |
 | `/decks` | **Crew** (default): deck grid with sort (default newest edits). Create / rename / delete. Crew / Rivals toggle. |
 | `/decks/rivals` | **Rivals** list: opponent-Leader journals. Add rival via full Leader picker (Owned off by default). |
 | `/decks/rivals/[leaderId]` | Rival journal: **Deck** tab (Key pieces + Tech options) and **Notes** tab (general notes + per-your-deck notes with W/L). `?tab=notes` opens Notes. |
@@ -161,7 +161,7 @@ Logged-in users on the auth landing routes (`/`, `/login`, `/signup`, `/forgot-p
 | `/profile` | Display name (Auth + Firestore), email, stats, logout. |
 | `/invite/[code]` | **Public friend invite.** Shows who invited you and one action (Send friend request / Accept / Sign up / Log in, or a status line). Outside `AppShell`; layout mounts `FriendsProvider` only. Not indexed. |
 | `/s/[shareId]` | **Public shared deck.** Snapshot of one variation (name, Leader, card counts + preferred art). No login. Outside `AppShell`. |
-| `/card-art/[file]` | **Image proxy** (not a page). Allowlisted `*.png` under Bandai `cardlist/card/` only. |
+| `/card-art/[file]` | **Image proxy** (not a page). Safe `*.png` name **and** must appear on a catalog image URL. |
 
 There is **no** `/api/*` folder. Card art uses App Router `GET /card-art/[file]` (Bandai card PNGs only).
 
@@ -238,7 +238,8 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 
 - Collection document **id** is the card number. Qty 0 **deletes** the doc.
 - Wanted document **id** is the same card number. Qty is extra copies to buy, not a total target. Qty 0 **deletes** the doc.
-- **Shares** are immutable snapshots (create + single-doc public **get**; **list denied** so there is no gallery). Create requires signed-in `ownerUid`, `keys().hasOnly(...)` (no extra fields), non-empty `cards` map of size ≤ 60, preferredImages map ≤ 61, and **createdAt/updatedAt timestamps**. Rules cannot iterate dynamic map *values*; the client cleans card qtys (`cleanCardsMap`) and preferred art (`isShareablePreferredUrl` — Bandai cardlist PNG path) on write and parse. Owner decks stay private.
+- **Shares** are immutable snapshots (create + single-doc public **get**; **owner-only list** so delete can find them — no public gallery). Create requires signed-in `ownerUid`, `keys().hasOnly(...)` (no extra fields), non-empty `cards` map of size ≤ 60, preferredImages map ≤ 61, and **createdAt/updatedAt timestamps**. Rules cannot iterate dynamic map *values*; the client cleans card qtys (`cleanCardsMap`) and preferred art (`isShareablePreferredUrl` — Bandai cardlist PNG path) on write and parse. Deleting a deck also deletes that deck’s share docs. Owner decks stay private.
+- **Usernames** create requires `getAfter(profiles/{uid}).username == name` in the same request (blocks orphan name squatting).
 - Collection, Wanted, card-preference, deck, and user-profile writes are shape-checked by the deployed `firestore.rules`. Variation writes check keys/name/map size/timestamp; positive int card values are enforced client-side.
 - User labels live only on owned collection rows. Label updates use `setCollectionLabels` (transaction) and **do not rewrite quantity**. Cap is 50 labels (UI + rules). Card tiles also show derived `Deck: <name>` labels for current deck membership; these are not stored as user labels and update automatically when decks change.
 - **Caught** writes binder and Wanted in one Firestore transaction. Collection `+` while a poster exists uses that same catch helper.
@@ -279,8 +280,10 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 - Full English catalog (no Don). Nav label **Explore**. `components/cards/` is still card tiles/modals.
 - Filters sync to the URL (`lib/search/filters.ts`) via `window.history.replaceState` (no router navigation), debounced 350ms. Sort / Owned / Wanted are read straight from the URL. URL changes from elsewhere (links, back/forward) re-seed the filters; the page's own writes never overwrite in-progress typing. Show-more resets whenever the result set changes. Owned toggle: `owned=1`. Wanted toggle: `wanted=1`. Both can be on. Deck membership filter (`deck=`). Description mode: `in=text`. Timing facet: `timing=on-play|on-ko` (AND). Old `/cards` redirects here and keeps the query string.
 - Search bar Name | Text: Name matches name or card id; Text matches `effect` + `trigger` substring. Text folds the printed minus (`−`), en dash, and fullwidth hyphen to `-`, and ignores apostrophes, then does the substring check. Switching modes keeps the query. Clearing filters resets to Name.
-- Sort: newest / oldest / serial / name / category / cost. Newest = latest set family.
+- Sort: newest / oldest / serial / name / category / cost. Newest orders by release order from `lib/setReleaseOrder.ts` (promos `P` last, then collector number inside a set). Sets missing from that map come after known sets and fall back to the old set-family rank.
 - Page size 48, load-more style.
+- **Browse / Flash** toggle (`?view=flash`, `ExploreModeToggle`). Flash is described in the route table. Browse is everything above.
+- Filter dropdowns (`FacetMultiSelect`) open left-aligned and flip to right-aligned only when that would stop them clipping the right edge of the phone screen.
 - Modal: qty (can create), bounty, user labels, art picker, decks that use the card, outside Previous/Next controls through the currently loaded results, and click-to-zoom full-screen art. Card tiles show current user labels plus derived deck labels.
 - WANTED stamp on every tile. Owned `+` while a poster exists catches against that bounty.
 - **Add starter deck** modal: increment ST01–ST36 contents; optional labels merged; optional “also create a deck.”
@@ -312,7 +315,8 @@ invites/{code}                       inviterUid, inviterUsername, inviterDisplay
 - Detail (`/decks/rivals/[leaderId]`):
   - **Deck** tab: **Key pieces** (“Engine staples for this deck.”) and **Tech options** — reference card sets with the same color / Leader-forbid pool as the builder, banned ids excluded, Name/Text search + FilterPanel (incl. Currently Playable). Tap a listed card for `CardDetailModal`. Mutual exclusion, no counts.
   - **Notes** tab: freeform notes with a **Bullet** helper (• lines; Enter continues the list); **Your decks** blocks pick one of your Crew decks for notes + manual Wins/Losses steppers (`QuantityStepper`, min 0). Deleted Crew decks keep the block with a **Deleted deck** tag until removed.
-- Friends may read journals when `privacy.rivals` is on (independent of Decks/Crew privacy).
+- Friends may read journals when `privacy.rivals` is on (independent of Decks/Crew privacy). When Crew decks are hidden, friend Notes show **Hidden deck** instead of the stored `deckName`.
+- Rival journal writes use Firestore transactions so notes / W-L / key-tech edits do not overwrite each other.
 
 ### Builder (`/decks/[id]?mode=edit`)
 
@@ -437,7 +441,7 @@ Do **not** call a language model to decide legality.
 | `data/blocks.json` | Bandai’s current block for every catalog id (`1`–`5` or `X`). Joined onto each card when the catalog loads. |
 | `data/block-observed.json` | Printings seen for each id. Input to `npm run build-blocks`. |
 | `data/block-overrides.json` | Bandai’s published X and Block 4 updates, plus `P-110`. These win over the observed printings. |
-| `data/standard.json` | Standard floor (`minBlock` 2), banned ids, restricted caps, and banned pairs. `OP14-020` joins the ban list on 12 Oct 2026. |
+| `data/standard.json` | Standard floor (`minBlock` 2), banned ids (includes `OP14-020` Dracule Mihawk from 12 Oct 2026), restricted caps, and banned pairs. |
 | `data/products/index.json` | ST01–ST36 picker |
 | `data/products/STxx.json` | Real box counts (`cardId` → qty) |
 | `scripts/ingest-catalog.ts` | From punk-records English JSON |
@@ -447,7 +451,7 @@ Card shape: `types/catalog.ts` (`DeckPoolCard`). `cost` on a Leader is Life. `bl
 
 **Note:** Catalog JSON is still committed offline. `/card-art` only fetches **image bytes** on demand (cached). It is not catalog scrape-at-runtime. A full CDN mirror remains the most robust long-term option if Bandai blocks datacenter IPs.
 
-When a new set releases: pull punk-records, run both ingest scripts, run `npm run build-blocks` (it stops if a new id has no block), commit `data/`, then ship. punk-records now includes a `block_number` on each card; for new ids, copy it into `data/block-observed.json` before `npm run build-blocks`. When it is blank, read the block icon on the card image and add it by hand (an X card also goes in `data/block-overrides.json`, as `EB05-014` did). Add the new set code to `lib/setReleaseOrder.ts`, or it sorts after Promos in the Set filter. Do not guess starter counts as “1 of each id.” On 1 Apr 2027, raise `minBlock` in `data/standard.json` from 2 to 3. When Bandai changes the ban list, edit that same file. `OP14-020` Dracule Mihawk is banned starting 12 Oct 2026 and is not in the file before that date.
+When a new set releases: pull punk-records, run both ingest scripts, run `npm run build-blocks` (it stops if a new id has no block), commit `data/`, then ship. punk-records now includes a `block_number` on each card; for new ids, copy it into `data/block-observed.json` before `npm run build-blocks`. When it is blank, read the block icon on the card image and add it by hand (an X card also goes in `data/block-overrides.json`, as `EB05-014` did). Add the new set code to `lib/setReleaseOrder.ts`, or it shows at the top of the Set filter (the list is reversed, unknown sets end up first) and sorts after known sets in Newest. Do not guess starter counts as “1 of each id.” On 1 Apr 2027, raise `minBlock` in `data/standard.json` from 2 to 3. When Bandai changes the ban list, edit that same file. Next announced change: banned pairs for EB05-001 with OP13-001 / OP01-002 effective **27 Nov 2026** (add when that date hits).
 
 ---
 
@@ -479,12 +483,13 @@ Key libraries:
 
 | Module | Role |
 |---|---|
-| `lib/firebase.ts` | Init from env; Auth persistence IndexedDB → localStorage → memory |
+| `lib/firebase.ts` | Init from env; Auth persistence IndexedDB → localStorage → memory; Firestore `persistentLocalCache` (multi-tab) with `getFirestore` fallback |
 | `lib/users.ts` | Signup doc + `ensureUserDoc` (both create-if-missing in a transaction, since they race on a new account), display name, owned-count for routing |
 | `lib/auth-routing.ts` | Post-login path, safe `?next=` allowlist, auth landing helpers |
 | `lib/collection.ts` | Qty set/adjust, label-only updates, label merge, batch starter add |
 | `lib/wanted.ts` | Bounty qty, catch transaction, raise gaps from a variation |
 | `lib/cardArtPath.ts` | Safe Bandai filename parse + `/card-art/{file}` paths |
+| `lib/cardArtAllowlist.ts` | Catalog image filenames allowed through the proxy |
 | `lib/cardArtFetch.ts` | Upstream Bandai fetch with timeout, size cap, ETag, in-flight coalesce |
 | `lib/cardImageUrl.ts` | Preferred/candidates, optional mirror rewrite, browser proxy URLs |
 | `lib/cardPrefs.ts` | Preferred art Firestore read/write; re-exports image URL helpers |
@@ -536,7 +541,7 @@ The blueprint is still the product source of truth for **rules** (color identity
 | Compact Legal/Owned on `/decks` is **any** variation | Compact Legal/Owned is the **favorite** variation. Profile still counts every variation. |
 | Wishlist (future-features #5) | Built as **Wanted**: extra copies to buy, top-level `/wanted` route + nav, Explore `wanted=1`, catch into the binder. Not a Collection mode. |
 | No public deck gallery / share network | **Share links** only: owner copies `/s/{id}` for one variation snapshot. Not a browseable gallery. **Friends** can browse each other's decks / collection / Wanted (exact-username add or a 7-day invite link, per-area privacy). Still no public directory. |
-| No study/practice tools | **Flash mode** in Explore (`?view=flash`): random flashcards with blurred effect text that reveals on click. Mobile-optimized. Loops + reshuffles. Filters work in both modes. |
+| No study/practice tools | **Flash mode** in Explore (`?view=flash`): random cards with the lower art blurred until Unblur. Loops + reshuffles. Filter panel only (no search bar). |
 
 Do not silently revert Collection to a full-catalog logger, or rip out the filter UI to restore `color:purple` in the box, without the user asking.
 
@@ -568,6 +573,7 @@ Do not silently revert Collection to a full-catalog logger, or rip out the filte
 | `DECKPOOL_V1_IMPLEMENTATION_GUIDE.md` | Human setup (Firebase console, Vercel clicks) |
 | `DECKPOOL_FUTURE_FEATURES.md` | Post-V1 ideas and decisions (wishlist, import, sim, and so on) |
 | `DECKPOOL_FRIENDS.md` | Friends decisions, data model, implementation plan, manual two-account test checklist |
+| `FLASH_MODE_CODE_REVIEW.md`, `FLASH_MODE_DEEP_REVIEW.md` | Historical review notes on an earlier draft of Flash mode. Several findings (for example the stale `handleNext` closure) are already fixed in the code. Do not treat them as current bugs without re-checking. |
 
 ---
 

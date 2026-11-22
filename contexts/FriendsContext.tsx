@@ -157,7 +157,17 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       onSnapshot(
         profileRef(friendUid),
         (snap) => {
-          if (cancelled || !snap.exists()) return;
+          if (cancelled) return;
+          if (!snap.exists()) {
+            // Drop a stale cache entry so the friend page can time out cleanly.
+            setProfilesByUid((prev) => {
+              if (!(friendUid in prev)) return prev;
+              const next = { ...prev };
+              delete next[friendUid];
+              return next;
+            });
+            return;
+          }
           const profile = parsePublicProfile(
             friendUid,
             snap.data() as Record<string, unknown>,

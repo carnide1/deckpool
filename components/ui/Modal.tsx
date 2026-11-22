@@ -64,6 +64,9 @@ export function Modal({
 
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        // Nested controls (filter dropdowns) handle Escape in capture and
+        // stopPropagation; do not close the modal in that case.
+        if (event.defaultPrevented) return;
         event.preventDefault();
         onCloseRef.current();
         return;
