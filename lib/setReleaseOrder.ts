@@ -121,14 +121,17 @@ export const SET_RELEASE_ORDER: Record<string, number> = {
   ST35: 55,
   ST36: 56,
   
-  // August 2025
+  // June 2026
   OP16: 57,
-  
-  // November 2025
+
+  // August 2026
   OP17: 58,
 
-  // EXTRA BOOSTER -ONE PIECE HEROINES EDITION vol.2-
+  // October 2026 — EXTRA BOOSTER -ONE PIECE HEROINES EDITION vol.2-
   EB05: 59,
+
+  // November 2026
+  OP18: 60,
 };
 
 /**

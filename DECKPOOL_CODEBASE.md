@@ -1,8 +1,8 @@
 # DeckPool — Codebase snapshot
 
 **Status:** Living summary of the **as-built** app  
-**Last updated:** 2026-11-22
-**Git:** `main` at `https://github.com/carnide1/deckpool.git`. 2026-11-22 review fixes (local, not necessarily pushed): `OP14-020` added to Standard ban list; Next.js **16.4.6**; Deck View qty chip uses `×` not Own; Flash preload uses `/card-art`, resets on filter change, mode toggle keeps URL filters; `useOwnerDecks` waits for variation snapshots; rival writes are transactional; `/card-art` requires catalog filenames + error caching; Firestore username create requires matching profile `getAfter`; owner can list/delete shares (deck delete revokes them); Collection/Explore/Builder surface read errors; `app/error.tsx` + `global-error.tsx`; Firestore persistent cache. Prior: Flash mode (PR #14), Crew/Rivals journals.
+**Last updated:** 2026-11-23
+**Git:** `main` at `https://github.com/carnide1/deckpool.git`. 2026-11-23: English **OP18** (THE DOMINANCE OF GOD) catalog ingest — 119 new ids, Block 5 / X for manga SRs, `OP18-093` unlimited copies, `setReleaseOrder` OP18 after EB05. Prior 2026-11-22 on `main`: `OP14-020` ban; Next.js **16.4.6**; Deck View `×` chip; Flash `/card-art` preload; transactional rivals; `/card-art` allowlist; username `getAfter`; owner share list; read-error surfaces; `error.tsx` / `global-error.tsx`; Firestore persistent cache; Flash mode (PR #14); Crew/Rivals journals.
 **Local path:** `C:\DeckPool`
 
 This file is the default briefing for any new chat. **Do not start by re-scanning the whole repo** unless this file is missing, clearly stale, or the task is to rewrite it.
@@ -73,7 +73,7 @@ V1 cost rules still in force in code: no paid search service, no language-model 
 | Theme | Bright only. Parchment cream, pirate red, ocean blue. No dark mode. |
 | Auth | Firebase Auth, **email/password only**. Client `AuthGate`. No `middleware.ts`. Public routes render while Auth is still resolving (avoids mobile “Loading…” freeze). Auth init falls back IndexedDB → localStorage → memory, with an 8s ready timeout + Retry. |
 | Data | Cloud Firestore, nested under `users/{uid}/…`, plus top-level `usernames`, `profiles`, `friendRequests`, `friendships` for Friends. Client SDK writes. |
-| Catalog | Static JSON in `data/`, loaded in the browser. ~**2850** English cards. Don cards stripped at ingest. |
+| Catalog | Static JSON in `data/`, loaded in the browser. ~**2969** English cards (through OP18). Don cards stripped at ingest. |
 | Images | Same-origin `/card-art/{file}.png` proxy for Bandai (avoids Chrome **CORP** and Vercel `/_next/image` **402**). Filename must be safe **and** present on a catalog image URL; upstream timeout, ETag/304, in-flight coalesce, long cache on hits, short cache on errors. Optional CDN mirror first via `NEXT_PUBLIC_CARD_IMAGE_ORIGIN`. Retries + **Retry** UI. `next.config` sets `images.unoptimized: true` (grids use plain `<img>`). |
 | Hosting (intended) | Vercel Hobby. No `vercel.json` in the repo. `.vercel/` is gitignored. Redirects (e.g. `/collection?view=wanted` → `/wanted`, `/cards` → `/explore`) live in `next.config.ts`. |
 | Package manager | **npm** (`package-lock.json`) |
@@ -423,7 +423,7 @@ Change Leader still strips only color and Leader-forbid cards. A rotated or bann
 
 **Owned:** Leader qty ≥ 1, and for every main-deck id, in-deck ≤ binder qty.
 
-Rules JSON: `data/construction-rules.json` (generated at ingest, plus seeds). As of this snapshot that includes unlimited copies for `OP08-072` (and others), Imu (`OP13-079`) forbidding Events with cost ≥ 2, Rayleigh (`OP12-001`) forbidding cost ≥ 5, and Nami `P-117` requiring `{East Blue}` types.
+Rules JSON: `data/construction-rules.json` (generated at ingest, plus seeds). As of this snapshot that includes unlimited copies for `OP01-075`, `OP08-072`, `OP16-042`, and `OP18-093` (Sleeptids); Imu (`OP13-079`) forbidding Events with cost ≥ 2; Rayleigh (`OP12-001`) forbidding cost ≥ 5; and Nami `P-117` requiring `{East Blue}` types.
 
 Do **not** call a language model to decide legality.
 
@@ -433,7 +433,7 @@ Do **not** call a language model to decide legality.
 
 | File | Role |
 |---|---|
-| `data/cards.json` | All searchable cards (~2850). No Don. |
+| `data/cards.json` | All searchable cards (~2969, through OP18). No Don. |
 | `data/packs.json` | Set/pack metadata |
 | `data/construction-rules.json` | copyLimit + forbid |
 | `data/has-flags.json` | Flags such as blocker, rush, banish, double-attack, unblockable, searcher (derived), counter, effect, trigger |
@@ -471,7 +471,7 @@ types/                  catalog, collection, wanted, deck, rival, share, user, f
 app/(app)/decks/rivals/ Crew/Rivals rival list + [leaderId] journal
 app/s/[shareId]/         public shared-deck page (+ CatalogProvider layout)
 app/invite/[code]/       public friend-invite page (+ FriendsProvider layout)
-data/                   committed snapshots (~2850 cards; includes OP17 and EB05)
+data/                   committed snapshots (~2969 cards; includes OP18, OP17, and EB05)
 scripts/                ingest + product URL/override JSON
 firestore.rules
 firebase.json

@@ -102,6 +102,19 @@ describe("sortCards", () => {
     );
   });
 
+  it("sorts OP18 as newer than EB05 based on actual release dates", () => {
+    const cards = [
+      card("EB05-001", "EB05", "Extra Booster Five"),
+      card("OP18-001", "OP18", "Op Eighteen"),
+      card("OP17-001", "OP17", "Op Seventeen"),
+    ];
+    const sorted = sortCards(cards, "newest");
+    assert.deepEqual(
+      sorted.map((row) => row.id),
+      ["OP18-001", "EB05-001", "OP17-001"],
+    );
+  });
+
   it("sorts mixed set types by chronological release order", () => {
     const cards = [
       card("ST06-001", "ST06", "Starter Six"),
