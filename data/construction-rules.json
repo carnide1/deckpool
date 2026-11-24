@@ -36,6 +36,11 @@
     "max": null
   },
   {
+    "kind": "copyLimit",
+    "cardId": "OP18-093",
+    "max": null
+  },
+  {
     "kind": "forbid",
     "whenLeader": "P-117",
     "match": {
